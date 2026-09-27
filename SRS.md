@@ -1,8 +1,7 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Draft 0.1, not baselined.** It is baselined once every item in the open questions
-register (Appendix B) is closed. After that, changes arrive as numbered amendments with a
-reason, never as silent edits.
+Status: **Baseline 1.0, 2026-09-27.** Every question in Appendix B is closed. From here, changes
+arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
 2026-09-27. Each requirement's Source line points at the spec section it comes from.
@@ -102,7 +101,7 @@ operator's normal user rights and never requests elevation.
 | CON-002 | UI framework is Slint, used under its GPLv3 licence. | See 2.6. |
 | CON-003 | Code layering is `ui → application → domain ← infrastructure`, enforced by a structural test. | House architecture invariant; keeps OS integration behind narrow adapters (spec §16, §17). |
 | CON-004 | The supplied artwork in `assets/` is product artwork and is used as supplied. | Spec §15. |
-| CON-005 | The version has one home, the `VERSION` file at the repo root; nothing else holds a version literal by hand. | House versioning rule. How Cargo.toml is kept in step is OQ-12. |
+| CON-005 | The version has one home, the `VERSION` file at the repo root; nothing else holds a version literal by hand. | House versioning rule. The build script stamps Cargo.toml from `VERSION`; a structural test fails when they differ (OQ-12). |
 | CON-006 | Repository licence is GPL-3.0. | Existing `LICENSE`; compatible with Slint's GPLv3 option. |
 
 ### 2.5 Assumptions
@@ -199,7 +198,7 @@ Acceptance: choosing `C:\src\app\build.ps1` gives `C:\src\app`.
 Verified by: `domain::operation` test `working_dir_defaults_to_script_parent`.
 
 **ADD-003 (M) Default name.** The operation factory shall default the display name to the
-script's parent folder name followed by a space and the file stem (proposed, OQ-5).
+script's parent folder name followed by a space and the file stem (OQ-5).
 Acceptance: `C:\src\pigeonpost\build.ps1` gives `pigeonpost build`.
 Verified by: `domain::operation` test `name_defaults_from_folder_and_stem`.
 
@@ -229,7 +228,7 @@ Verified by: inspection; `icon_discovery` test iterates the list.
 
 **ICON-004 (M) Choose icon.** When the operator activates Choose Icon in the operation dialog,
 BuildPilot shall open an image picker (PNG, JPEG, ICO) and use the chosen image.
-Proposed (OQ-6): the chosen image is copied into `%APPDATA%\BuildPilot\icons\<operation id>.<ext>`
+Per OQ-6, the chosen image is copied into `%APPDATA%\BuildPilot\icons\<operation id>.<ext>`
 so it survives the original moving; a discovered icon is referenced by path.
 
 **ICON-005 (M) Missing icon at start.** If an operation's icon file is missing or unreadable at
@@ -287,7 +286,7 @@ re-attribute any running operation or its output. Source: spec §4.3.
 Verified by: `application::deck` test `reorder_during_run_keeps_run`.
 
 **ROW-006 (M) Checkboxes.** Each row shall have a checkbox whose state the flight deck holds as a
-set of operation IDs. No action uses it in v1. Proposed (OQ-7): checkbox state is not persisted.
+set of operation IDs. No action uses it in v1. Checkbox state is not persisted (OQ-7).
 
 **ROW-007 (M) Selection.** When the operator clicks a row (or moves focus to it), the flight deck
 shall make it the selected row and the output tray shall show its latest run. Source: spec §11.1.
@@ -300,7 +299,7 @@ file extension:
 | Extension | Launched as |
 |---|---|
 | `.ps1` | `pwsh.exe` if found on PATH, else `powershell.exe`; with `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File <script> <arguments>` |
-| `.bat`, `.cmd` | `cmd.exe /d /c <script> <arguments>` |
+| `.bat`, `.cmd` | the script itself, with `<arguments>`; the standard library runs it through `cmd.exe` (Amendment 1) |
 | `.exe`, `.com` | directly |
 
 A file of any other type is refused at Add with a message listing the supported types.
@@ -312,8 +311,8 @@ directory and arguments, with stdout and stderr captured and stdin closed. Sourc
 
 **LCH-003 (M) Paths and arguments.** The launcher shall pass script paths, working directories
 and arguments containing spaces, quotes or non-ASCII characters to the host intact.
-Proposed (OQ-8): arguments are stored as a list (one per line in the dialog); the launcher quotes
-each one. Verified by: `infrastructure::process` integration test using a fixture script that
+Arguments are stored as a list (one per line in the dialog); the launcher quotes each one
+(OQ-8). Verified by: `infrastructure::process` integration test using a fixture script that
 echoes each argument it receives, with paths under a folder named `with space é`.
 
 **LCH-004 (M) No console window.** The launcher shall start the host without opening a console
@@ -458,7 +457,11 @@ least 4.5:1 against its background (WCAG 2.2 AA). Verified by: a unit test over 
 **UI-003 (M) Help/About.** The About surface shall show the name, the version read from
 `VERSION`, a one-sentence purpose, the repository URL, the GPL-3.0 licence and a Slint credit.
 
-**UI-004 (M) Settings.** Settings shall hold only global options. Its contents are OQ-9.
+**UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark, Follow Windows)
+plus the data folder path with an Open Folder button. Source: OQ-9.
+
+**UI-005 (M) Theme toggle.** The toolbar shall carry a theme toggle using the light and dark
+artwork; Settings shall show the same choice. Source: OQ-13.
 
 ### 3.13 Accessibility and keyboard (A11Y)
 
@@ -513,7 +516,11 @@ full rights. It does not verify that a script is safe. It does not encrypt its c
 
 The config file is `%APPDATA%\BuildPilot\buildpilot.json`, UTF-8 JSON, owned by BuildPilot alone.
 Operations are held as an array in flight-deck order; the order is the array order. BuildPilot is
-the single writer. A second BuildPilot instance is prevented (proposed, OQ-10).
+the single writer.
+
+**DATA-001 (M) Single instance.** When BuildPilot is started while another instance is running for
+the same Windows user, the new process shall bring the running instance's window forward and exit.
+Source: OQ-10. Verified by: Manual.
 
 ---
 
@@ -555,23 +562,26 @@ Inside-out, following spec §22 but with the domain first:
 
 Every use case is runnable from a test before any window exists.
 
-## Appendix B. Open questions register
+## Appendix B. Decisions register
 
-| ID | Question | Proposal | Owner | Due |
-|---|---|---|---|---|
-| OQ-1 | Stop: hard terminate only? Or Ctrl+Break first with a grace period? | Hard terminate of the Job Object in v1; graceful stop moves to Appendix D. | Oliver | 2026-10-04 |
-| OQ-2 | Output retention cap and flood test figures (OUT-004, OUT-005). | 100,000 lines; 50,000 lines in 5 s; 100 ms click response. | Oliver | 2026-10-04 |
-| OQ-3 | Row response time (LIFE-004). | 100 ms. | Oliver | 2026-10-04 |
-| OQ-4 | Stop timeout before reporting failure (STOP-003). | 5 s. | Oliver | 2026-10-04 |
-| OQ-5 | Default display name (ADD-003). | Folder name, space, file stem. | Oliver | 2026-10-04 |
-| OQ-6 | Chosen icons: copy into the data folder? Or reference by path? | Copy chosen icons; reference discovered ones by path. | Oliver | 2026-10-04 |
-| OQ-7 | Persist checkbox state? | No; transient. | Oliver | 2026-10-04 |
-| OQ-8 | Arguments as a list or as one string? | List, one per line in the dialog. | Oliver | 2026-10-04 |
-| OQ-9 | What does Settings hold in v1? | Theme (Light, Dark, Follow Windows) plus the data folder path with an Open Folder button. Nothing else until use earns it. | Oliver | 2026-10-04 |
-| OQ-10 | Single instance per user? | Yes; a second launch brings the first window forward. | Oliver | 2026-10-04 |
-| OQ-11 | Supported script types beyond `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`? | None in v1 (see Appendix D). | Oliver | 2026-10-04 |
-| OQ-12 | How Cargo.toml's version follows `VERSION` (CON-005). | A structural test fails when they differ; the build script stamps Cargo.toml from `VERSION`. | Oliver | before first release |
-| OQ-13 | Theme toggle location: toolbar buttons using the light/dark artwork? Settings? Both? | Toolbar toggle using the artwork; Settings mirrors it. | Oliver | 2026-10-04 |
+Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
+accepting the proposed default in each case. No question is open.
+
+| ID | Question | Decision |
+|---|---|---|
+| OQ-1 | Stop: hard terminate only? Or Ctrl+Break first with a grace period? | Hard terminate of the Job Object in v1; graceful stop is in Appendix D. |
+| OQ-2 | Output retention cap and flood test figures (OUT-004, OUT-005). | 100,000 lines; 50,000 lines in 5 s; 100 ms click response. |
+| OQ-3 | Row response time (LIFE-004). | 100 ms. |
+| OQ-4 | Stop timeout before reporting failure (STOP-003). | 5 s. |
+| OQ-5 | Default display name (ADD-003). | Folder name, space, file stem. |
+| OQ-6 | Chosen icons: copy into the data folder? Or reference by path? | Copy chosen icons; reference discovered ones by path. |
+| OQ-7 | Persist checkbox state? | No; transient. |
+| OQ-8 | Arguments as a list or as one string? | List, one per line in the dialog. |
+| OQ-9 | What does Settings hold in v1? | Theme (Light, Dark, Follow Windows) plus the data folder path with an Open Folder button. Nothing else until use earns it. |
+| OQ-10 | Single instance per user? | Yes; a second launch brings the first window forward. |
+| OQ-11 | Supported script types beyond `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`? | None in v1 (see Appendix D). |
+| OQ-12 | How Cargo.toml's version follows `VERSION` (CON-005). | The build script stamps Cargo.toml from `VERSION`; a structural test fails when they differ. |
+| OQ-13 | Theme toggle location: toolbar buttons using the light/dark artwork? Settings? Both? | Toolbar toggle using the artwork; Settings mirrors it. |
 
 ## Appendix C. Traceability
 
@@ -582,7 +592,7 @@ this document as well as forwards.
 ## Appendix D. Won't this time (v1)
 
 - Run All / Stop All and any action on checked rows.
-- Graceful stop (Ctrl+Break then wait), pending OQ-1.
+- Graceful stop (Ctrl+Break then wait), per OQ-1.
 - A progress protocol for scripts to report percentages (the model allows it: LIFE-006).
 - Keeping output from runs before the latest.
 - Script types beyond those in LCH-001, e.g. `.py`, `.sh`.
@@ -590,3 +600,17 @@ this document as well as forwards.
 - Localisation.
 - Per-operation preferences (spec §12), until a real one is found.
 - Environment variable overrides per operation.
+
+## Appendix E. Amendments
+
+**Amendment 1 (2026-09-27): batch files are launched directly.** Changes LCH-001, row `.bat`,
+`.cmd`. Baseline 1.0 said to start `cmd.exe /d /c <script> <arguments>` by hand.
+
+Reason, from the Rust standard library documentation (`std::process`, "Windows argument
+splitting", read 2026-09-27): when `Command` is given a `.bat` file it runs it as `cmd.exe /c`
+itself and "escapes the arguments according to `cmd.exe` rules"; an argument it cannot escape
+safely makes the spawn fail with an error. Starting `cmd.exe` by hand would quote the arguments
+by the standard C runtime rules instead, which `cmd.exe` does not follow: that is the fault risk
+R-3 named. The same documentation says this batch handling "may be removed in the future", so an
+infrastructure test launches a real `.cmd` fixture with spaced and quoted arguments; a change in
+the standard library then fails that test rather than a build in the field.

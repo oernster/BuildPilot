@@ -1,0 +1,18 @@
+[package]
+name = "buildpilot"
+# Stamped from VERSION by the build script; tests/structural checks the two agree (SRS OQ-12).
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+description = "A build flight deck: remembers, launches, monitors and stops build scripts."
+repository = "https://github.com/oernster/BuildPilot"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[lints.rust]
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
