@@ -34,6 +34,7 @@ impl App {
     /// Adds an operation as the bottom row and saves (CFG-001).
     pub fn add(&mut self, spec: OperationSpec) -> Result<OperationId, AppError> {
         let config = OperationConfig::try_from(spec)?;
+        self.check_environment(&config)?;
         let id = self.ports.ids.next_id();
         let config = self.settle_icon(&id, config, None)?;
         self.record_icon_status(&id, config.icon());
@@ -52,6 +53,7 @@ impl App {
             .ok_or_else(|| DeckError::NotFound(id.clone()))?;
         let current = self.deck.operations()[index].config().clone();
         let config = OperationConfig::try_from(spec)?;
+        self.check_environment(&config)?;
         let config = self.settle_icon(id, config, Some(current.icon()))?;
         let applies_next_run = self.is_running(id) && current.differs_in_execution(&config);
         self.record_icon_status(id, config.icon());

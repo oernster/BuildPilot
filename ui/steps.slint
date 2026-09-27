@@ -1,0 +1,88 @@
+// The operation dialog's steps (STEP-008) and environment (ENV-002). The state lives in a
+// global so the main window carries none of it; Rust fills it and answers the callbacks.
+
+import { ComboBox } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { TextButton, Field } from "widgets.slint";
+
+export global StepEditor {
+    // `1. buildexe.py` per step, in run order.
+    in property <[string]> labels;
+    // The selected step, whose script and arguments the dialog's fields show.
+    in property <int> selected;
+    // Several environments were found, so the operator picks one.
+    in property <bool> choose-environment;
+    in property <[string]> environments;
+    in-out property <string> environment;
+    // One line about the environment when there is nothing to choose; empty for none.
+    in property <string> environment-note;
+    callback select(int);
+    callback add();
+    callback remove();
+    callback up();
+    callback down();
+}
+
+export component StepsField inherits HorizontalLayout {
+    spacing: Theme.gap;
+    VerticalLayout {
+        horizontal-stretch: 1;
+        spacing: Theme.gap;
+        for label[index] in StepEditor.labels: TextButton {
+            text: label;
+            label: "Step " + label;
+            checked: index == StepEditor.selected;
+            in-dialog: true;
+            clicked => { StepEditor.select(index); }
+        }
+    }
+    VerticalLayout {
+        alignment: start;
+        spacing: Theme.gap;
+        TextButton {
+            text: "Add step";
+            label: "Add a step after the last";
+            in-dialog: true;
+            clicked => { StepEditor.add(); }
+        }
+        TextButton {
+            text: "Remove";
+            label: "Remove the selected step";
+            enabled: StepEditor.labels.length > 1;
+            in-dialog: true;
+            clicked => { StepEditor.remove(); }
+        }
+        TextButton {
+            text: "Up";
+            label: "Run the selected step earlier";
+            enabled: StepEditor.selected > 0;
+            in-dialog: true;
+            clicked => { StepEditor.up(); }
+        }
+        TextButton {
+            text: "Down";
+            label: "Run the selected step later";
+            enabled: StepEditor.selected < StepEditor.labels.length - 1;
+            in-dialog: true;
+            clicked => { StepEditor.down(); }
+        }
+    }
+}
+
+export component EnvironmentField inherits VerticalLayout {
+    spacing: Theme.gap;
+    if StepEditor.choose-environment: environment-field := Field {
+        focused: choice.has-focus;
+        label: "Environment";
+        choice := ComboBox {
+            model: StepEditor.environments;
+            current-value <=> StepEditor.environment;
+            accessible-label: environment-field.label;
+        }
+    }
+    if !StepEditor.choose-environment && StepEditor.environment-note != "": Text {
+        text: StepEditor.environment-note;
+        color: Theme.text-muted;
+        wrap: word-wrap;
+    }
+}

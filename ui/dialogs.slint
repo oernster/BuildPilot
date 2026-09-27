@@ -4,6 +4,7 @@
 import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Field } from "widgets.slint";
+import { StepEditor, StepsField, EnvironmentField } from "steps.slint";
 
 export component Modal inherits Rectangle {
     in property <length> panel-width: 560px;
@@ -85,12 +86,14 @@ export component OperationDialog inherits Modal {
         label: "Name";
         name-edit := LineEdit { text <=> root.name; accessible-label: name-field.label; }
     }
+    FieldLabel { text: "Steps, run in order"; }
+    StepsField { }
     FieldLabel { text: script-field.label; }
     HorizontalLayout {
         spacing: Theme.gap;
         script-field := Field {
             focused: script-edit.has-focus;
-            label: "Script";
+            label: "Script of step " + (StepEditor.selected + 1);
             script-edit := LineEdit { text <=> root.script; accessible-label: script-field.label; }
         }
         TextButton {
@@ -118,10 +121,12 @@ export component OperationDialog inherits Modal {
             clicked => { root.browse-folder(); }
         }
     }
+    if StepEditor.choose-environment: FieldLabel { text: "Environment"; }
+    EnvironmentField { }
     FieldLabel { text: arguments-field.label; }
     arguments-field := Field {
         focused: arguments-edit.has-focus;
-        label: "Arguments, one per line";
+        label: "Arguments of step " + (StepEditor.selected + 1) + ", one per line";
         arguments-edit := TextEdit {
             text <=> root.arguments;
             height: 76px;

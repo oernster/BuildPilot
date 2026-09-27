@@ -64,6 +64,15 @@ impl ScriptKind {
     }
 }
 
+/// How much steps of `kinds` depend on an environment: the most any one needs.
+pub fn need_of(kinds: impl IntoIterator<Item = ScriptKind>) -> Need {
+    kinds
+        .into_iter()
+        .map(ScriptKind::environment_need)
+        .max()
+        .unwrap_or(Need::None)
+}
+
 /// Which PowerShell is available to run `.ps1` scripts. Infrastructure finds out; the domain
 /// only decides what to do with the answer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -18,6 +18,7 @@ mod output_model;
 mod reading;
 mod row_sync;
 pub mod rows;
+mod step_editor;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -140,6 +141,7 @@ pub fn run(
     ui.apply_theme();
     actions::wire(&ui, &window);
     dialog::wire(&ui, &window);
+    step_editor::wire(&ui, &window);
     reading::wire_reading(&window.global::<Reading>());
     let _update_timers = help::wire(&ui, &window);
 
@@ -167,6 +169,11 @@ impl Ui {
         if let Some(window) = self.window.upgrade() {
             act(&window);
         }
+    }
+
+    /// `read` of the window; `None` once the window has gone.
+    fn with_window_value<T>(&self, read: impl FnOnce(&MainWindow) -> T) -> Option<T> {
+        self.window.upgrade().map(|window| read(&window))
     }
 
     /// Everything the window shows, brought up to date.

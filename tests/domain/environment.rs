@@ -2,8 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use buildpilot::domain::environment::{
-    EnvironmentProblem, Need, VariableEdits, environments_among, is_environment, join_path,
-    preselect, resolve, split_path, step_variables,
+    EnvironmentProblem, Need, Offer, VariableEdits, environments_among, is_environment, join_path,
+    offer, preselect, resolve, split_path, step_variables,
 };
 
 fn names(values: &[&str]) -> Vec<String> {
@@ -70,6 +70,29 @@ fn preselection() {
     assert_eq!(preselect(&names(&["venv", ".venv"])), None);
     assert_eq!(preselect(&names(&["a", "b"])), None);
     assert_eq!(preselect(&[]), None);
+}
+
+// ENV-002: what the dialog shows for each need and each number found.
+#[test]
+fn dialog_offers() {
+    let two = names(&["venv", "venv_smoke"]);
+    assert_eq!(offer(Need::None, &two), Offer::Nothing);
+    assert_eq!(offer(Need::Optional, &[]), Offer::Nothing);
+    assert!(matches!(
+        offer(Need::Required, &[]),
+        Offer::Note(note) if note.contains("will not run")
+    ));
+    assert_eq!(
+        offer(Need::Optional, &names(&["venv"])),
+        Offer::Note("Environment: venv".to_owned())
+    );
+    assert_eq!(
+        offer(Need::Required, &two),
+        Offer::Choose {
+            found: two.clone(),
+            preselected: Some("venv".to_owned())
+        }
+    );
 }
 
 // ENV-003 to ENV-005.

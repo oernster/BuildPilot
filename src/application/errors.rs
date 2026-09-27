@@ -33,6 +33,8 @@ pub enum AppError {
     ScriptMissing(PathBuf),
     /// Windows could not open or show something (NAV-004).
     Shell(String),
+    /// Several environments were found and none was chosen (ENV-002).
+    EnvironmentNotChosen(Vec<String>),
 }
 
 impl fmt::Display for AppError {
@@ -55,6 +57,11 @@ impl fmt::Display for AppError {
                 path.display()
             ),
             Self::Shell(message) => write!(f, "Windows could not open it: {message}"),
+            Self::EnvironmentNotChosen(found) => write!(
+                f,
+                "Choose the environment to use: this folder holds several ({}).",
+                found.join(", ")
+            ),
         }
     }
 }

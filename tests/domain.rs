@@ -15,6 +15,7 @@ mod domain {
     mod output;
     mod preferences;
     mod selection;
+    mod step;
     mod support;
     mod text;
 }

@@ -2,8 +2,8 @@
 
 use std::path::{Path, PathBuf};
 
-use buildpilot::application::App;
-use buildpilot::domain::environment::EnvironmentProblem;
+use buildpilot::application::{App, AppError};
+use buildpilot::domain::environment::{EnvironmentProblem, Offer};
 use buildpilot::domain::launch_plan::LaunchPlan;
 use buildpilot::domain::lifecycle::{Failure, LaunchError, RunState};
 use buildpilot::domain::operation::OperationId;
@@ -196,16 +196,19 @@ fn python_without_a_usable_environment_is_refused() {
         refusal(&scripts(), &[BUILD_EXE], None),
         environment_error(EnvironmentProblem::NoneFound)
     );
-    let two = scripts()
-        .with_environment(VENV)
-        .with_environment(r"C:\src\app\venv_smoke");
+    // ENV-005: a second environment that appeared after the operation was saved.
+    let world = scripts().with_environment(VENV);
+    let mut app = world.app();
+    let id = app.add(draft(&app, BUILD_EXE)).unwrap();
+    let world = world.with_environment(r"C:\src\app\venv_smoke");
+    app.run(&id).unwrap();
     assert_eq!(
-        refusal(&two, &[BUILD_EXE], None),
-        environment_error(EnvironmentProblem::Several(vec![
-            "venv".to_owned(),
-            "venv_smoke".to_owned()
-        ]))
+        app.run_state(&id),
+        &RunState::Failed(Failure::FailedToStart(environment_error(
+            EnvironmentProblem::Several(vec!["venv".to_owned(), "venv_smoke".to_owned()])
+        )))
     );
+    assert!(world.state.borrow().launches.is_empty());
     assert_eq!(
         refusal(
             &scripts().with_environment(VENV),
@@ -214,6 +217,57 @@ fn python_without_a_usable_environment_is_refused() {
         ),
         environment_error(EnvironmentProblem::NamedMissing("gone".to_owned()))
     );
+}
+
+// ENV-002: the dialog's offer follows the folder and the kinds of step typed so far.
+#[test]
+fn the_dialog_is_offered_what_the_folder_holds() {
+    let world = scripts()
+        .with_environment(VENV)
+        .with_environment(r"C:\src\app\venv_smoke");
+    let app = world.app();
+    let typed = |scripts: &[&str]| -> Vec<StepSpec> {
+        scripts
+            .iter()
+            .map(|script| StepSpec::for_script(script.as_ref()))
+            .collect()
+    };
+    assert_eq!(
+        app.environment_offer(Path::new(APP), &typed(&[BUILD_EXE])),
+        Offer::Choose {
+            found: vec!["venv".to_owned(), "venv_smoke".to_owned()],
+            preselected: Some("venv".to_owned())
+        }
+    );
+    assert_eq!(
+        app.environment_offer(Path::new(APP), &typed(&[BUILD_CMD, "half typed"])),
+        Offer::Nothing
+    );
+}
+
+// ENV-002: with several environments, saving waits for a choice.
+#[test]
+fn saving_needs_a_choice_among_several() {
+    let world = scripts()
+        .with_environment(VENV)
+        .with_environment(r"C:\src\app\venv_smoke");
+    let mut app = world.app();
+    let unchosen = draft(&app, BUILD_EXE);
+    let error = app.add(unchosen.clone()).unwrap_err();
+    assert_eq!(
+        error,
+        AppError::EnvironmentNotChosen(vec!["venv".to_owned(), "venv_smoke".to_owned()])
+    );
+    assert_eq!(
+        error.to_string(),
+        "Choose the environment to use: this folder holds several (venv, venv_smoke)."
+    );
+    let mut chosen = unchosen.clone();
+    chosen.environment = Some("venv".to_owned());
+    let id = app.add(chosen).unwrap();
+    assert!(app.edit(&id, unchosen).is_err());
+    // A .cmd step needs no environment, so several are no obstacle.
+    assert!(app.add(draft(&app, BUILD_CMD)).is_ok());
 }
 
 // ENV-003: the named environment is used when several exist.

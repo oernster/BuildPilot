@@ -6,24 +6,19 @@ use std::rc::Rc;
 use slint::{Image, SharedString};
 
 use crate::domain::launch_plan::ScriptKind;
-use crate::domain::operation::{
-    IconRef, OperationId, OperationSpec, format_argument_lines, parse_argument_lines,
-};
-use crate::domain::step::StepSpec;
+use crate::domain::operation::{IconRef, OperationId, OperationSpec};
+use crate::domain::step::StepList;
 
 use super::{MainWindow, Ui};
 
 /// Image types an icon may be (ICON-004).
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "ico"];
 
-/// Whether the dialog adds or edits; the icon it currently holds.
+/// Whether the dialog adds or edits; the icon and steps it currently holds.
 pub(super) struct DialogState {
     editing: Option<OperationId>,
     icon: IconRef,
-    /// The steps after the first and the chosen environment, which the dialog does not yet
-    /// show; carried so a save keeps them.
-    later_steps: Vec<StepSpec>,
-    environment: Option<String>,
+    pub(super) steps: StepList,
 }
 
 pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
@@ -52,6 +47,7 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
             this.with_window(|w| {
                 w.set_field_working_dir(SharedString::from(folder.display().to_string()))
             });
+            this.refresh_environment();
         }
     });
     let this = ui.clone();
@@ -72,8 +68,8 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     window.on_cancel_operation(move || this.close_dialog());
 }
 
-/// Asks for a build script, starting in `folder` when given (ADD-001).
-fn pick_script(folder: Option<&Path>) -> Option<PathBuf> {
+/// Asks for a build script, starting in `folder` when given (ADD-001, STEP-008).
+pub(super) fn pick_script(folder: Option<&Path>) -> Option<PathBuf> {
     let extensions: Vec<&str> = ScriptKind::supported_extensions().collect();
     let mut picker = rfd::FileDialog::new()
         .set_title("Choose a build script")
@@ -104,7 +100,7 @@ impl Ui {
             (operation.config().to_spec(), app.is_running(&id))
         };
         let note = if running {
-            "This operation is running. Changes to the script, folder or arguments take effect on its next run."
+            "This operation is running. Changes to its steps, folder or environment take effect on its next run."
                 .to_owned()
         } else {
             String::new()
@@ -120,26 +116,23 @@ impl Ui {
         save_label: &str,
         note: String,
     ) {
-        let mut steps = spec.steps.into_iter();
-        let first = steps.next().unwrap_or_default();
         self.with_window(|w| {
             w.set_operation_heading(SharedString::from(heading));
             w.set_operation_save_label(SharedString::from(save_label));
             w.set_field_name(SharedString::from(spec.name.as_str()));
-            w.set_field_script(SharedString::from(first.script_path.display().to_string()));
             w.set_field_working_dir(SharedString::from(spec.working_dir.display().to_string()));
-            w.set_field_arguments(SharedString::from(format_argument_lines(&first.arguments)));
             w.set_operation_note(SharedString::from(note));
             w.set_operation_error(SharedString::default());
-            w.set_show_operation_dialog(true);
         });
         *self.dialog.borrow_mut() = Some(DialogState {
             editing,
             icon: IconRef::Placeholder,
-            later_steps: steps.collect(),
-            environment: spec.environment,
+            steps: StepList::new(spec.steps),
         });
+        self.show_steps();
+        self.reset_environment(spec.environment);
         self.set_dialog_icon(spec.icon);
+        self.with_window(|w| w.set_show_operation_dialog(true));
     }
 
     fn set_dialog_icon(&self, icon: IconRef) {
@@ -180,27 +173,23 @@ impl Ui {
         let Some(window) = self.window.upgrade() else {
             return;
         };
-        let Some((editing, icon, later_steps, environment)) =
-            self.dialog.borrow().as_ref().map(|state| {
-                (
-                    state.editing.clone(),
-                    state.icon.clone(),
-                    state.later_steps.clone(),
-                    state.environment.clone(),
-                )
-            })
-        else {
+        self.keep_typed_step();
+        // The folder may have been typed rather than browsed: the choice must match it now.
+        self.refresh_environment();
+        let Some((editing, icon, steps)) = self.dialog.borrow().as_ref().map(|state| {
+            (
+                state.editing.clone(),
+                state.icon.clone(),
+                state.steps.steps().to_vec(),
+            )
+        }) else {
             return;
-        };
-        let first = StepSpec {
-            script_path: PathBuf::from(window.get_field_script().trim()),
-            arguments: parse_argument_lines(&window.get_field_arguments()),
         };
         let spec = OperationSpec {
             name: window.get_field_name().to_string(),
-            steps: std::iter::once(first).chain(later_steps).collect(),
+            steps,
             working_dir: PathBuf::from(window.get_field_working_dir().trim()),
-            environment,
+            environment: self.chosen_environment(),
             icon,
         };
         let outcome = match &editing {

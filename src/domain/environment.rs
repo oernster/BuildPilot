@@ -76,6 +76,38 @@ pub fn preselect(found: &[String]) -> Option<String> {
     }
 }
 
+/// What the operation dialog shows about the environment (ENV-002).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Offer {
+    /// Nothing: no step is activated; else only `.ps1` steps are, with none to use.
+    Nothing,
+    /// A line of text, for one environment or for a `.py` step with none.
+    Note(String),
+    /// A choice among several, with the one to start on where there is one.
+    Choose {
+        /// The environments found.
+        found: Vec<String>,
+        /// The one preselected (ENV-002).
+        preselected: Option<String>,
+    },
+}
+
+/// The offer for steps needing `need` in a folder holding `found`.
+pub fn offer(need: Need, found: &[String]) -> Offer {
+    match (need, found) {
+        (Need::None, _) | (Need::Optional, []) => Offer::Nothing,
+        (Need::Required, []) => Offer::Note(
+            "No Python environment in this folder: the .py steps will not run until one exists."
+                .to_owned(),
+        ),
+        (_, [only]) => Offer::Note(format!("Environment: {only}")),
+        (_, several) => Offer::Choose {
+            found: several.to_vec(),
+            preselected: preselect(several),
+        },
+    }
+}
+
 /// How much an operation's steps depend on an environment, least first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Need {

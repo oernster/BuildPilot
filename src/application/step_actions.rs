@@ -2,16 +2,45 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::domain::environment::{Need, environments_among, resolve, step_variables};
-use crate::domain::launch_plan::{LaunchPlan, ScriptKind, plan};
+use crate::domain::environment::{Need, Offer, environments_among, offer, resolve, step_variables};
+use crate::domain::launch_plan::{LaunchPlan, ScriptKind, need_of, plan};
 use crate::domain::lifecycle::LaunchError;
 use crate::domain::operation::OperationConfig;
 use crate::domain::output::Stream;
+use crate::domain::step::StepSpec;
 
-use super::App;
 use super::ports::{ProcessHandle, RunKey};
+use super::{App, AppError};
 
 impl App {
+    /// The environments directly inside `dir` (ENV-001), as the dialog and a run both see them.
+    pub(super) fn environments_found(&self, dir: &Path) -> Vec<String> {
+        let paths = &self.ports.paths;
+        environments_among(dir, &paths.subfolders(dir), |path| paths.is_file(path))
+    }
+
+    /// What the dialog shows about the environment for `steps` run in `working_dir` (ENV-002).
+    pub fn environment_offer(&self, working_dir: &Path, steps: &[StepSpec]) -> Offer {
+        // A step of no known kind yet (still being typed) needs nothing.
+        let kinds = steps
+            .iter()
+            .filter_map(|step| ScriptKind::of(&step.script_path));
+        offer(need_of(kinds), &self.environments_found(working_dir))
+    }
+
+    /// Refuses a configuration that leaves open which of several environments to use
+    /// (ENV-002).
+    pub(super) fn check_environment(&self, config: &OperationConfig) -> Result<(), AppError> {
+        let found = self.environments_found(config.working_dir());
+        let unchosen = config.environment_need() != Need::None
+            && config.environment().is_none()
+            && found.len() > 1;
+        if unchosen {
+            return Err(AppError::EnvironmentNotChosen(found));
+        }
+        Ok(())
+    }
+
     /// Everything a run needs, checked before step 1 starts so a missing later script is not
     /// found after the earlier steps have run (STEP-005). Answers the environment folder every
     /// step uses (ENV-003), if any.
@@ -30,7 +59,7 @@ impl App {
         if !paths.is_dir(dir) {
             return Err(LaunchError::WorkingDirNotFound(dir.to_path_buf()));
         }
-        let found = environments_among(dir, &paths.subfolders(dir), |path| paths.is_file(path));
+        let found = self.environments_found(dir);
         resolve(config.environment_need(), config.environment(), &found)
             .map(|name| name.map(|name| dir.join(name)))
             .map_err(|problem| LaunchError::Environment {

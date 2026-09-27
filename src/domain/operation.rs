@@ -8,7 +8,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use super::environment::Need;
-use super::launch_plan::ScriptKind;
+use super::launch_plan::{ScriptKind, need_of};
 use super::step::{Step, StepSpec};
 
 /// Stable identity of an operation (CFG-003). Assigned once by infrastructure, never reused.
@@ -101,11 +101,7 @@ impl OperationConfig {
     }
     /// How much the steps depend on an environment: the most any one step needs.
     pub fn environment_need(&self) -> Need {
-        self.steps
-            .iter()
-            .map(|step| step.kind().environment_need())
-            .max()
-            .unwrap_or(Need::None)
+        need_of(self.steps.iter().map(Step::kind))
     }
     /// The same configuration with a different icon; an icon never affects a run.
     pub fn with_icon(&self, icon: IconRef) -> Self {
