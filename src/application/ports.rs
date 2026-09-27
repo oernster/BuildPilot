@@ -45,6 +45,14 @@ pub enum LoadProblem {
     SetAside(PathBuf),
     /// The file was written by a newer BuildPilot, so it will not be overwritten (CFG-009).
     NewerSchema,
+    /// The file exists but could not be read or set aside; it is left untouched and changes
+    /// are not saved this session.
+    Unreadable {
+        /// The config file.
+        path: PathBuf,
+        /// The operating system's message.
+        message: String,
+    },
 }
 
 /// A failed write (CFG-008).

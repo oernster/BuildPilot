@@ -1,27 +1,49 @@
-use buildpilot::domain::text::{decode_line, strip_ansi};
+use buildpilot::domain::text::{decode_line, lossy_utf8, strip_ansi};
+
+fn decode(bytes: &[u8]) -> String {
+    decode_line(bytes, lossy_utf8)
+}
+
+/// A stand-in for a code-page decoder: reads every byte as the Latin-1 character of that value.
+fn latin1(bytes: &[u8]) -> String {
+    bytes.iter().map(|&byte| char::from(byte)).collect()
+}
 
 // OUT-008
 #[test]
 fn plain_text_passes_through() {
-    assert_eq!(decode_line(b"Compiling buildpilot"), "Compiling buildpilot");
-    assert_eq!(decode_line("caf\u{e9}".as_bytes()), "caf\u{e9}");
+    assert_eq!(decode(b"Compiling buildpilot"), "Compiling buildpilot");
+    assert_eq!(decode("caf\u{e9}".as_bytes()), "caf\u{e9}");
 }
 
-// OUT-008: invalid UTF-8 becomes U+FFFD.
+// OUT-008: without a better decoder, invalid UTF-8 becomes U+FFFD.
 #[test]
 fn invalid_bytes_are_replaced() {
-    assert_eq!(decode_line(b"bad \xff byte"), "bad \u{fffd} byte");
+    assert_eq!(decode(b"bad \xff byte"), "bad \u{fffd} byte");
+}
+
+// Amendment 2: a line that is not UTF-8 goes to the fallback; a line that is never does.
+#[test]
+fn only_invalid_utf8_reaches_the_fallback() {
+    assert_eq!(decode_line(b"caf\xe9\r", latin1), "caf\u{e9}");
+    assert_eq!(decode_line("caf\u{e9}".as_bytes(), latin1), "caf\u{e9}");
+    assert_eq!(decode_line(b"\x1b[31mcaf\xe9\x1b[0m", latin1), "caf\u{e9}");
+}
+
+#[test]
+fn lossy_utf8_replaces_invalid_bytes() {
+    assert_eq!(lossy_utf8(b"a\xffb"), "a\u{fffd}b");
 }
 
 #[test]
 fn trailing_carriage_return_is_removed() {
-    assert_eq!(decode_line(b"windows line\r"), "windows line");
+    assert_eq!(decode(b"windows line\r"), "windows line");
 }
 
 #[test]
 fn rewritten_line_shows_its_final_value() {
-    assert_eq!(decode_line(b"10%\r50%\r100%"), "100%");
-    assert_eq!(decode_line(b"10%\r100%\r"), "100%");
+    assert_eq!(decode(b"10%\r50%\r100%"), "100%");
+    assert_eq!(decode(b"10%\r100%\r"), "100%");
 }
 
 // OUT-008: colour codes removed.
@@ -51,5 +73,5 @@ fn short_and_truncated_escapes_are_removed() {
 
 #[test]
 fn escapes_are_removed_after_decoding() {
-    assert_eq!(decode_line(b"\x1b[32mok\x1b[0m\r"), "ok");
+    assert_eq!(decode(b"\x1b[32mok\x1b[0m\r"), "ok");
 }

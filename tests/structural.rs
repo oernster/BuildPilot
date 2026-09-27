@@ -26,6 +26,7 @@ const PURE_LAYERS: &[(&str, &[&str])] = &[
             "std::fmt",
             "std::ops",
             "std::path",
+            "std::str",
             "std::time::Duration",
         ],
     ),
@@ -51,7 +52,8 @@ const CLOCK_READS: &[&str] = &["Instant::now", "SystemTime"];
 const FORBIDDEN_DEPENDENCIES: &[(&str, &[&str])] = &[
     ("domain", &["application", "infrastructure", "ui"]),
     ("application", &["infrastructure", "ui"]),
-    ("infrastructure", &["application", "ui"]),
+    // Infrastructure implements the application's port traits, so it may name the application.
+    ("infrastructure", &["ui"]),
 ];
 
 fn rust_files(dir: &Path) -> Vec<PathBuf> {
@@ -207,6 +209,33 @@ fn no_module_exceeds_the_line_limit_or_sits_in_the_danger_band() {
     assert!(
         violations.is_empty(),
         "module size:\n{}",
+        violations.join("\n")
+    );
+}
+
+/// The one folder whose files may contain `unsafe` code.
+const UNSAFE_HOME: &str = "src/infrastructure/win32";
+/// How `unsafe` code begins.
+const UNSAFE_MARKERS: &[&str] = &["unsafe {", "unsafe fn", "unsafe impl", "unsafe extern"];
+
+#[test]
+fn unsafe_code_lives_only_in_win32() {
+    let home = Path::new(ROOT).join(UNSAFE_HOME);
+    let mut violations = Vec::new();
+    for file in rust_files(&Path::new(ROOT).join("src")) {
+        if file.starts_with(&home) {
+            continue;
+        }
+        let source = read(&file);
+        for marker in UNSAFE_MARKERS {
+            if source.contains(marker) {
+                violations.push(format!("{}: {marker}", relative(&file)));
+            }
+        }
+    }
+    assert!(
+        violations.is_empty(),
+        "unsafe code outside {UNSAFE_HOME}:\n{}",
         violations.join("\n")
     );
 }

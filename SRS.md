@@ -423,8 +423,10 @@ Source: spec §11. Verified by: `domain::follow` state tests; Manual.
 **OUT-007 (M) stderr marked.** The tray shall mark stderr lines with a gutter marker as well as a
 colour. Source: spec §11.1, §19.
 
-**OUT-008 (M) Text decoding.** The output reader shall decode output as UTF-8, replacing invalid
-bytes with U+FFFD. It shall remove ANSI escape sequences. Verified by: `domain::text` tests.
+**OUT-008 (M) Text decoding.** The output reader shall decode each line as UTF-8 when it is valid
+UTF-8; otherwise it shall decode the line in the Windows OEM code page (Amendment 2). It shall
+remove ANSI escape sequences. Verified by: `domain::text` tests; `infrastructure::process` tests
+reading a folder name containing `é`.
 
 **OUT-009 (M) Collapse and resize.** The operator shall be able to collapse, expand and resize
 the tray. Collapsing it shall not affect any run.
@@ -614,3 +616,13 @@ by the standard C runtime rules instead, which `cmd.exe` does not follow: that i
 R-3 named. The same documentation says this batch handling "may be removed in the future", so an
 infrastructure test launches a real `.cmd` fixture with spaced and quoted arguments; a change in
 the standard library then fails that test rather than a build in the field.
+
+**Amendment 2 (2026-09-27): output that is not UTF-8 is read in the OEM code page.** Changes
+OUT-008, which said to decode as UTF-8 and replace invalid bytes with U+FFFD.
+
+Reason, measured on the reference machine (ANSI code page 1252, OEM code page 850): started
+hidden with piped output, `pwsh.exe`, `powershell.exe` and `cmd.exe` all wrote `é` as the single
+byte 0x82, which is `é` in code page 850 and invalid as UTF-8. Decoding it as UTF-8 showed U+FFFD
+in place of every accented character, including in paths. Tools such as Cargo write UTF-8, so no
+single encoding fits every script. Each line is therefore decoded as UTF-8 when it is valid UTF-8
+and in the OEM code page otherwise; a pure ASCII line reads the same either way.
