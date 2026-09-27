@@ -94,6 +94,7 @@ export component MainWindow inherits Window {
     callback help(string);
     callback close-help();
     callback open-repository();
+    callback open-donation();
     callback download-update();
     callback skip-update();
     callback close-update();
@@ -231,6 +232,13 @@ export component MainWindow inherits Window {
                     color: Theme.text;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
+                }
+                // UI-014: the picture says nothing by itself, so its name says where it goes.
+                IconButton {
+                    icon: @image-url("../assets/ui/donate.png");
+                    label: "Buy the author a drink (opens your browser)";
+                    tooltip-below: true;
+                    activated => { root.open-donation(); }
                 }
                 IconButton {
                     icon: Theme.dark ? @image-url("../assets/ui/light-mode.png")

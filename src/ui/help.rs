@@ -34,6 +34,8 @@ pub struct HelpFacts {
     pub copyright: &'static str,
     /// The repository's address.
     pub repository: &'static str,
+    /// The donation page's address (UI-014).
+    pub donate: &'static str,
     /// Every crate built in (UI-009).
     pub credits: Vec<Credit>,
     /// BuildPilot's licence text.
@@ -123,6 +125,12 @@ fn wire_menu(ui: &Rc<Ui>, help: &Rc<Help>, window: &MainWindow) {
             .app
             .borrow()
             .open_address(this.environment.help.repository);
+        this.report(opened);
+    });
+    let this = ui.clone();
+    // UI-014: a browser that will not open is reported as a notice, never silence.
+    window.on_open_donation(move || {
+        let opened = this.app.borrow().open_address(this.environment.help.donate);
         this.report(opened);
     });
 }

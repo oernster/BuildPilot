@@ -227,8 +227,9 @@ more than once, since two operations may differ only in arguments.
 **ICON-001 (M) Discovery convention.** When a script or a folder is chosen, the icon resolver
 shall look in the script's directory (or the folder) for, in order: `assets\application-icon.png`;
 `assets\application-icon.ico`; a PNG named after the directory itself, e.g.
-`Stellody\Stellody.png`. The first that exists and holds an image is the operation's icon.
-Source: spec §5.1; the ICO and folder-named entries, owner 2026-09-27.
+`Stellody\Stellody.png`; then `docs\assets\` holding the same name as a PNG, then as an ICO. The
+first that exists and holds an image is the operation's icon.
+Source: spec §5.1; the ICO, folder-named and `docs\assets` entries, owner 2026-09-27.
 Verified by: `infrastructure::icons` tests `finds_conventional_icon`,
 `conventions_are_tried_in_order`, `only_the_folder_named_png_is_found`,
 `ignores_undecodable_file`, `absent_icon_gives_none`.
@@ -570,6 +571,15 @@ measured by the owner 2026-09-27 on an installed build with 20 rows, a drag ran 
 second with every image drawn from its 1254 px master and at 60 with the copies. Verified by:
 `assets` test that every image the Slint files name is a copy in `assets/ui` of at most 256 px;
 Manual for the frame rate.
+
+**UI-014 (S) Donate.** The toolbar shall carry a donate button, immediately left of the theme
+toggle, drawn from `assets\donate.png` at the toolbar's own icon size, named and tooltipped "Buy
+the author a drink (opens your browser)". Activating it shall hand
+`https://www.paypal.com/ncp/payment/XC9S6VZ96K9Q4` to Windows to open in the operator's browser;
+BuildPilot never fetches it. A browser that will not open is reported as a notice. Nothing is
+held back behind a donation. Source: owner, 2026-09-27; the house donate model. Verified by:
+`infrastructure::identity` test pinning the address; `keyboard` and `geometry` toolbar tests;
+Manual for the browser.
 
 **UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark), the data folder
 path with an Open Folder button and the operator's host table (HOST-001). The theme button shown

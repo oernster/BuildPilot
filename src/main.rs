@@ -15,7 +15,9 @@ use buildpilot::infrastructure::build_info::{CREDITS, LICENCE};
 use buildpilot::infrastructure::config_store::JsonConfigStore;
 use buildpilot::infrastructure::icons::FsIconLibrary;
 use buildpilot::infrastructure::launcher::{EventSink, WindowsLauncher};
-use buildpilot::infrastructure::locations::{AUTHOR, COPYRIGHT, PRODUCT_NAME, data_folder};
+use buildpilot::infrastructure::locations::{
+    AUTHOR, COPYRIGHT, DONATE_URL, PRODUCT_NAME, data_folder,
+};
 use buildpilot::infrastructure::log_file::LogFile;
 use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::releases::{GitHubReleases, REPOSITORY};
@@ -95,6 +97,7 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
         author: AUTHOR,
         copyright: COPYRIGHT,
         repository: REPOSITORY,
+        donate: DONATE_URL,
         credits: credits::parse(CREDITS),
         licence: LICENCE,
         releases: Arc::new(GitHubReleases::new(PRODUCT_NAME, version)),

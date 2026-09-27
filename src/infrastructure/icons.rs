@@ -12,8 +12,14 @@ use crate::domain::operation::OperationId;
 pub enum IconConvention {
     /// A fixed path beneath the folder, one part each.
     Beneath(&'static [&'static str]),
-    /// A file in the folder named after the folder, with this extension: `Stellody\Stellody.png`.
-    NamedForFolder(&'static str),
+    /// A file named after the folder with `extension`, in the subfolder `within` (one part each;
+    /// none for the folder itself): `Stellody\Stellody.png`, `Stellody\docs\assets\Stellody.ico`.
+    NamedForFolder {
+        /// The subfolder it sits in.
+        within: &'static [&'static str],
+        /// Its extension.
+        extension: &'static str,
+    },
 }
 
 impl IconConvention {
@@ -21,20 +27,23 @@ impl IconConvention {
     /// which has no name.
     pub fn candidate(self, dir: &Path) -> Option<PathBuf> {
         match self {
-            Self::Beneath(parts) => Some(
-                parts
-                    .iter()
-                    .fold(dir.to_path_buf(), |path, part| path.join(part)),
-            ),
-            Self::NamedForFolder(extension) => {
+            Self::Beneath(parts) => Some(beneath(dir, parts)),
+            Self::NamedForFolder { within, extension } => {
                 // Appended, not set: a folder named `my.app` looks for `my.app.png`.
                 let mut file = dir.file_name()?.to_os_string();
                 file.push(".");
                 file.push(extension);
-                Some(dir.join(file))
+                Some(beneath(dir, within).join(file))
             }
         }
     }
+}
+
+/// `dir` with `parts` joined beneath it.
+fn beneath(dir: &Path, parts: &[&str]) -> PathBuf {
+    parts
+        .iter()
+        .fold(dir.to_path_buf(), |path, part| path.join(part))
 }
 
 /// Where to look for an icon beside a script, in order; the first readable image wins. A new
@@ -42,7 +51,18 @@ impl IconConvention {
 pub const ICON_CONVENTIONS: &[IconConvention] = &[
     IconConvention::Beneath(&["assets", "application-icon.png"]),
     IconConvention::Beneath(&["assets", "application-icon.ico"]),
-    IconConvention::NamedForFolder("png"),
+    IconConvention::NamedForFolder {
+        within: &[],
+        extension: "png",
+    },
+    IconConvention::NamedForFolder {
+        within: &["docs", "assets"],
+        extension: "png",
+    },
+    IconConvention::NamedForFolder {
+        within: &["docs", "assets"],
+        extension: "ico",
+    },
 ];
 
 /// The file signatures of the image types an icon may be: PNG, JPEG, ICO.

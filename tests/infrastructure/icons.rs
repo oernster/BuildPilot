@@ -35,7 +35,8 @@ fn finds_conventional_icon() {
 }
 
 // ICON-001, ICON-003: the conventions in order: assets\application-icon.png, then .ico, then a
-// PNG named after the folder in the folder itself. The first readable image wins.
+// PNG named after the folder in the folder itself, then docs\assets\<folder>.png, then .ico.
+// The first readable image wins.
 #[test]
 fn conventions_are_tried_in_order() {
     let root = tempfile::tempdir().unwrap();
@@ -43,8 +44,14 @@ fn conventions_are_tried_in_order() {
     let png = app.join("assets").join("application-icon.png");
     let ico = app.join("assets").join("application-icon.ico");
     let named = app.join("Stellody.png");
+    let site_png = app.join("docs").join("assets").join("Stellody.png");
+    let site_ico = app.join("docs").join("assets").join("Stellody.ico");
     let library = library(root.path());
     assert_eq!(library.discover(&app), None);
+    write(&site_ico, ICO);
+    assert_eq!(library.discover(&app), Some(site_ico));
+    write(&site_png, PNG);
+    assert_eq!(library.discover(&app), Some(site_png));
     write(&named, PNG);
     assert_eq!(library.discover(&app), Some(named.clone()));
     write(&ico, ICO);
@@ -71,7 +78,11 @@ fn only_the_folder_named_png_is_found() {
         Some(dotted.join("my.app.png"))
     );
     assert_eq!(
-        IconConvention::NamedForFolder("png").candidate(Path::new(r"C:\")),
+        IconConvention::NamedForFolder {
+            within: &[],
+            extension: "png",
+        }
+        .candidate(Path::new(r"C:\")),
         None
     );
 }

@@ -5,8 +5,9 @@ use slint::platform::{Key, WindowEvent};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 /// The toolbar, left to right.
-pub const TOOLBAR: [&str; 4] = [
+pub const TOOLBAR: [&str; 5] = [
     "Add a build script",
+    "Buy the author a drink (opens your browser)",
     "Switch to dark theme",
     "Settings",
     "Help",

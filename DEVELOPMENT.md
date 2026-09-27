@@ -113,8 +113,10 @@ python tools/uiicons.py
 
 The interface never draws a master: drawn from those 1254 pixel files, twenty rows held a drag at
 20 frames a second. The script writes a small copy of each master to `assets\ui`, twice the
-largest size the interface draws it (128 pixels; 256 for the application icon). The `assets`
-test refuses a Slint file that names anything else. It needs Pillow.
+largest size the interface draws it (128 pixels; 256 for the application icon). `donate.png` is
+a picture rather than an icon: it is cropped to its drawn pixels and scaled by height alone to
+196 pixels, four times the toolbar's 49 pixel box. The `assets` test refuses a Slint file that
+names anything else. It needs Pillow.
 
 ## Running from source
 

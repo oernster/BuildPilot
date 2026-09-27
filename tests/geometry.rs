@@ -15,8 +15,9 @@ const HEIGHT: f32 = 480.0;
 /// Half a logical pixel: rounding in layout never moves anything further than this.
 const TOLERANCE: f32 = 0.5;
 /// The toolbar, left to right.
-const TOOLBAR: [&str; 4] = [
+const TOOLBAR: [&str; 5] = [
     "Add a build script",
+    "Buy the author a drink (opens your browser)",
     "Switch to dark theme",
     "Settings",
     "Help",

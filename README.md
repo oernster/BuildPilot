@@ -110,6 +110,12 @@ program to `dist\BuildPilotSetup.exe`.
 [DEVELOPMENT.md](DEVELOPMENT.md) sets up a machine to build it;
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together and why.
 
+## Supporting the project
+
+BuildPilot is free and stays free: there is no paid tier, no licence key and no feature held
+back behind a donation. The toolbar's drink button opens the donation page in your browser;
+BuildPilot hands the address to Windows and sends nothing itself.
+
 ## Licence
 
 BuildPilot is distributed under the GNU General Public License v3.0; see [LICENSE](LICENSE).

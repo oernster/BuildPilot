@@ -20,15 +20,25 @@ COPIES = MASTERS / "ui"
 DEFAULT_SIZE = 128
 # The application icon is also setup's mark, drawn at 126 px.
 SIZES = {"application-icon.png": 256}
+# Pictures rather than icons (UI-014): cropped to their drawn pixels, then scaled by height
+# alone to four times the 49 px box a toolbar button draws them in, so the detail stays
+# readable under display scaling.
+PICTURE_HEIGHTS = {"donate.png": 196}
 
 
 def main() -> None:
     COPIES.mkdir(exist_ok=True)
     for master in sorted(MASTERS.glob("*.png")):
-        size = SIZES.get(master.name, DEFAULT_SIZE)
         with Image.open(master) as image:
             copy = image.convert("RGBA")
-            copy.thumbnail((size, size), Image.LANCZOS)
+            if master.name in PICTURE_HEIGHTS:
+                copy = copy.crop(copy.getbbox())
+                height = PICTURE_HEIGHTS[master.name]
+                width = round(copy.width * height / copy.height)
+                copy = copy.resize((width, height), Image.LANCZOS)
+            else:
+                size = SIZES.get(master.name, DEFAULT_SIZE)
+                copy.thumbnail((size, size), Image.LANCZOS)
             copy.save(COPIES / master.name, optimize=True)
         print(f"wrote {(COPIES / master.name).relative_to(ROOT)}: {copy.size[0]}x{copy.size[1]}")
 

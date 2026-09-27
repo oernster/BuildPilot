@@ -20,7 +20,8 @@ fn a_dialog_owns_the_ring_while_open() {
     let opener = window.as_weak();
     window.on_open_settings(move || opener.upgrade().unwrap().set_show_settings(true));
 
-    walk(&window, Key::Tab, 3);
+    let settings = TOOLBAR.iter().position(|stop| *stop == "Settings").unwrap();
+    walk(&window, Key::Tab, settings + 1);
     assert_eq!(focused(&window), "Settings");
     press(&window, " ");
     assert_eq!(focused(&window), "Light theme");
