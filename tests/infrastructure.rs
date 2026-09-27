@@ -5,6 +5,8 @@ mod infrastructure {
     mod config_store;
     mod icons;
     #[cfg(windows)]
+    mod instance;
+    #[cfg(windows)]
     mod process;
     mod system;
 }

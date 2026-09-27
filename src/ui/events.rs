@@ -1,4 +1,5 @@
-//! Getting run events from the launcher's threads onto the UI thread without flooding it.
+//! Getting work from other threads onto the UI thread: run events from the launcher's threads
+//! (without flooding it) plus a later BuildPilot's summons (DATA-001).
 //!
 //! The first event after a drain schedules one drain on the event loop; events arriving before
 //! it runs ride along. Measured in spike R-2: 50,000 lines in about 0.75 s produced roughly 4,000
@@ -9,9 +10,24 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+/// Work another thread can ask the UI thread to do.
+#[derive(Clone, Copy)]
+pub enum Hook {
+    /// Drain the waiting run events.
+    Drain,
+    /// Bring the window forward.
+    Summon,
+}
+
+/// How many hooks there are.
+const HOOK_COUNT: usize = 2;
+
+/// What one hook does, once installed.
+type Act = Option<Rc<dyn Fn()>>;
+
 thread_local! {
-    /// The UI thread's drain, installed by `install_drain`.
-    static DRAIN: RefCell<Option<Rc<dyn Fn()>>> = RefCell::new(None);
+    /// The UI thread's hooks, installed by `install`.
+    static HOOKS: RefCell<[Act; HOOK_COUNT]> = RefCell::new([None, None]);
 }
 
 /// Wakes the UI thread when events are waiting.
@@ -31,8 +47,7 @@ impl Waker {
         let pending = self.pending.clone();
         Arc::new(move || {
             if !pending.swap(true, Ordering::AcqRel) {
-                // Fails only once the event loop has ended, when nothing is left to wake.
-                let _ = slint::invoke_from_event_loop(run_drain);
+                schedule(Hook::Drain);
             }
         })
     }
@@ -43,14 +58,20 @@ impl Waker {
     }
 }
 
-/// Installs the function that drains events on this (the UI) thread.
-pub fn install_drain(drain: Rc<dyn Fn()>) {
-    DRAIN.with(|slot| *slot.borrow_mut() = Some(drain));
+/// Runs `hook` on the UI thread. Fails only once the event loop has ended, when nothing is left
+/// to do it for.
+pub fn schedule(hook: Hook) {
+    let _ = slint::invoke_from_event_loop(move || run(hook));
 }
 
-fn run_drain() {
-    let drain = DRAIN.with(|slot| slot.borrow().clone());
-    if let Some(drain) = drain {
-        drain();
+/// Installs what `hook` does on this (the UI) thread.
+pub fn install(hook: Hook, act: Rc<dyn Fn()>) {
+    HOOKS.with(|hooks| hooks.borrow_mut()[hook as usize] = Some(act));
+}
+
+fn run(hook: Hook) {
+    let act = HOOKS.with(|hooks| hooks.borrow()[hook as usize].clone());
+    if let Some(act) = act {
+        act();
     }
 }

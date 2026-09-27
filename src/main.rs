@@ -14,6 +14,7 @@ use buildpilot::infrastructure::launcher::{EventSink, WindowsLauncher};
 use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::shell::ExplorerShell;
 use buildpilot::infrastructure::system::{FsPaths, SystemClock, UuidIds};
+use buildpilot::infrastructure::win32::instance::{self, Claim};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::ui::{self, Environment, Waker};
 
@@ -39,6 +40,13 @@ fn data_folder() -> PathBuf {
 
 fn main() {
     let data = data_folder();
+    // DATA-001, settled before the config is read so there is only ever one writer.
+    match instance::claim(&instance::instance_key(&data)) {
+        Ok(Claim::Running) => return,
+        Ok(Claim::First(instance)) => instance.on_summons(ui::summons()),
+        // Nothing to compare against, so this run goes ahead without the guard.
+        Err(error) => eprintln!("BuildPilot could not check for another instance: {error}"),
+    }
     let (sender, events) = mpsc::channel();
     let waker = Waker::new();
     let ports = Ports {
@@ -57,6 +65,7 @@ fn main() {
     let environment = Environment {
         version: env!("BUILDPILOT_VERSION"),
         windows_uses_dark: windows_uses_dark(),
+        bring_forward: instance::bring_forward,
     };
     if let Err(error) = ui::run(app, events, waker, environment) {
         // No window could open, so there is nowhere else to say it.

@@ -19,11 +19,13 @@ pub mod rows;
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
+use std::num::NonZeroIsize;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
+use raw_window_handle::{HasWindowHandle, RawWindowHandle};
 use slint::{
     CloseRequestResponse, ComponentHandle, Image, ModelRc, PhysicalPosition, PhysicalSize,
     SharedString, Timer, TimerMode, VecModel,
@@ -33,6 +35,7 @@ use crate::application::{App, AppError, RunEvent};
 use crate::domain::follow::Follow;
 use crate::domain::operation::OperationId;
 
+use events::Hook;
 pub use events::Waker;
 use output_model::OutputModel;
 
@@ -47,6 +50,13 @@ pub struct Environment {
     pub version: &'static str,
     /// Whether Windows currently asks apps to be dark.
     pub windows_uses_dark: bool,
+    /// Restores and raises a native window, given its handle (DATA-001).
+    pub bring_forward: fn(NonZeroIsize),
+}
+
+/// What a later BuildPilot's summons calls, from any thread: brings the window forward.
+pub fn summons() -> impl Fn() + Send + 'static {
+    || events::schedule(Hook::Summon)
 }
 
 /// A question waiting on the confirm dialog.
@@ -125,7 +135,9 @@ pub fn run(
     dialog::wire(&ui, &window);
 
     let drain_ui = ui.clone();
-    events::install_drain(Rc::new(move || drain_ui.drain()));
+    events::install(Hook::Drain, Rc::new(move || drain_ui.drain()));
+    let summon_ui = ui.clone();
+    events::install(Hook::Summon, Rc::new(move || summon_ui.come_forward()));
     let tick_ui = ui.clone();
     let ticker = Timer::default();
     ticker.start(TimerMode::Repeated, TICK, move || {
@@ -156,6 +168,18 @@ impl Ui {
         }
         self.sync_rows();
         self.sync_output();
+    }
+
+    /// DATA-001: a later BuildPilot was started, so this window comes forward instead.
+    fn come_forward(&self) {
+        self.with_window(|window| {
+            let handle = window.window().window_handle();
+            if let Ok(handle) = handle.window_handle()
+                && let RawWindowHandle::Win32(win32) = handle.as_raw()
+            {
+                (self.environment.bring_forward)(win32.hwnd);
+            }
+        });
     }
 
     /// Tells the operator something in the notice area.
