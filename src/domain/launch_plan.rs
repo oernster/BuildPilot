@@ -4,7 +4,8 @@
 
 use std::path::{Path, PathBuf};
 
-use super::operation::OperationConfig;
+use super::environment::{Need, PYTHON_PROGRAM, VariableEdits, python_in};
+use super::step::Step;
 
 /// The kinds of file BuildPilot can launch.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,6 +16,8 @@ pub enum ScriptKind {
     Batch,
     /// A native executable.
     Executable,
+    /// A Python script, run by an existing environment's interpreter (ENV-006).
+    Python,
 }
 
 /// Supported extensions, lower case, in the order they are listed to the operator.
@@ -24,6 +27,7 @@ const EXTENSIONS: &[(&str, ScriptKind)] = &[
     ("cmd", ScriptKind::Batch),
     ("exe", ScriptKind::Executable),
     ("com", ScriptKind::Executable),
+    ("py", ScriptKind::Python),
 ];
 
 impl ScriptKind {
@@ -48,6 +52,15 @@ impl ScriptKind {
             .map(|extension| format!(".{extension}"))
             .collect::<Vec<_>>()
             .join(", ")
+    }
+
+    /// How much a step of this kind depends on an environment (ENV-004, OQ-18).
+    pub fn environment_need(self) -> Need {
+        match self {
+            Self::Python => Need::Required,
+            Self::PowerShell => Need::Optional,
+            Self::Batch | Self::Executable => Need::None,
+        }
     }
 }
 
@@ -81,7 +94,7 @@ pub const POWERSHELL_ARGUMENTS: &[&str] = &[
     "-File",
 ];
 
-/// Everything infrastructure needs to start one run.
+/// Everything infrastructure needs to start one step.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchPlan {
     /// The program to start.
@@ -90,31 +103,49 @@ pub struct LaunchPlan {
     pub arguments: Vec<String>,
     /// The directory the program starts in.
     pub working_dir: PathBuf,
+    /// Changes to BuildPilot's own variables for this process alone (ENV-006, ENV-009).
+    pub variables: VariableEdits,
 }
 
-/// Builds the launch plan for `config`.
+/// Builds the launch plan for `step`, run in `working_dir`. `environment` is the folder of the
+/// environment the run resolved, if any; `variables` are the step's edits from
+/// `environment::step_variables`.
 ///
 /// A batch file is handed to the standard library as the program itself. Rust then runs it
 /// through `cmd.exe` with `cmd.exe` escaping and refuses an argument it cannot escape safely.
 /// Starting `cmd.exe /c` by hand would quote the arguments by the wrong rules (SRS
 /// Amendment 1).
-pub fn plan(config: &OperationConfig, powershell: PowerShellHost) -> LaunchPlan {
-    let script = config.script_path().to_path_buf();
-    let (program, mut arguments) = match config.kind() {
+pub fn plan(
+    step: &Step,
+    working_dir: &Path,
+    powershell: PowerShellHost,
+    environment: Option<&Path>,
+    variables: VariableEdits,
+) -> LaunchPlan {
+    let script = step.script_path().to_path_buf();
+    let script_argument = script.to_string_lossy().into_owned();
+    let (program, mut arguments) = match step.kind() {
         ScriptKind::PowerShell => {
             let mut leading: Vec<String> = POWERSHELL_ARGUMENTS
                 .iter()
                 .map(|argument| (*argument).to_owned())
                 .collect();
-            leading.push(script.to_string_lossy().into_owned());
+            leading.push(script_argument);
             (PathBuf::from(powershell.program()), leading)
         }
+        // Run refuses a .py step with no environment (ENV-004); the bare name is what a caller
+        // outside Run gets.
+        ScriptKind::Python => (
+            environment.map_or_else(|| PathBuf::from(PYTHON_PROGRAM), python_in),
+            vec![script_argument],
+        ),
         ScriptKind::Batch | ScriptKind::Executable => (script, Vec::new()),
     };
-    arguments.extend(config.arguments().iter().cloned());
+    arguments.extend(step.arguments().iter().cloned());
     LaunchPlan {
         program,
         arguments,
-        working_dir: config.working_dir().to_path_buf(),
+        working_dir: working_dir.to_path_buf(),
+        variables,
     }
 }

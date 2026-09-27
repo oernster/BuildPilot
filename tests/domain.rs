@@ -6,6 +6,7 @@ mod domain {
     mod credits;
     mod deck;
     mod elapsed;
+    mod environment;
     mod follow;
     mod launch_plan;
     mod lifecycle;

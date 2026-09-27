@@ -7,7 +7,9 @@ use std::error::Error;
 use std::fmt;
 use std::path::{Path, PathBuf};
 
+use super::environment::Need;
 use super::launch_plan::ScriptKind;
+use super::step::{Step, StepSpec};
 
 /// Stable identity of an operation (CFG-003). Assigned once by infrastructure, never reused.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -52,12 +54,12 @@ pub enum IconRef {
 pub struct OperationSpec {
     /// Display name.
     pub name: String,
-    /// The script or executable to run; must be absolute.
-    pub script_path: PathBuf,
-    /// The directory to run it in; must be absolute.
+    /// The steps, in the order they run (STEP-001).
+    pub steps: Vec<StepSpec>,
+    /// The directory every step runs in; must be absolute.
     pub working_dir: PathBuf,
-    /// Arguments, one entry each (OQ-8).
-    pub arguments: Vec<String>,
+    /// The environment's folder name, where the operator chose one (ENV-002).
+    pub environment: Option<String>,
     /// The icon.
     pub icon: IconRef,
 }
@@ -66,11 +68,10 @@ pub struct OperationSpec {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OperationConfig {
     name: String,
-    script_path: PathBuf,
+    steps: Vec<Step>,
     working_dir: PathBuf,
-    arguments: Vec<String>,
+    environment: Option<String>,
     icon: IconRef,
-    kind: ScriptKind,
 }
 
 impl OperationConfig {
@@ -78,25 +79,33 @@ impl OperationConfig {
     pub fn name(&self) -> &str {
         &self.name
     }
-    /// Absolute path of the script or executable.
-    pub fn script_path(&self) -> &Path {
-        &self.script_path
+    /// The steps in order; never empty.
+    pub fn steps(&self) -> &[Step] {
+        &self.steps
+    }
+    /// The first step, which the row shows, opens and locates (ROW-001).
+    pub fn first_step(&self) -> &Step {
+        &self.steps[0]
     }
     /// Absolute working directory.
     pub fn working_dir(&self) -> &Path {
         &self.working_dir
     }
-    /// Arguments, one entry each.
-    pub fn arguments(&self) -> &[String] {
-        &self.arguments
+    /// The chosen environment's folder name, if the operator chose one (ENV-002).
+    pub fn environment(&self) -> Option<&str> {
+        self.environment.as_deref()
     }
     /// The icon.
     pub fn icon(&self) -> &IconRef {
         &self.icon
     }
-    /// What kind of file the script is.
-    pub fn kind(&self) -> ScriptKind {
-        self.kind
+    /// How much the steps depend on an environment: the most any one step needs.
+    pub fn environment_need(&self) -> Need {
+        self.steps
+            .iter()
+            .map(|step| step.kind().environment_need())
+            .max()
+            .unwrap_or(Need::None)
     }
     /// The same configuration with a different icon; an icon never affects a run.
     pub fn with_icon(&self, icon: IconRef) -> Self {
@@ -109,17 +118,17 @@ impl OperationConfig {
     pub fn to_spec(&self) -> OperationSpec {
         OperationSpec {
             name: self.name.clone(),
-            script_path: self.script_path.clone(),
+            steps: self.steps.iter().map(Step::to_spec).collect(),
             working_dir: self.working_dir.clone(),
-            arguments: self.arguments.clone(),
+            environment: self.environment.clone(),
             icon: self.icon.clone(),
         }
     }
     /// True when running with `other` would launch something different (EDIT-002).
     pub fn differs_in_execution(&self, other: &Self) -> bool {
-        self.script_path != other.script_path
+        self.steps != other.steps
             || self.working_dir != other.working_dir
-            || self.arguments != other.arguments
+            || self.environment != other.environment
     }
 }
 
@@ -132,14 +141,14 @@ impl TryFrom<OperationSpec> for OperationConfig {
         if name.is_empty() {
             return Err(OperationError::EmptyName);
         }
-        if spec.script_path.as_os_str().is_empty() {
+        if spec.steps.is_empty() {
             return Err(OperationError::EmptyScriptPath);
         }
-        if !spec.script_path.is_absolute() {
-            return Err(OperationError::ScriptPathNotAbsolute(spec.script_path));
-        }
-        let kind = ScriptKind::of(&spec.script_path)
-            .ok_or_else(|| OperationError::UnsupportedScriptType(spec.script_path.clone()))?;
+        let steps = spec
+            .steps
+            .into_iter()
+            .map(Step::try_from)
+            .collect::<Result<Vec<_>, _>>()?;
         if spec.working_dir.as_os_str().is_empty() {
             return Err(OperationError::EmptyWorkingDir);
         }
@@ -148,11 +157,12 @@ impl TryFrom<OperationSpec> for OperationConfig {
         }
         Ok(Self {
             name,
-            script_path: spec.script_path,
+            steps,
             working_dir: spec.working_dir,
-            arguments: spec.arguments,
+            environment: spec
+                .environment
+                .filter(|environment| !environment.trim().is_empty()),
             icon: spec.icon,
-            kind,
         })
     }
 }
@@ -195,9 +205,9 @@ pub fn draft_for_script(script: &Path) -> Result<OperationSpec, OperationError> 
         .ok_or_else(|| OperationError::NoParentDirectory(script.to_path_buf()))?;
     Ok(OperationSpec {
         name: default_name(script, working_dir),
-        script_path: script.to_path_buf(),
+        steps: vec![StepSpec::for_script(script)],
         working_dir: working_dir.to_path_buf(),
-        arguments: Vec::new(),
+        environment: None,
         icon: IconRef::Placeholder,
     })
 }

@@ -9,6 +9,7 @@ use crate::domain::launch_plan::ScriptKind;
 use crate::domain::operation::{
     IconRef, OperationId, OperationSpec, format_argument_lines, parse_argument_lines,
 };
+use crate::domain::step::StepSpec;
 
 use super::{MainWindow, Ui};
 
@@ -19,6 +20,10 @@ const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "ico"];
 pub(super) struct DialogState {
     editing: Option<OperationId>,
     icon: IconRef,
+    /// The steps after the first and the chosen environment, which the dialog does not yet
+    /// show; carried so a save keeps them.
+    later_steps: Vec<StepSpec>,
+    environment: Option<String>,
 }
 
 pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
@@ -115,13 +120,15 @@ impl Ui {
         save_label: &str,
         note: String,
     ) {
+        let mut steps = spec.steps.into_iter();
+        let first = steps.next().unwrap_or_default();
         self.with_window(|w| {
             w.set_operation_heading(SharedString::from(heading));
             w.set_operation_save_label(SharedString::from(save_label));
             w.set_field_name(SharedString::from(spec.name.as_str()));
-            w.set_field_script(SharedString::from(spec.script_path.display().to_string()));
+            w.set_field_script(SharedString::from(first.script_path.display().to_string()));
             w.set_field_working_dir(SharedString::from(spec.working_dir.display().to_string()));
-            w.set_field_arguments(SharedString::from(format_argument_lines(&spec.arguments)));
+            w.set_field_arguments(SharedString::from(format_argument_lines(&first.arguments)));
             w.set_operation_note(SharedString::from(note));
             w.set_operation_error(SharedString::default());
             w.set_show_operation_dialog(true);
@@ -129,6 +136,8 @@ impl Ui {
         *self.dialog.borrow_mut() = Some(DialogState {
             editing,
             icon: IconRef::Placeholder,
+            later_steps: steps.collect(),
+            environment: spec.environment,
         });
         self.set_dialog_icon(spec.icon);
     }
@@ -171,19 +180,27 @@ impl Ui {
         let Some(window) = self.window.upgrade() else {
             return;
         };
-        let Some((editing, icon)) = self
-            .dialog
-            .borrow()
-            .as_ref()
-            .map(|state| (state.editing.clone(), state.icon.clone()))
+        let Some((editing, icon, later_steps, environment)) =
+            self.dialog.borrow().as_ref().map(|state| {
+                (
+                    state.editing.clone(),
+                    state.icon.clone(),
+                    state.later_steps.clone(),
+                    state.environment.clone(),
+                )
+            })
         else {
             return;
         };
+        let first = StepSpec {
+            script_path: PathBuf::from(window.get_field_script().trim()),
+            arguments: parse_argument_lines(&window.get_field_arguments()),
+        };
         let spec = OperationSpec {
             name: window.get_field_name().to_string(),
-            script_path: PathBuf::from(window.get_field_script().trim()),
+            steps: std::iter::once(first).chain(later_steps).collect(),
             working_dir: PathBuf::from(window.get_field_working_dir().trim()),
-            arguments: parse_argument_lines(&window.get_field_arguments()),
+            environment,
             icon,
         };
         let outcome = match &editing {

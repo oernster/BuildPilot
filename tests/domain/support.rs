@@ -5,8 +5,9 @@ use std::path::PathBuf;
 use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, OperationSpec,
 };
+use buildpilot::domain::step::StepSpec;
 
-/// A valid spec for `script`, run in its folder with no arguments.
+/// A valid spec with one step, `script`, run in its folder with no arguments.
 pub fn spec(script: &str) -> OperationSpec {
     let script = PathBuf::from(script);
     OperationSpec {
@@ -15,10 +16,21 @@ pub fn spec(script: &str) -> OperationSpec {
             .parent()
             .expect("test script has a folder")
             .to_path_buf(),
-        script_path: script,
-        arguments: Vec::new(),
+        steps: vec![StepSpec::for_script(&script)],
+        environment: None,
         icon: IconRef::Placeholder,
     }
+}
+
+/// `spec(first)` with a further step for each of `later`, in order.
+pub fn spec_with_steps(first: &str, later: &[&str]) -> OperationSpec {
+    let mut spec = spec(first);
+    spec.steps.extend(
+        later
+            .iter()
+            .map(|script| StepSpec::for_script(script.as_ref())),
+    );
+    spec
 }
 
 /// A validated configuration for `script`.

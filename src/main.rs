@@ -20,7 +20,7 @@ use buildpilot::infrastructure::log_file::LogFile;
 use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::releases::{GitHubReleases, REPOSITORY};
 use buildpilot::infrastructure::shell::ExplorerShell;
-use buildpilot::infrastructure::system::{FsPaths, SystemClock, UuidIds};
+use buildpilot::infrastructure::system::{FsPaths, ProcessVariables, SystemClock, UuidIds};
 use buildpilot::infrastructure::win32::diagnostics::show_error;
 use buildpilot::infrastructure::win32::instance::{self, Claim};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
@@ -86,6 +86,7 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
         ))),
         shell: Box::new(ExplorerShell),
         log: Box::new(log),
+        variables: Box::new(ProcessVariables),
     };
     let app = App::start(ports, detect_powershell(env::var_os("PATH").as_deref()));
     let version = env!("BUILDPILOT_VERSION");

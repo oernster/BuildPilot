@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use buildpilot::application::ports::LoadedConfig;
 use buildpilot::application::{
     App, Clock, ConfigStore, IconLibrary, IdSource, Launcher, Log, PathProbe, Ports, ProcessHandle,
-    RunKey, Shell, StoreError,
+    RunKey, Shell, StoreError, Variables,
 };
 use buildpilot::domain::launch_plan::{LaunchPlan, PowerShellHost};
 use buildpilot::domain::operation::{Operation, OperationId};
@@ -37,6 +37,7 @@ pub struct WorldState {
     pub shell_calls: Vec<(&'static str, PathBuf)>,
     pub shell_error: Option<String>,
     pub log: Vec<String>,
+    pub inherited: Vec<(String, String)>,
 }
 
 /// A test's whole world: shared state plus a clock the test moves.
@@ -67,6 +68,27 @@ impl World {
         self
     }
 
+    /// Records an existing environment at `folder`: its marker and its interpreter (ENV-001).
+    pub fn with_environment(self, folder: &str) -> Self {
+        let folder = PathBuf::from(folder);
+        {
+            let mut state = self.state.borrow_mut();
+            state.dirs.insert(folder.clone());
+            state.files.insert(folder.join("pyvenv.cfg"));
+            state.files.insert(folder.join(r"Scripts\python.exe"));
+        }
+        self
+    }
+
+    /// BuildPilot's own variables, as the fake reports them (ENV-009).
+    pub fn with_inherited(self, pairs: &[(&str, &str)]) -> Self {
+        self.state.borrow_mut().inherited = pairs
+            .iter()
+            .map(|(name, value)| ((*name).to_owned(), (*value).to_owned()))
+            .collect();
+        self
+    }
+
     pub fn advance(&self, by: Duration) {
         self.now.set(self.now.get() + by);
     }
@@ -82,6 +104,7 @@ impl World {
             launcher: Box::new(FakeLauncher(self.state.clone())),
             shell: Box::new(FakeShell(self.state.clone())),
             log: Box::new(FakeLog(self.state.clone())),
+            variables: Box::new(FakeVariables(self.state.clone())),
         };
         App::start(ports, PowerShellHost::Pwsh)
     }
@@ -153,6 +176,26 @@ impl PathProbe for FakePaths {
     }
     fn is_dir(&self, path: &Path) -> bool {
         self.0.borrow().dirs.contains(path)
+    }
+    fn subfolders(&self, dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .0
+            .borrow()
+            .dirs
+            .iter()
+            .filter(|folder| folder.parent() == Some(dir))
+            .map(|folder| folder.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+}
+
+struct FakeVariables(Rc<RefCell<WorldState>>);
+
+impl Variables for FakeVariables {
+    fn inherited(&self) -> Vec<(String, String)> {
+        self.0.borrow().inherited.clone()
     }
 }
 

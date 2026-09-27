@@ -101,7 +101,7 @@ fn display_command_quotes_spaced_and_empty_parts() {
     let world = World::new().with_script(r"C:\my src\tool.exe");
     let mut app = world.app();
     let mut spec = app.draft_for(r"C:\my src\tool.exe".as_ref()).unwrap();
-    spec.arguments = vec!["two words".to_owned()];
+    spec.steps[0].arguments = vec!["two words".to_owned()];
     let id = app.add(spec).unwrap();
     world.state.borrow_mut().spawn_error = Some("No.".to_owned());
     app.run(&id).unwrap();

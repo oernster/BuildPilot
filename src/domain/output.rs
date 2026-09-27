@@ -19,6 +19,8 @@ pub enum Stream {
     Stdout,
     /// Standard error.
     Stderr,
+    /// BuildPilot's own line: which step started and with what (STEP-006, ENV-008).
+    Note,
 }
 
 /// One line of output.

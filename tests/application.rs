@@ -8,6 +8,7 @@ mod application {
     mod navigation;
     mod run;
     mod startup;
+    mod steps;
     mod support;
     mod updates;
 }

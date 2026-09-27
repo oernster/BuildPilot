@@ -36,8 +36,10 @@ pub enum StatusClass {
 pub struct RowFacts<'a> {
     /// Display name.
     pub name: &'a str,
-    /// The script.
+    /// The first step's script.
     pub script: &'a Path,
+    /// How many steps follow the first (ROW-001).
+    pub later_steps: usize,
     /// Its latest run.
     pub state: &'a RunState,
     /// How long the latest run has run.
@@ -81,14 +83,20 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
             String::new(),
         ),
         RunState::Running(details) => {
-            let verb = if details.stop_requested() {
+            let action = if details.stop_requested() {
                 "Stopping"
             } else {
                 "Running"
             };
+            // STEP-007: which step, only where there is more than one.
+            let verb = if details.steps() > 1 {
+                format!("{action} step {} of {}", details.step(), details.steps())
+            } else {
+                action.to_owned()
+            };
             let status = match &took {
                 Some(took) => format!("{verb} {took}"),
-                None => verb.to_owned(),
+                None => verb,
             };
             (
                 SPINNER[facts.tick % SPINNER.len()],
@@ -107,6 +115,14 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
             let status = match &took {
                 Some(took) => format!("Failed, exit code {code}, after {took}"),
                 None => format!("Failed, exit code {code}"),
+            };
+            (GLYPH_FAILED, StatusClass::Failed, status, String::new())
+        }
+        RunState::Failed(Failure::StepExitCode { step, code }) => {
+            let failed = format!("Failed, step {step} exited with code {code}");
+            let status = match &took {
+                Some(took) => format!("{failed}, after {took}"),
+                None => failed,
             };
             (GLYPH_FAILED, StatusClass::Failed, status, String::new())
         }
@@ -129,7 +145,7 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
         );
     }
     RowText {
-        detail: detail(facts.script),
+        detail: detail(facts.script, facts.later_steps),
         glyph,
         status,
         class,
@@ -148,12 +164,15 @@ fn after(label: &str, took: &Option<String>) -> String {
     }
 }
 
-/// `build.ps1 in C:\src\app`.
-pub fn detail(script: &Path) -> String {
-    let file = script
+/// `build.ps1 in C:\src\app`; `buildexe.py +1 in C:\src\app` when one step follows it (ROW-001).
+pub fn detail(script: &Path, later_steps: usize) -> String {
+    let mut file = script
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
         .unwrap_or_default();
+    if later_steps > 0 {
+        file = format!("{file} +{later_steps}");
+    }
     match script.parent() {
         Some(folder) if !folder.as_os_str().is_empty() => format!("{file} in {}", folder.display()),
         _ => file,

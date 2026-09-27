@@ -138,7 +138,7 @@ fn edit_during_run_does_not_touch_run() {
     renamed.name = "only a name".to_owned();
     assert!(!app.edit(&a, renamed.clone()).unwrap().applies_next_run);
     let mut argued = renamed;
-    argued.arguments = vec!["--release".to_owned()];
+    argued.steps[0].arguments = vec!["--release".to_owned()];
     assert!(app.edit(&a, argued).unwrap().applies_next_run);
     assert!(app.is_running(&a));
     assert_eq!(world.state.borrow().launches.len(), 1);

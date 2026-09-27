@@ -5,6 +5,8 @@ use std::error::Error;
 use std::fmt;
 use std::path::PathBuf;
 
+use super::environment::EnvironmentProblem;
+
 /// The state of an operation's latest run (LIFE-001).
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub enum RunState {
@@ -22,10 +24,12 @@ pub enum RunState {
 }
 
 /// Details of a run in progress.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Running {
     stop_requested: bool,
     progress: Progress,
+    step: usize,
+    steps: usize,
 }
 
 impl Running {
@@ -37,6 +41,14 @@ impl Running {
     pub fn progress(&self) -> Progress {
         self.progress
     }
+    /// The step running, counted from 1 (STEP-007).
+    pub fn step(&self) -> usize {
+        self.step
+    }
+    /// How many steps the run has.
+    pub fn steps(&self) -> usize {
+        self.steps
+    }
 }
 
 /// Why a run failed (LIFE-001).
@@ -46,15 +58,29 @@ pub enum Failure {
     FailedToStart(LaunchError),
     /// The process exited with this non-zero code.
     ExitCode(i32),
+    /// One step of several exited with a non-zero code; no later step ran (STEP-003).
+    StepExitCode {
+        /// The step, counted from 1.
+        step: usize,
+        /// Its exit code.
+        code: i32,
+    },
 }
 
-/// Why no process was started (LCH-007 to LCH-009).
+/// Why no process was started (LCH-007 to LCH-009, ENV-004, ENV-005).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LaunchError {
     /// The script file does not exist.
     ScriptNotFound(PathBuf),
     /// The working directory does not exist.
     WorkingDirNotFound(PathBuf),
+    /// No environment could be used, searching this working directory.
+    Environment {
+        /// What was wrong.
+        problem: EnvironmentProblem,
+        /// The folder searched.
+        searched: PathBuf,
+    },
     /// The operating system refused to start the program.
     Os {
         /// The command that was attempted, as the operator would type it.
@@ -80,6 +106,11 @@ impl fmt::Display for LaunchError {
             Self::Os { command, message } => {
                 write!(f, "Could not start {command}: {message}")
             }
+            Self::Environment { problem, searched } => write!(
+                f,
+                "{problem} in {}. BuildPilot uses an existing environment and does not create one.",
+                searched.display()
+            ),
         }
     }
 }
@@ -141,10 +172,16 @@ impl RunState {
         matches!(self, Self::Running(_))
     }
 
-    /// A process was started (LCH-002). Refused while one is already running (LCH-005).
-    pub fn launched(&self) -> Result<Self, TransitionError> {
+    /// The first of `steps` steps was started (LCH-002). Refused while one is already running
+    /// (LCH-005).
+    pub fn launched(&self, steps: usize) -> Result<Self, TransitionError> {
         self.refuse_if_running()?;
-        Ok(Self::Running(Running::default()))
+        Ok(Self::Running(Running {
+            stop_requested: false,
+            progress: Progress::default(),
+            step: 1,
+            steps,
+        }))
     }
 
     /// The operator asked for the run to stop. Asking again is allowed and changes nothing, so
@@ -159,15 +196,26 @@ impl RunState {
         }
     }
 
-    /// The process exited with `code`. A stopped run is Stopped whatever the code
-    /// (LIFE-003); otherwise 0 is success and anything else failure (LIFE-002).
+    /// The running step exited with `code`. A stopped run is Stopped whatever the code
+    /// (LIFE-003, STEP-004). Otherwise 0 moves to the next step (STEP-002), else after the last
+    /// to success; anything else is failure and no later step runs (LIFE-002, STEP-003).
     pub fn exited(&self, code: i32) -> Result<Self, TransitionError> {
-        match self {
-            Self::Running(running) if running.stop_requested => Ok(Self::Stopped),
-            Self::Running(_) if code == 0 => Ok(Self::Succeeded),
-            Self::Running(_) => Ok(Self::Failed(Failure::ExitCode(code))),
-            _ => Err(TransitionError::NotRunning),
-        }
+        let Self::Running(running) = self else {
+            return Err(TransitionError::NotRunning);
+        };
+        Ok(match running {
+            Running {
+                stop_requested: true,
+                ..
+            } => Self::Stopped,
+            Running { step, steps, .. } if code == 0 && step < steps => Self::Running(Running {
+                step: step + 1,
+                ..running.clone()
+            }),
+            _ if code == 0 => Self::Succeeded,
+            Running { steps: 1, .. } => Self::Failed(Failure::ExitCode(code)),
+            Running { step, .. } => Self::Failed(Failure::StepExitCode { step: *step, code }),
+        })
     }
 
     fn refuse_if_running(&self) -> Result<(), TransitionError> {

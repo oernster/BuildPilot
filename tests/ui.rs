@@ -20,6 +20,7 @@ fn text_for(
     row_text(&RowFacts {
         name: "app build",
         script: Path::new(SCRIPT),
+        later_steps: 0,
         state,
         elapsed,
         overdue_pid,
@@ -28,7 +29,7 @@ fn text_for(
 }
 
 fn running(stop_requested: bool) -> RunState {
-    let state = RunState::Idle.launched().unwrap();
+    let state = RunState::Idle.launched(1).unwrap();
     if stop_requested {
         state.stop_requested().unwrap()
     } else {
@@ -39,8 +40,38 @@ fn running(stop_requested: bool) -> RunState {
 // ROW-001
 #[test]
 fn detail_names_the_file_and_its_folder() {
-    assert_eq!(detail(Path::new(SCRIPT)), r"build.ps1 in C:\src\app");
-    assert_eq!(detail(Path::new("build.ps1")), "build.ps1");
+    assert_eq!(detail(Path::new(SCRIPT), 0), r"build.ps1 in C:\src\app");
+    assert_eq!(detail(Path::new("build.ps1"), 0), "build.ps1");
+    // ROW-001, Amendment 4: the first step, then how many follow.
+    assert_eq!(
+        detail(Path::new(r"C:\src\app\buildexe.py"), 1),
+        r"buildexe.py +1 in C:\src\app"
+    );
+}
+
+// STEP-007, STEP-003: a run of several steps says which step it is on or which one failed.
+#[test]
+fn steps_read_in_words() {
+    let second = RunState::Idle.launched(2).unwrap().exited(0).unwrap();
+    let took = Some(Duration::from_secs(65));
+    assert_eq!(
+        text_for(&second, took, None, 0).status,
+        "Running step 2 of 2 1:05"
+    );
+    let stopping = second.stop_requested().unwrap();
+    assert_eq!(
+        text_for(&stopping, None, None, 0).status,
+        "Stopping step 2 of 2"
+    );
+    let failed = RunState::Failed(Failure::StepExitCode { step: 1, code: 3 });
+    assert_eq!(
+        text_for(&failed, took, None, 0).status,
+        "Failed, step 1 exited with code 3, after 1:05"
+    );
+    assert_eq!(
+        text_for(&failed, None, None, 0).status,
+        "Failed, step 1 exited with code 3"
+    );
 }
 
 // LIFE-005: every state has a glyph and words, so colour is never the only signal.

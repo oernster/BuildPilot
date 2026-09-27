@@ -1,12 +1,14 @@
 use std::path::{Path, PathBuf};
 
+use buildpilot::domain::environment::Need;
 use buildpilot::domain::launch_plan::ScriptKind;
 use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationError, OperationId, OperationSpec,
     draft_for_script, format_argument_lines, parse_argument_lines,
 };
+use buildpilot::domain::step::StepSpec;
 
-use super::support::{config, id, spec};
+use super::support::{config, id, spec, spec_with_steps};
 
 // ADD-002
 #[test]
@@ -34,19 +36,28 @@ fn name_at_drive_root_is_the_stem() {
 #[test]
 fn draft_has_no_arguments_and_the_placeholder_icon() {
     let draft = draft_for_script(Path::new(r"C:\src\app\build.ps1")).unwrap();
-    assert!(draft.arguments.is_empty());
+    assert_eq!(
+        draft.steps,
+        [StepSpec::for_script(Path::new(r"C:\src\app\build.ps1"))]
+    );
+    assert!(draft.steps[0].arguments.is_empty());
+    assert_eq!(draft.environment, None);
     assert_eq!(draft.icon, IconRef::Placeholder);
 }
 
 // LCH-001: an unsupported type is refused at Add, naming the supported ones.
 #[test]
 fn draft_refuses_unsupported_type() {
-    let error = draft_for_script(Path::new(r"C:\src\app\build.py")).unwrap_err();
+    let error = draft_for_script(Path::new(r"C:\src\app\build.sh")).unwrap_err();
     assert_eq!(
         error,
-        OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\build.py"))
+        OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\build.sh"))
     );
-    assert!(error.to_string().contains(".ps1, .bat, .cmd, .exe, .com"));
+    assert!(
+        error
+            .to_string()
+            .contains(".ps1, .bat, .cmd, .exe, .com, .py")
+    );
 }
 
 #[test]
@@ -69,14 +80,61 @@ fn same_script_makes_two_distinct_operations() {
 
 #[test]
 fn valid_spec_round_trips_through_config() {
-    let mut original = spec(r"C:\src\app\build.ps1");
-    original.arguments = vec!["--release".to_owned()];
+    let mut original = spec_with_steps(r"C:\src\app\buildexe.py", &[r"C:\src\app\setup.ps1"]);
+    original.steps[0].arguments = vec!["--release".to_owned()];
+    original.environment = Some("venv".to_owned());
     original.icon = IconRef::Chosen(PathBuf::from(r"C:\data\icons\a.png"));
     let validated = OperationConfig::try_from(original.clone()).unwrap();
     assert_eq!(validated.to_spec(), original);
-    assert_eq!(validated.kind(), ScriptKind::PowerShell);
     assert_eq!(validated.name(), "app build");
-    assert_eq!(validated.arguments(), ["--release"]);
+    assert_eq!(validated.steps().len(), 2);
+    assert_eq!(validated.first_step().kind(), ScriptKind::Python);
+    assert_eq!(validated.first_step().arguments(), ["--release"]);
+    assert_eq!(validated.steps()[1].kind(), ScriptKind::PowerShell);
+    assert_eq!(validated.environment(), Some("venv"));
+}
+
+// STEP-001: at least one step; each is validated, the first bad one reported.
+#[test]
+fn steps_are_required_and_each_validated() {
+    let mut none = spec(r"C:\src\app\build.ps1");
+    none.steps.clear();
+    assert_eq!(
+        OperationConfig::try_from(none).unwrap_err(),
+        OperationError::EmptyScriptPath
+    );
+    let bad_second = spec_with_steps(r"C:\src\app\build.ps1", &[r"C:\src\app\notes.txt"]);
+    assert_eq!(
+        OperationConfig::try_from(bad_second).unwrap_err(),
+        OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\notes.txt"))
+    );
+}
+
+// ENV-002: a blank environment name is no choice at all.
+#[test]
+fn blank_environment_is_none() {
+    let mut blank = spec(r"C:\src\app\build.py");
+    blank.environment = Some("  ".to_owned());
+    assert_eq!(
+        OperationConfig::try_from(blank).unwrap().environment(),
+        None
+    );
+}
+
+// ENV-004, OQ-18: the operation needs what its most demanding step needs.
+#[test]
+fn environment_need_is_the_greatest_step_need() {
+    let need = |first: &str, later: &[&str]| {
+        OperationConfig::try_from(spec_with_steps(first, later))
+            .unwrap()
+            .environment_need()
+    };
+    assert_eq!(need(r"C:\a\build.cmd", &[r"C:\a\x.exe"]), Need::None);
+    assert_eq!(need(r"C:\a\build.cmd", &[r"C:\a\x.ps1"]), Need::Optional);
+    assert_eq!(
+        need(r"C:\a\x.ps1", &[r"C:\a\x.py", r"C:\a\y.bat"]),
+        Need::Required
+    );
 }
 
 // ADD-005: the name is trimmed; a blank one is refused.
@@ -102,17 +160,17 @@ type BrokenSpecCase = (fn(&mut OperationSpec), OperationError, &'static str);
 fn each_invalid_field_is_named() {
     let cases: [BrokenSpecCase; 5] = [
         (
-            |s| s.script_path = PathBuf::new(),
+            |s| s.steps[0].script_path = PathBuf::new(),
             OperationError::EmptyScriptPath,
             "Script is missing",
         ),
         (
-            |s| s.script_path = PathBuf::from("build.ps1"),
+            |s| s.steps[0].script_path = PathBuf::from("build.ps1"),
             OperationError::ScriptPathNotAbsolute(PathBuf::from("build.ps1")),
             "relative",
         ),
         (
-            |s| s.script_path = PathBuf::from(r"C:\src\app\notes.txt"),
+            |s| s.steps[0].script_path = PathBuf::from(r"C:\src\app\notes.txt"),
             OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\notes.txt")),
             "Supported types",
         ),
@@ -156,7 +214,7 @@ fn blank_id_is_refused() {
     assert_eq!(id.to_string(), "4f1c");
 }
 
-// EDIT-002: only script, folder and arguments change what a run launches.
+// EDIT-002: only steps, folder and environment change what a run launches.
 #[test]
 fn execution_difference_ignores_name_and_icon() {
     let base = config(r"C:\src\app\build.ps1");
@@ -171,12 +229,22 @@ fn execution_difference_ignores_name_and_icon() {
     assert!(base.differs_in_execution(&OperationConfig::try_from(moved).unwrap()));
 
     let mut argued = base.to_spec();
-    argued.arguments = vec!["-x".to_owned()];
+    argued.steps[0].arguments = vec!["-x".to_owned()];
     assert!(base.differs_in_execution(&OperationConfig::try_from(argued).unwrap()));
 
     let mut rescripted = base.to_spec();
-    rescripted.script_path = PathBuf::from(r"C:\src\app\other.ps1");
+    rescripted.steps[0].script_path = PathBuf::from(r"C:\src\app\other.ps1");
     assert!(base.differs_in_execution(&OperationConfig::try_from(rescripted).unwrap()));
+
+    let mut stepped = base.to_spec();
+    stepped
+        .steps
+        .push(StepSpec::for_script(Path::new(r"C:\src\app\two.ps1")));
+    assert!(base.differs_in_execution(&OperationConfig::try_from(stepped).unwrap()));
+
+    let mut chosen = base.to_spec();
+    chosen.environment = Some("venv".to_owned());
+    assert!(base.differs_in_execution(&OperationConfig::try_from(chosen).unwrap()));
 }
 
 #[test]
@@ -185,7 +253,7 @@ fn with_icon_changes_only_the_icon() {
     let icon = IconRef::Discovered(PathBuf::from(r"C:\src\app\assets\application-icon.png"));
     let changed = base.with_icon(icon.clone());
     assert_eq!(changed.icon(), &icon);
-    assert_eq!(changed.script_path(), base.script_path());
+    assert_eq!(changed.steps(), base.steps());
 }
 
 #[test]

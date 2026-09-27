@@ -100,6 +100,14 @@ pub trait PathProbe {
     fn is_file(&self, path: &Path) -> bool;
     /// True when `path` is an existing directory.
     fn is_dir(&self, path: &Path) -> bool;
+    /// The names of the folders directly inside `dir`; none when it cannot be read (ENV-001).
+    fn subfolders(&self, dir: &Path) -> Vec<String>;
+}
+
+/// BuildPilot's own environment variables, which each step starts from (ENV-009).
+pub trait Variables {
+    /// Every variable BuildPilot was started with, as name and value.
+    fn inherited(&self) -> Vec<(String, String)>;
 }
 
 /// Finds, checks and stores operation icons (SRS 3.3).

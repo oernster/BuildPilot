@@ -83,7 +83,13 @@ impl WindowsLauncher {
 
 impl Launcher for WindowsLauncher {
     fn spawn(&mut self, key: RunKey, plan: &LaunchPlan) -> Result<Box<dyn ProcessHandle>, String> {
-        let mut child = Command::new(&plan.program)
+        let mut command = Command::new(&plan.program);
+        // ENV-006, ENV-009: this process's variables only; BuildPilot's own are untouched.
+        for name in &plan.variables.remove {
+            command.env_remove(name);
+        }
+        command.envs(plan.variables.set.iter().map(|(name, value)| (name, value)));
+        let mut child = command
             .args(&plan.arguments)
             .current_dir(&plan.working_dir)
             .stdin(Stdio::null())

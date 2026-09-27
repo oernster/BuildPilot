@@ -84,6 +84,6 @@ impl App {
             .deck
             .get(id)
             .ok_or_else(|| DeckError::NotFound(id.clone()))?;
-        Ok(operation.config().script_path().to_path_buf())
+        Ok(operation.config().first_step().script_path().to_path_buf())
     }
 }

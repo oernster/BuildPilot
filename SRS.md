@@ -196,8 +196,9 @@ Verified by: `domain::config` round-trip test; Manual for restore.
 
 ### 3.2 Adding operations (ADD)
 
-**ADD-001 (M) Add by browsing.** When the operator activates Add, BuildPilot shall open a file
-picker filtered to the supported types (LCH-001). When a file is chosen, BuildPilot shall open the
+**ADD-001 (M) Add by browsing.** When the operator chooses to add a script (SCAN-002 offers a
+folder as well; Amendment 5), BuildPilot shall open a file picker filtered to the supported types
+(LCH-001). When a file is chosen, BuildPilot shall open the
 operation dialog pre-filled with the derived defaults, the chosen file as its only step.
 Source: spec §5.
 Verified by: Manual (file picker); defaults per ADD-002 to ADD-004.
@@ -602,7 +603,7 @@ case shall start the next step. Verified by: `application::run` test with a two-
 
 **STEP-003 (M) Stop on failure.** If a step exits with a non-zero code, then the run use case shall
 start no further step; the run shall end Failed with that code and the step's number.
-Acceptance: step 1 exits 3, so step 2 never starts and the row reads "Failed: step 1 exited
+Acceptance: step 1 exits 3, so step 2 never starts and the row reads "Failed, step 1 exited
 with code 3". Verified by: `application::run` test.
 
 **STEP-004 (M) Stop ends the sequence.** When the operator activates Stop during a step, the run
@@ -728,6 +729,76 @@ extensions beside the built-in ones. Verified by: `domain::launch_plan` test.
 
 A host program that cannot be started is a launch failure (LCH-009).
 
+### 3.20 Adding from a folder (SCAN)
+
+Added by Amendment 5. Measured 2026-09-27 over the owner's Development folder: of 30 projects
+with a build script, 12 hold `build.ps1` (Go and Rust, none with an environment); 14 hold
+`buildexe.py` and `buildinstaller.py` (each with one environment); none holds both. The other 4
+match neither pattern, one of them in part (EDColonisationAsst: `buildinstaller.py` without
+`buildexe.py`). A scan proposes; it never adds or runs anything the operator has not seen, so it
+is not the "autopilot" §1.4 rules out.
+
+**SCAN-001 (M) Patterns.** The folder scanner shall take its patterns from one ordered list, each
+an ordered list of file names that become steps:
+
+| Order | Pattern | Steps |
+|---|---|---|
+| 1 | Go, Rust and other PowerShell builds | `build.ps1` |
+| 2 | Python builds | `buildexe.py`, then `buildinstaller.py` |
+
+A further pattern is one entry with no change elsewhere (as ICON-003). File names compare without
+regard to case. Verified by: `domain` test over the list.
+
+**SCAN-002 (M) Add takes a script or a folder.** When the operator activates Add, BuildPilot shall
+offer to choose a script (ADD-001) or a folder. Verified by: Manual.
+
+**SCAN-003 (M) Best pattern.** When a folder is scanned, the folder scanner shall choose the
+pattern with the most of its files present directly in that folder (the earlier pattern on a
+tie). It shall propose those present files as steps in the pattern's order. A pattern with none of its
+files present is never chosen.
+Acceptance: `buildexe.py` and `buildinstaller.py` present gives both steps in that order;
+`buildinstaller.py` alone (EDColonisationAsst) gives that one step; `build.ps1` gives one step;
+a folder holding only `Makefile` gives no proposal. Verified by: `domain` tests.
+
+**SCAN-004 (M) One folder.** When the chosen folder has a proposal, BuildPilot shall open the
+operation dialog pre-filled with it: the proposed steps, the folder as working directory, the
+folder's name as the name, the environment preselected as ENV-002 states and the icon found as
+ICON-001 states. Nothing is added until the operator confirms. Verified by: `application` test;
+Manual for the dialog.
+
+**SCAN-005 (S) A parent of several projects.** When the chosen folder has no proposal but folders
+directly inside it do, BuildPilot shall list those folders with each one's proposed steps and a
+tick box, then add an operation (as SCAN-004 fills it) for each ticked folder when the operator
+confirms. Acceptance: choosing `C:\Users\Oliver\Development` lists 27 folders (12 PowerShell,
+14 Python, EDColonisationAsst in part) and adds the ticked ones in the order listed.
+Verified by: `application` test; Manual for the list.
+
+**SCAN-006 (S) Unticked where a choice is owed.** In the SCAN-005 list, a folder shall start unticked
+with a note saying why when its proposed steps and working directory match an operation already
+on the deck; likewise when ENV-002 cannot preselect its environment. Rationale: ADD-006 allows the
+duplicate; a bulk add should still not make one by default. An environment choice needs the
+single-folder dialog. Verified by: `application` test.
+
+**SCAN-007 (M) Nothing found.** If neither the folder nor any folder directly inside it has a
+proposal, then BuildPilot shall say which file names it looked for and open the script picker in
+that folder. Verified by: `application` test; Manual.
+
+**SCAN-009 (M) A partial match is flagged.** Where a proposal holds fewer steps than its pattern
+(SCAN-003), BuildPilot shall say so in words naming the missing files and the steps that will
+run, e.g. "buildexe.py not found: only buildinstaller.py will run". In the SCAN-005 list that
+folder's row shall also take the warning background and pulse twice when the list opens, then
+stay on the warning background; in the SCAN-004 dialog the words sit above the steps on the same
+background. Source: owner, 2026-09-27, so the EDColonisationAsst case is obvious rather than
+hidden. The pulse is two cycles of 1 s each, below the three flashes per second of WCAG 2.2
+success criterion 2.3.1; the words carry the meaning, so colour and motion are never the only
+signal (LIFE-005, A11Y). The warning background is a theme token whose text reaches 4.5:1 in
+both themes (UI-002). Verified by: `domain` test for the words; the UI-002 contrast test for the
+token; Manual for the pulse.
+
+**SCAN-008 (M) Depth.** The folder scanner shall read only the chosen folder plus (for
+SCAN-005) the folders directly inside it; never deeper. Rationale: a deeper search would find build scripts
+of dependencies and tools inside a project. Verified by: `infrastructure` test.
+
 ---
 
 ## 4. Other requirements
@@ -773,8 +844,8 @@ Every use case is runnable from a test before any window exists.
 ## Appendix B. Decisions register
 
 Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
-accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4 and are
-decided. No question is open.
+accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4 and OQ-19
+with Amendment 5; all are decided. No question is open.
 
 | ID | Question | Decision |
 |---|---|---|
@@ -795,6 +866,7 @@ decided. No question is open.
 | OQ-15 | Several environments in one working directory? | The operation dialog asks; the choice is saved (ENV-002). Decided 2026-09-27. |
 | OQ-16 | No environment for a `.py` step? | Refuse to run; never fall back to a Python on PATH and never create one (ENV-004, ENV-007). Decided 2026-09-27. |
 | OQ-17 | Where does a host for another script type live? | One table in Settings keyed by extension (HOST). Decided 2026-09-27. |
+| OQ-19 | Add from a folder: how offered, how far, partial matches, where the patterns live? | The one Add button takes a script or a folder; a parent folder may be scanned for several projects at once; a partial match proposes the files present; the patterns are a built-in list (SCAN). Decided 2026-09-27. |
 | OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | `.ps1` steps yes, running without one when none is found; `.bat` and `.cmd` no. Every step is deactivated first (ENV-009). Decided 2026-09-27. |
 
 ## Appendix C. Traceability
@@ -866,3 +938,11 @@ guessing at a Python on PATH. `.ps1` steps are activated as well, so a PowerShel
 calls Python finds its environment. Every step first undoes any activation BuildPilot inherited,
 since two environments may conflict. A host table in Settings covers other script types without a
 per-operation field. Existing config files migrate each operation to a single step.
+
+**Amendment 5 (2026-09-27): adding from a folder.** Changes ADD-001 (Add now also takes a folder);
+adds SCAN-001 to SCAN-009 and OQ-19. Baseline 1.0 added one chosen script at a time.
+
+Reason: the owner asked for a folder's build to be recognised rather than assembled by hand. The
+two patterns are the two measured across the owner's projects (3.20). The owner chose a built-in
+pattern list, a partial match proposing what exists and a parent folder scanned for several
+projects at once. Every proposal is shown before anything is added.

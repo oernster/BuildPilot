@@ -6,13 +6,15 @@ use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, draft_for_script,
 };
 use buildpilot::domain::preferences::{Preferences, ThemeChoice, TrayLayout, WindowGeometry};
+use buildpilot::domain::step::StepSpec;
 use buildpilot::domain::version::Version;
+use buildpilot::infrastructure::config_format::CURRENT_SCHEMA;
 use buildpilot::infrastructure::config_store::{CONFIG_FILE, JsonConfigStore, SET_ASIDE_SUFFIX};
 use serde_json::{Value, json};
 
 fn operation(id: &str, script: &str) -> Operation {
     let mut spec = draft_for_script(Path::new(script)).unwrap();
-    spec.arguments = vec!["--release".to_owned(), "two words".to_owned()];
+    spec.steps[0].arguments = vec!["--release".to_owned(), "two words".to_owned()];
     spec.icon = IconRef::Chosen(PathBuf::from(r"C:\data\icons\x.png"));
     Operation::new(
         OperationId::new(id).unwrap(),
@@ -56,9 +58,19 @@ fn missing_file_is_a_first_run() {
 fn every_field_and_the_order_round_trip() {
     let folder = tempfile::tempdir().unwrap();
     let data = folder.path().join("BuildPilot");
+    // Amendment 4: several steps and a chosen environment survive too.
+    let mut python = draft_for_script(Path::new(r"C:\src\py\buildexe.py")).unwrap();
+    python.steps.push(StepSpec::for_script(Path::new(
+        r"C:\src\py\buildinstaller.py",
+    )));
+    python.environment = Some("venv_smoke".to_owned());
     let operations = vec![
         operation("b", r"C:\src\beta\build.cmd"),
         operation("a", r"C:\src\alpha\build.ps1"),
+        Operation::new(
+            OperationId::new("p").unwrap(),
+            OperationConfig::try_from(python).unwrap(),
+        ),
     ];
     let mut store = JsonConfigStore::new(data.clone());
     store.save(&operations, &preferences()).unwrap();
@@ -85,10 +97,32 @@ fn serialised_form_has_no_runtime_fields() {
         .keys()
         .map(String::as_str)
         .collect();
+    assert_eq!(keys, ["icon", "id", "name", "steps", "working_dir"]);
+    assert_eq!(document["schema"], CURRENT_SCHEMA);
+}
+
+// CFG-009, Amendment 4: a schema 1 entry's script and arguments become its one step, written
+// back as steps.
+#[test]
+fn older_schema_migrates() {
+    let folder = tempfile::tempdir().unwrap();
+    let text = r#"{"schema": 1, "operations": [{"id": "a", "name": "alpha",
+        "script": "C:\\src\\alpha\\build.ps1", "arguments": ["-x"],
+        "working_dir": "C:\\src\\alpha"}]}"#;
+    fs::write(folder.path().join(CONFIG_FILE), text).unwrap();
+    let mut store = JsonConfigStore::new(folder.path().to_path_buf());
+    let loaded = store.load();
+    assert!(loaded.problems.is_empty());
+    let step = loaded.operations[0].config().first_step();
+    assert_eq!(step.script_path(), Path::new(r"C:\src\alpha\build.ps1"));
+    assert_eq!(step.arguments(), ["-x"]);
+    store.save(&loaded.operations, &preferences()).unwrap();
+    let saved = file_json(folder.path());
     assert_eq!(
-        keys,
-        ["arguments", "icon", "id", "name", "script", "working_dir"]
+        saved["operations"][0]["steps"],
+        json!([{"script": "C:\\src\\alpha\\build.ps1", "arguments": ["-x"]}])
     );
+    assert!(saved["operations"][0].get("script").is_none());
 }
 
 // CFG-005: a malformed entry is reported, the rest load and the entry survives later saves.
@@ -174,9 +208,12 @@ fn unreadable_preferences_fall_back_to_defaults() {
 #[test]
 fn newer_schema_is_read_only() {
     let folder = tempfile::tempdir().unwrap();
-    let text = r#"{"schema": 2, "operations": [{"id": "a", "name": "alpha",
-        "script": "C:\\src\\alpha\\build.ps1", "working_dir": "C:\\src\\alpha"}]}"#;
-    fs::write(folder.path().join(CONFIG_FILE), text).unwrap();
+    let newer = CURRENT_SCHEMA + 1;
+    let text = format!(
+        r#"{{"schema": {newer}, "operations": [{{"id": "a", "name": "alpha",
+        "steps": [{{"script": "C:\\src\\alpha\\build.ps1"}}], "working_dir": "C:\\src\\alpha"}}]}}"#
+    );
+    fs::write(folder.path().join(CONFIG_FILE), &text).unwrap();
     let mut store = JsonConfigStore::new(folder.path().to_path_buf());
     let loaded = store.load();
     assert_eq!(loaded.problems, [LoadProblem::NewerSchema]);

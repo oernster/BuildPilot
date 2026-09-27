@@ -177,6 +177,33 @@ fn pure_layers_use_no_external_crates() {
     );
 }
 
+/// Commands that make or change a Python environment. BuildPilot uses one that exists and never
+/// builds one (ENV-007), so none may appear anywhere in its source.
+const ENVIRONMENT_BUILDERS: &[&str] = &[
+    "-m venv",
+    "virtualenv",
+    "pip install",
+    "uv.exe",
+    "poetry",
+    "conda",
+];
+
+#[test]
+fn no_source_builds_an_environment() {
+    let violations: Vec<String> = rust_files(&Path::new(ROOT).join("src"))
+        .into_iter()
+        .flat_map(|file| {
+            let source = read(&file).to_ascii_lowercase();
+            ENVIRONMENT_BUILDERS
+                .iter()
+                .filter(move |command| source.contains(*command))
+                .map(move |command| format!("{} names {command}", relative(&file)))
+                .collect::<Vec<_>>()
+        })
+        .collect();
+    assert!(violations.is_empty(), "{}", violations.join("\n"));
+}
+
 #[test]
 fn layers_depend_inwards_only() {
     let mut violations = Vec::new();

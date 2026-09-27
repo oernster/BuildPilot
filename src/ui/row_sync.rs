@@ -66,7 +66,8 @@ impl Ui {
         let config = operation.config();
         let text = rows::row_text(&RowFacts {
             name: config.name(),
-            script: config.script_path(),
+            script: config.first_step().script_path(),
+            later_steps: config.steps().len() - 1,
             state: app.run_state(id),
             elapsed: app.elapsed(id),
             overdue_pid,

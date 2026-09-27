@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::env;
 use std::fs;
 
-use buildpilot::application::ports::{Clock, IdSource, PathProbe};
+use buildpilot::application::ports::{Clock, IdSource, PathProbe, Variables};
 use buildpilot::domain::launch_plan::PowerShellHost;
 use buildpilot::infrastructure::powershell::detect_powershell;
-use buildpilot::infrastructure::system::{FsPaths, SystemClock, UuidIds};
+use buildpilot::infrastructure::system::{FsPaths, ProcessVariables, SystemClock, UuidIds};
 
 // LCH-001: pwsh when it is on PATH, Windows PowerShell otherwise.
 #[test]
@@ -46,6 +46,30 @@ fn paths_answer_from_the_file_system() {
     assert!(paths.is_file(&file) && !paths.is_dir(&file));
     assert!(paths.is_dir(root.path()) && !paths.is_file(root.path()));
     assert!(!paths.is_file(&root.path().join("gone.ps1")));
+}
+
+// ENV-001: the folders directly inside, sorted, files left out; nothing when unreadable.
+#[test]
+fn subfolders_lists_only_folders() {
+    let root = tempfile::tempdir().unwrap();
+    for folder in ["venv", ".venv", r"venv\Scripts"] {
+        fs::create_dir_all(root.path().join(folder)).unwrap();
+    }
+    fs::write(root.path().join("buildexe.py"), b"").unwrap();
+    assert_eq!(FsPaths.subfolders(root.path()), [".venv", "venv"]);
+    assert!(FsPaths.subfolders(&root.path().join("gone")).is_empty());
+}
+
+// ENV-009: BuildPilot's own variables are what the process holds.
+#[test]
+fn inherited_variables_are_the_process_environment() {
+    let inherited = ProcessVariables.inherited();
+    let path = env::var("PATH").unwrap();
+    assert!(
+        inherited
+            .iter()
+            .any(|(name, value)| name.eq_ignore_ascii_case("PATH") && *value == path)
+    );
 }
 
 // Amendment 2. Assumes an OEM code page where 0x82 is é: 850 (measured on the reference

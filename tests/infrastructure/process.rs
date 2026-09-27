@@ -11,6 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use buildpilot::application::ports::{Launcher, ProcessHandle, RunEvent, RunEventKind, RunKey};
+use buildpilot::domain::environment::{VariableEdits, step_variables};
 use buildpilot::domain::launch_plan::{LaunchPlan, plan};
 use buildpilot::domain::operation::{OperationConfig, OperationId, draft_for_script};
 use buildpilot::domain::output::Stream;
@@ -69,13 +70,30 @@ fn rig() -> Rig {
 
 impl Rig {
     fn plan(&self, fixture: &str, arguments: &[&str]) -> LaunchPlan {
+        self.plan_in(fixture, arguments, None, VariableEdits::default())
+    }
+
+    /// `fixture`'s one step, run in `environment` where given, with `variables`.
+    fn plan_in(
+        &self,
+        fixture: &str,
+        arguments: &[&str],
+        environment: Option<&Path>,
+        variables: VariableEdits,
+    ) -> LaunchPlan {
         let mut spec = draft_for_script(&self.folder.path().join(fixture)).unwrap();
-        spec.arguments = arguments
+        spec.steps[0].arguments = arguments
             .iter()
             .map(|argument| (*argument).to_owned())
             .collect();
         let config = OperationConfig::try_from(spec).unwrap();
-        plan(&config, detect_powershell(env::var_os("PATH").as_deref()))
+        plan(
+            config.first_step(),
+            config.working_dir(),
+            detect_powershell(env::var_os("PATH").as_deref()),
+            environment,
+            variables,
+        )
     }
 
     fn start(&mut self, run: u64, fixture: &str, arguments: &[&str]) -> Box<dyn ProcessHandle> {
@@ -181,9 +199,50 @@ fn missing_program_is_refused() {
         program: PathBuf::from(r"C:\no such folder\ghost.exe"),
         arguments: Vec::new(),
         working_dir: rig.folder.path().to_path_buf(),
+        variables: VariableEdits::default(),
     };
     let error = rig.launcher.spawn(key, &ghost).err().expect("refused");
     assert!(!error.is_empty());
+}
+
+// ENV-006, ENV-009: the step's variables reach the process with activation first on PATH;
+// setting PATH replaces the inherited Path rather than adding a second one.
+#[test]
+fn an_activated_step_sees_its_environment() {
+    let mut rig = rig();
+    let venv = rig.folder.path().join("venv");
+    fs::create_dir_all(venv.join("Scripts")).unwrap();
+    fs::write(venv.join("pyvenv.cfg"), "").unwrap();
+    fs::write(venv.join(r"Scripts\python.exe"), "").unwrap();
+    let inherited: Vec<(String, String)> = env::vars_os()
+        .map(|(name, value)| {
+            (
+                name.to_string_lossy().into_owned(),
+                value.to_string_lossy().into_owned(),
+            )
+        })
+        .collect();
+    let variables = step_variables(&inherited, Some(&venv), |path| path.is_file());
+    let plan = rig.plan_in("print_env.ps1", &[], Some(&venv), variables);
+    let key = RunKey {
+        operation: OperationId::new("env").unwrap(),
+        run: 1,
+    };
+    let _process = rig.launcher.spawn(key, &plan).unwrap();
+    let (lines, code) = rig.until_exit(1);
+    assert_eq!(code, 0);
+    let texts: Vec<String> = lines.into_iter().map(|(_, text)| text).collect();
+    assert_eq!(
+        texts,
+        [
+            format!("VIRTUAL_ENV:{}", venv.display()),
+            format!("PATH0:{}", venv.join("Scripts").display()),
+            format!("PYTHON:{}", venv.join(r"Scripts\python.exe").display()),
+            "PYTHONIOENCODING:utf-8".to_owned(),
+            "PYTHONUNBUFFERED:1".to_owned(),
+            "PATHS:1".to_owned(),
+        ]
+    );
 }
 
 // STOP-001: Stop ends the script and the process it started.

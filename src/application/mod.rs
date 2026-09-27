@@ -14,6 +14,7 @@ mod navigation;
 pub mod ports;
 mod run_actions;
 mod runtime;
+mod step_actions;
 pub mod updates;
 
 use std::collections::HashMap;
@@ -31,7 +32,7 @@ pub use navigation::LocateOutcome;
 pub use ports::{
     Clock, ConfigStore, IconLibrary, IdSource, Launcher, LoadProblem, Log, PathProbe,
     ProcessHandle, Release, ReleaseAsset, ReleaseSource, RunEvent, RunEventKind, RunKey, Shell,
-    StoreError,
+    StoreError, Variables,
 };
 pub use run_actions::{OverdueStop, STOP_TIMEOUT};
 
@@ -55,6 +56,8 @@ pub struct Ports {
     pub shell: Box<dyn Shell>,
     /// The log file.
     pub log: Box<dyn Log>,
+    /// BuildPilot's own environment variables.
+    pub variables: Box<dyn Variables>,
 }
 
 /// Something the operator should be told that is not the answer to their last action.

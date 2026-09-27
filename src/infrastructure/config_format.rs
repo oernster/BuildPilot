@@ -11,10 +11,11 @@ use serde_json::{Map, Value};
 
 use crate::domain::operation::{IconRef, Operation, OperationConfig, OperationId, OperationSpec};
 use crate::domain::preferences::{Preferences, ThemeChoice, TrayLayout, WindowGeometry};
+use crate::domain::step::StepSpec;
 use crate::domain::version::Version;
 
-/// The schema this build writes (CFG-009).
-pub const CURRENT_SCHEMA: u64 = 1;
+/// The schema this build writes (CFG-009). Schema 2 replaced one script with steps.
+pub const CURRENT_SCHEMA: u64 = 2;
 
 const SCHEMA_KEY: &str = "schema";
 const PREFERENCES_KEY: &str = "preferences";
@@ -72,13 +73,27 @@ enum IconDto {
 }
 
 #[derive(Serialize, Deserialize)]
+struct StepDto {
+    script: PathBuf,
+    #[serde(default)]
+    arguments: Vec<String>,
+}
+
+/// An operation entry. Schema 1 held one `script` with its `arguments`; schema 2 holds `steps`.
+/// Both read, as one step and as the list (CFG-009); only `steps` is written.
+#[derive(Serialize, Deserialize)]
 struct OperationDto {
     id: String,
     name: String,
-    script: PathBuf,
-    working_dir: PathBuf,
     #[serde(default)]
+    steps: Vec<StepDto>,
+    #[serde(default, skip_serializing)]
+    script: Option<PathBuf>,
+    #[serde(default, skip_serializing)]
     arguments: Vec<String>,
+    working_dir: PathBuf,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    environment: Option<String>,
     #[serde(default)]
     icon: IconDto,
 }
@@ -149,11 +164,26 @@ pub fn render(operations: &[Operation], preferences: &Preferences, unreadable: &
 fn operation_from_value(entry: &Value) -> Option<Operation> {
     let dto = serde_json::from_value::<OperationDto>(entry.clone()).ok()?;
     let id = OperationId::new(dto.id).ok()?;
+    let mut steps: Vec<StepSpec> = dto
+        .steps
+        .into_iter()
+        .map(|step| StepSpec {
+            script_path: step.script,
+            arguments: step.arguments,
+        })
+        .collect();
+    // Schema 1: the one script and its arguments become the only step.
+    if let Some(script) = dto.script.filter(|_| steps.is_empty()) {
+        steps.push(StepSpec {
+            script_path: script,
+            arguments: dto.arguments,
+        });
+    }
     let config = OperationConfig::try_from(OperationSpec {
         name: dto.name,
-        script_path: dto.script,
+        steps,
         working_dir: dto.working_dir,
-        arguments: dto.arguments,
+        environment: dto.environment,
         icon: match dto.icon {
             IconDto::Placeholder => IconRef::Placeholder,
             IconDto::Discovered { path } => IconRef::Discovered(path),
@@ -169,9 +199,18 @@ fn operation_to_dto(operation: &Operation) -> OperationDto {
     OperationDto {
         id: operation.id().as_str().to_owned(),
         name: config.name().to_owned(),
-        script: config.script_path().to_path_buf(),
+        steps: config
+            .steps()
+            .iter()
+            .map(|step| StepDto {
+                script: step.script_path().to_path_buf(),
+                arguments: step.arguments().to_vec(),
+            })
+            .collect(),
+        script: None,
+        arguments: Vec::new(),
         working_dir: config.working_dir().to_path_buf(),
-        arguments: config.arguments().to_vec(),
+        environment: config.environment().map(str::to_owned),
         icon: match config.icon() {
             IconRef::Placeholder => IconDto::Placeholder,
             IconRef::Discovered(path) => IconDto::Discovered { path: path.clone() },

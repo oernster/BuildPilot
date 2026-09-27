@@ -3,8 +3,7 @@
 use std::time::Duration;
 
 use crate::domain::deck::DeckError;
-use crate::domain::launch_plan::{LaunchPlan, plan};
-use crate::domain::lifecycle::{Failure, LaunchError, RunState, TransitionError};
+use crate::domain::lifecycle::{Failure, RunState, TransitionError};
 use crate::domain::operation::OperationId;
 use crate::domain::output::OutputBuffer;
 
@@ -41,7 +40,7 @@ impl App {
             .clone();
         // LCH-005, settled once: the run's state from here on is this transition or a failure to
         // start, both allowed exactly when this one is.
-        let started = self.run_state(id).launched()?;
+        let started = self.run_state(id).launched(config.steps().len())?;
 
         self.runs_started += 1;
         let run = self.runs_started;
@@ -49,36 +48,27 @@ impl App {
             operation: id.clone(),
             run,
         };
-        let launch = plan(&config, self.powershell);
-        let command = display_command(&launch);
-        let outcome = if !self.ports.paths.is_file(config.script_path()) {
-            Err(LaunchError::ScriptNotFound(
-                config.script_path().to_path_buf(),
-            ))
-        } else if !self.ports.paths.is_dir(config.working_dir()) {
-            Err(LaunchError::WorkingDirNotFound(
-                config.working_dir().to_path_buf(),
-            ))
-        } else {
-            self.ports
-                .launcher
-                .spawn(key, &launch)
-                .map_err(|message| LaunchError::Os {
-                    command: command.clone(),
-                    message,
-                })
+        self.runtimes
+            .entry(id.clone())
+            .or_default()
+            .begin_attempt(run, config.clone());
+        let outcome = match self.prepare(&config) {
+            Ok(environment) => {
+                let started = self.start_step(&key, &config, 0, environment.as_deref());
+                self.runtimes.entry(id.clone()).or_default().environment = environment;
+                started
+            }
+            Err(error) => {
+                let name = config.name();
+                self.ports
+                    .log
+                    .record(&format!("{name} could not start: {error}"));
+                Err(error)
+            }
         };
-
-        let name = config.name();
-        let line = match &outcome {
-            Ok(process) => format!("Started {name} (process {}): {command}", process.pid()),
-            Err(error) => format!("{name} could not start: {error}"),
-        };
-        self.ports.log.record(&line);
 
         let now = self.ports.clock.now();
         let runtime = self.runtimes.entry(id.clone()).or_default();
-        runtime.begin_attempt(run);
         runtime.state = match outcome {
             Ok(process) => {
                 runtime.process = Some(process);
@@ -139,10 +129,30 @@ impl App {
         let Ok(next) = runtime.state.exited(code) else {
             return;
         };
+        runtime.process = None;
+        if let RunState::Running(running) = &next {
+            // STEP-002: the step before succeeded, so the next one starts in the same run.
+            let index = running.step() - 1;
+            runtime.state = next.clone();
+            let config = runtime
+                .config
+                .clone()
+                .expect("a run in progress holds the configuration it started with");
+            let environment = runtime.environment.clone();
+            let started = self.start_step(&event.key, &config, index, environment.as_deref());
+            let runtime = self.runtimes.entry(event.key.operation).or_default();
+            match started {
+                Ok(process) => runtime.process = Some(process),
+                Err(error) => {
+                    runtime.state = RunState::Failed(Failure::FailedToStart(error));
+                    runtime.finished_at = Some(now);
+                }
+            }
+            return;
+        }
         let stopped = next == RunState::Stopped;
         runtime.state = next;
         runtime.finished_at = Some(now);
-        runtime.process = None;
         let name = self.name_of(&event.key.operation);
         let line = if stopped {
             format!("{name} stopped (exit code {code})")
@@ -230,19 +240,4 @@ impl App {
             .map(|operation| operation.config().name().to_owned())
             .unwrap_or_else(|| id.to_string())
     }
-}
-
-/// `launch` as the operator would type it, for a launch failure message (LCH-009).
-fn display_command(launch: &LaunchPlan) -> String {
-    std::iter::once(launch.program.to_string_lossy().into_owned())
-        .chain(launch.arguments.iter().cloned())
-        .map(|part| {
-            if part.is_empty() || part.contains(char::is_whitespace) {
-                format!("\"{part}\"")
-            } else {
-                part
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
 }
