@@ -785,7 +785,7 @@ that folder. Verified by: `application` test; Manual.
 
 **SCAN-009 (M) A partial match is flagged.** Where a proposal holds fewer steps than its pattern
 (SCAN-003), BuildPilot shall say so in words naming the missing files and the steps that will
-run, e.g. "buildexe.py not found: only buildinstaller.py will run". In the SCAN-005 list that
+run, e.g. "buildexe.py was not found: only buildinstaller.py will run". In the SCAN-005 list that
 folder's row shall also take the warning background and pulse twice when the list opens, then
 stay on the warning background; in the SCAN-004 dialog the words sit above the steps on the same
 background. Source: owner, 2026-09-27, so the EDColonisationAsst case is obvious rather than

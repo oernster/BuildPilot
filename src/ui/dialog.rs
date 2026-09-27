@@ -3,13 +3,13 @@
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use slint::{Image, SharedString};
+use slint::{ComponentHandle, Image, SharedString};
 
 use crate::domain::launch_plan::ScriptKind;
 use crate::domain::operation::{IconRef, OperationId, OperationSpec};
 use crate::domain::step::StepList;
 
-use super::{MainWindow, Ui};
+use super::{MainWindow, StepEditor, Ui};
 
 /// Image types an icon may be (ICON-004).
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "ico"];
@@ -23,7 +23,7 @@ pub(super) struct DialogState {
 
 pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     let this = ui.clone();
-    window.on_add(move || this.open_add());
+    window.on_add(move || this.open_add_choice());
     let this = ui.clone();
     window.on_edit(move |row| {
         if let Ok(id) = OperationId::new(row.as_str()) {
@@ -81,16 +81,6 @@ pub(super) fn pick_script(folder: Option<&Path>) -> Option<PathBuf> {
 }
 
 impl Ui {
-    fn open_add(&self) {
-        let Some(script) = pick_script(None) else {
-            return;
-        };
-        let draft = self.app.borrow().draft_for(&script);
-        if let Some(spec) = self.report(draft) {
-            self.open_dialog(None, spec, "Add a build script", "Add", String::new());
-        }
-    }
-
     fn open_edit(&self, id: OperationId) {
         let (spec, running) = {
             let app = self.app.borrow();
@@ -108,7 +98,7 @@ impl Ui {
         self.open_dialog(Some(id), spec, "Edit build operation", "Save", note);
     }
 
-    fn open_dialog(
+    pub(super) fn open_dialog(
         &self,
         editing: Option<OperationId>,
         spec: OperationSpec,
@@ -131,6 +121,11 @@ impl Ui {
         });
         self.show_steps();
         self.reset_environment(spec.environment);
+        // A folder scan sets its own warning after this (SCAN-009); anything else has none.
+        self.with_window(|w| {
+            w.global::<StepEditor>()
+                .set_warning(SharedString::default())
+        });
         self.set_dialog_icon(spec.icon);
         self.with_window(|w| w.set_show_operation_dialog(true));
     }

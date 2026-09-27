@@ -16,11 +16,23 @@ export global StepEditor {
     in-out property <string> environment;
     // One line about the environment when there is nothing to choose; empty for none.
     in property <string> environment-note;
+    // A partial match from a folder scan (SCAN-009); empty when there is none.
+    in property <string> warning;
     callback select(int);
     callback add();
     callback remove();
     callback up();
     callback down();
+}
+
+// SCAN-009 in the dialog: the partial-match words on the warning background, above the steps.
+export component StepWarning inherits Rectangle {
+    background: Theme.warning-surface;
+    border-radius: Theme.radius;
+    VerticalLayout {
+        padding: Theme.gap;
+        Text { text: StepEditor.warning; color: Theme.text; wrap: word-wrap; }
+    }
 }
 
 export component StepsField inherits HorizontalLayout {

@@ -14,6 +14,7 @@ mod domain {
     mod operation;
     mod output;
     mod preferences;
+    mod scan;
     mod selection;
     mod step;
     mod support;

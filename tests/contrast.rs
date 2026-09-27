@@ -23,6 +23,8 @@ const PAIRS: &[(&str, &str)] = &[
     ("failure", "surface"),
     ("failure", "surface-selected"),
     ("caution", "surface"),
+    ("text", "warning-surface"),
+    ("text-muted", "warning-surface"),
     ("tooltip-text", "tooltip-background"),
 ];
 

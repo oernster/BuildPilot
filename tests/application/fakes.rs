@@ -178,17 +178,22 @@ impl PathProbe for FakePaths {
         self.0.borrow().dirs.contains(path)
     }
     fn subfolders(&self, dir: &Path) -> Vec<String> {
-        let mut names: Vec<String> = self
-            .0
-            .borrow()
-            .dirs
-            .iter()
-            .filter(|folder| folder.parent() == Some(dir))
-            .map(|folder| folder.file_name().unwrap().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
+        names_inside(&self.0.borrow().dirs, dir)
     }
+    fn files(&self, dir: &Path) -> Vec<String> {
+        names_inside(&self.0.borrow().files, dir)
+    }
+}
+
+/// The sorted names of the `paths` directly inside `dir`.
+fn names_inside(paths: &HashSet<PathBuf>, dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> = paths
+        .iter()
+        .filter(|path| path.parent() == Some(dir))
+        .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
 }
 
 struct FakeVariables(Rc<RefCell<WorldState>>);

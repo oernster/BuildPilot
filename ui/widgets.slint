@@ -310,6 +310,8 @@ export component Toggle inherits Rectangle {
     in property <bool> checked;
     in property <string> label;
     in property <bool> on-ring: true;
+    // A stop of an open dialog's ring rather than the main window's.
+    in property <bool> in-dialog;
     callback toggled();
 
     width: 28px;
@@ -340,6 +342,7 @@ export component Toggle inherits Rectangle {
     stop := Stop {
         label: root.label;
         on-ring: root.on-ring;
+        in-dialog: root.in-dialog;
         activated => { root.toggled(); }
     }
 }

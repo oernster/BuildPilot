@@ -18,6 +18,7 @@ mod output_model;
 mod reading;
 mod row_sync;
 pub mod rows;
+mod scan;
 mod step_editor;
 
 use std::cell::{Cell, RefCell};
@@ -86,6 +87,8 @@ pub(crate) struct Ui {
     tray_expanded: Cell<bool>,
     tray_height: Cell<f32>,
     dialog: RefCell<Option<dialog::DialogState>>,
+    /// The projects a folder scan listed, while the list is open (SCAN-005).
+    scanned: RefCell<scan::Listed>,
     pending: RefCell<Option<Pending>>,
     environment: Environment,
     waker: Waker,
@@ -119,6 +122,7 @@ pub fn run(
                 .map_or(DEFAULT_TRAY_HEIGHT, |h| h as f32),
         ),
         dialog: RefCell::new(None),
+        scanned: RefCell::new(Vec::new()),
         pending: RefCell::new(None),
         environment,
         waker,
@@ -142,6 +146,7 @@ pub fn run(
     actions::wire(&ui, &window);
     dialog::wire(&ui, &window);
     step_editor::wire(&ui, &window);
+    scan::wire(&ui, &window);
     reading::wire_reading(&window.global::<Reading>());
     let _update_timers = help::wire(&ui, &window);
 

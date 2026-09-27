@@ -4,7 +4,7 @@
 import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Field } from "widgets.slint";
-import { StepEditor, StepsField, EnvironmentField } from "steps.slint";
+import { StepEditor, StepsField, EnvironmentField, StepWarning } from "steps.slint";
 
 export component Modal inherits Rectangle {
     in property <length> panel-width: 560px;
@@ -87,6 +87,7 @@ export component OperationDialog inherits Modal {
         name-edit := LineEdit { text <=> root.name; accessible-label: name-field.label; }
     }
     FieldLabel { text: "Steps, run in order"; }
+    if StepEditor.warning != "": StepWarning { }
     StepsField { }
     FieldLabel { text: script-field.label; }
     HorizontalLayout {

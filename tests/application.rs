@@ -7,6 +7,7 @@ mod application {
     mod log;
     mod navigation;
     mod run;
+    mod scan;
     mod startup;
     mod steps;
     mod support;

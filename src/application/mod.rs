@@ -14,6 +14,7 @@ mod navigation;
 pub mod ports;
 mod run_actions;
 mod runtime;
+mod scan_actions;
 mod step_actions;
 pub mod updates;
 
@@ -35,6 +36,7 @@ pub use ports::{
     StoreError, Variables,
 };
 pub use run_actions::{OverdueStop, STOP_TIMEOUT};
+pub use scan_actions::{FolderScan, ScannedFolder};
 
 use runtime::OperationRuntime;
 

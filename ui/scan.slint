@@ -1,0 +1,137 @@
+// Adding from a folder (SRS 3.20): Add's choice between a script and a folder, then the list of
+// projects a parent folder holds. State lives in a global so the main window carries none of it.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { TextButton, Toggle } from "widgets.slint";
+import { Modal } from "dialogs.slint";
+
+// One project folder found by a scan.
+export struct ScannedRow {
+    name: string,
+    // Its steps as file names, `buildexe.py then buildinstaller.py`.
+    steps: string,
+    ticked: bool,
+    // SCAN-009's words; empty when the match is whole.
+    warning: string,
+    // SCAN-006's reason it starts unticked; empty when it starts ticked.
+    note: string,
+}
+
+export global ScanList {
+    in property <bool> choosing;
+    in property <bool> listing;
+    in property <string> folder;
+    in property <[ScannedRow]> rows;
+    callback choose-script();
+    callback choose-folder();
+    callback toggle(int);
+    callback add-ticked();
+    callback cancel();
+}
+
+// SCAN-002: Add takes a script or a folder.
+export component AddChoiceDialog inherits Modal {
+    heading: "Add a build";
+    panel-width: 460px;
+    dismissed => { ScanList.cancel(); }
+    init => { script-button.focus-me(); }
+
+    Text {
+        text: "Choose one build script. Or choose a folder for BuildPilot to recognise.";
+        color: Theme.text;
+        wrap: word-wrap;
+    }
+    HorizontalLayout {
+        alignment: end;
+        spacing: Theme.gap;
+        TextButton { text: "Cancel"; in-dialog: true; clicked => { ScanList.cancel(); } }
+        script-button := TextButton {
+            text: "Script";
+            label: "Choose a build script";
+            in-dialog: true;
+            clicked => { ScanList.choose-script(); }
+        }
+        TextButton {
+            text: "Folder";
+            label: "Choose a folder to recognise";
+            primary: true;
+            in-dialog: true;
+            clicked => { ScanList.choose-folder(); }
+        }
+    }
+}
+
+// A row that, when it warns, pulses its warning background twice, a second each, then stays on
+// it (SCAN-009): well under WCAG 2.3.1's three flashes a second.
+component PulsingRow inherits Rectangle {
+    in property <bool> warn;
+    property <int> pulses: 2;
+    property <duration> half-pulse: 500ms;
+    property <int> half-pulses-left: root.warn ? root.pulses * 2 : 0;
+    property <bool> lit: true;
+    background: root.warn && root.lit ? Theme.warning-surface : Theme.surface;
+    border-radius: Theme.radius;
+    animate background { duration: root.half-pulse; easing: ease-in-out; }
+    Timer {
+        interval: root.half-pulse;
+        running: root.half-pulses-left > 0;
+        triggered => {
+            root.lit = !root.lit;
+            root.half-pulses-left -= 1;
+        }
+    }
+    @children
+}
+
+// SCAN-005, SCAN-006, SCAN-009: the projects inside a parent folder, each with a tick box.
+export component ScanListDialog inherits Modal {
+    heading: "Projects in " + ScanList.folder;
+    panel-width: 640px;
+    tall: true;
+    dismissed => { ScanList.cancel(); }
+    init => { cancel-button.focus-me(); }
+
+    ScrollView {
+        vertical-stretch: 1;
+        VerticalLayout {
+            spacing: Theme.gap;
+            for row[index] in ScanList.rows: PulsingRow {
+        warn: row.warning != "";
+        HorizontalLayout {
+            padding: Theme.gap;
+            spacing: Theme.gap;
+            Toggle {
+                checked: row.ticked;
+                label: "Add " + row.name;
+                in-dialog: true;
+                toggled => { ScanList.toggle(index); }
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                Text { text: row.name; color: Theme.text; font-weight: 600; }
+                Text { text: row.steps; color: Theme.text-muted; wrap: word-wrap; }
+                if row.warning != "": Text { text: row.warning; color: Theme.text; wrap: word-wrap; }
+                if row.note != "": Text { text: row.note; color: Theme.text-muted; wrap: word-wrap; }
+            }
+        }
+            }
+        }
+    }
+    HorizontalLayout {
+        alignment: end;
+        spacing: Theme.gap;
+        cancel-button := TextButton {
+            text: "Cancel";
+            in-dialog: true;
+            clicked => { ScanList.cancel(); }
+        }
+        TextButton {
+            text: "Add ticked";
+            label: "Add the ticked projects";
+            primary: true;
+            in-dialog: true;
+            clicked => { ScanList.add-ticked(); }
+        }
+    }
+}

@@ -19,6 +19,8 @@ export { Theme, RowData, StatusKind, OutputLineData, Ring, CreditData }
 export { SetupWindow, SetupScreen, FooterAction } from "setup.slint";
 export { Reading } from "reading.slint";
 export { StepEditor } from "steps.slint";
+export { ScanList, ScannedRow } from "scan.slint";
+import { ScanList, AddChoiceDialog, ScanListDialog } from "scan.slint";
 
 // Which control opened the dialog that is showing, so focus can go back to it.
 enum Opener { rows, add, settings, help }
@@ -140,7 +142,7 @@ export component MainWindow inherits Window {
 
     out property <bool> modal-open: root.show-operation-dialog || root.show-confirm
         || root.show-settings || root.show-help-menu || root.show-guide || root.show-about
-        || root.show-licence || root.show-update;
+        || root.show-licence || root.show-update || ScanList.choosing || ScanList.listing;
     // Only the topmost surface reads itself: the update prompt can arrive over a Help surface.
     property <bool> reading-active: !root.show-update;
     changed modal-open => {
@@ -358,5 +360,7 @@ export component MainWindow inherits Window {
             skip => { root.skip-update(); }
             close => { root.close-update(); }
         }
+        if ScanList.choosing: AddChoiceDialog { }
+        if ScanList.listing: ScanListDialog { }
     }
 }

@@ -3,7 +3,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use buildpilot::ui::StepEditor;
+use buildpilot::ui::{ScanList, ScannedRow, StepEditor};
 use slint::platform::Key;
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
@@ -101,6 +101,66 @@ fn the_environment_choice_is_on_the_ring() {
             "Browse for the working directory",
             "Environment",
             "Arguments of step 1, one per line"
+        ]
+    );
+}
+
+// SCAN-002: Add's choice opens on Script and rings Cancel, Script and Folder.
+#[test]
+fn the_add_choice_opens_on_script() {
+    let window = window();
+    let opener = window.as_weak();
+    window.on_add(move || {
+        let window = opener.upgrade().unwrap();
+        window.global::<ScanList>().set_choosing(true);
+    });
+    press(&window, Key::Tab);
+    press(&window, " ");
+    assert_eq!(focused(&window), "Choose a build script");
+    assert_eq!(
+        walk(&window, Key::Tab, 3),
+        [
+            "Choose a folder to recognise",
+            "Cancel",
+            "Choose a build script"
+        ]
+    );
+}
+
+// SCAN-005: the list opens on Cancel; each project's tick box is a stop.
+#[test]
+fn the_project_list_rings_its_tick_boxes() {
+    let window = window();
+    let row = |name: &str, warning: &str| ScannedRow {
+        name: name.into(),
+        steps: "build.ps1".into(),
+        ticked: true,
+        warning: warning.into(),
+        note: SharedString::default(),
+    };
+    let list = window.global::<ScanList>();
+    list.set_rows(ModelRc::new(VecModel::from(vec![
+        row(
+            "edca",
+            "buildexe.py was not found: only buildinstaller.py will run",
+        ),
+        row("pigeonpost", ""),
+    ])));
+    let opener = window.as_weak();
+    window.on_add(move || {
+        let window = opener.upgrade().unwrap();
+        window.global::<ScanList>().set_listing(true);
+    });
+    press(&window, Key::Tab);
+    press(&window, " ");
+    assert_eq!(focused(&window), "Cancel");
+    assert_eq!(
+        walk(&window, Key::Tab, 4),
+        [
+            "Add the ticked projects",
+            "Add edca",
+            "Add pigeonpost",
+            "Cancel"
         ]
     );
 }

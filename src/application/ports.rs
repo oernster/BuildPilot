@@ -102,6 +102,8 @@ pub trait PathProbe {
     fn is_dir(&self, path: &Path) -> bool;
     /// The names of the folders directly inside `dir`; none when it cannot be read (ENV-001).
     fn subfolders(&self, dir: &Path) -> Vec<String>;
+    /// The names of the files directly inside `dir`; none when it cannot be read (SCAN-008).
+    fn files(&self, dir: &Path) -> Vec<String>;
 }
 
 /// BuildPilot's own environment variables, which each step starts from (ENV-009).

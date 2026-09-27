@@ -38,17 +38,26 @@ impl PathProbe for FsPaths {
         path.is_dir()
     }
     fn subfolders(&self, dir: &Path) -> Vec<String> {
-        let Ok(entries) = fs::read_dir(dir) else {
-            return Vec::new();
-        };
-        let mut names: Vec<String> = entries
-            .flatten()
-            .filter(|entry| entry.path().is_dir())
-            .map(|entry| entry.file_name().to_string_lossy().into_owned())
-            .collect();
-        names.sort();
-        names
+        entries_where(dir, Path::is_dir)
     }
+    fn files(&self, dir: &Path) -> Vec<String> {
+        entries_where(dir, Path::is_file)
+    }
+}
+
+/// The sorted names of the entries directly inside `dir` whose path passes `keep`; none when
+/// `dir` cannot be read.
+fn entries_where(dir: &Path, keep: fn(&Path) -> bool) -> Vec<String> {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return Vec::new();
+    };
+    let mut names: Vec<String> = entries
+        .flatten()
+        .filter(|entry| keep(&entry.path()))
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    names.sort();
+    names
 }
 
 /// The variables BuildPilot itself was started with (ENV-009).
