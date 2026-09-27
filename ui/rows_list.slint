@@ -101,7 +101,15 @@ export component RowsList inherits Rectangle {
         let from = root.selected-index < 0 ? (delta > 0 ? -1 : 0) : root.selected-index;
         let to = mod(from + delta + root.rows.length, root.rows.length);
         root.select(root.rows[to].id);
-        let top = root.rows-padding + to * root.row-pitch;
+        root.reveal(to);
+    }
+
+    // Scrolls the least that brings row `index` wholly into view; nothing when it is already.
+    function reveal(index: int) {
+        if (index < 0 || index >= root.rows.length) {
+            return;
+        }
+        let top = root.rows-padding + index * root.row-pitch;
         let bottom = top + Theme.row-height + root.rows-padding;
         if (top + rows-view.content-y < 0) {
             rows-view.content-y = -top + root.rows-padding;
@@ -109,6 +117,10 @@ export component RowsList inherits Rectangle {
             rows-view.content-y = rows-view.visible-height - bottom;
         }
     }
+
+    // ROW-009: when the view shrinks (the tray opening), the selected row stays in sight.
+    property <length> view-height: rows-view.visible-height;
+    changed view-height => { root.reveal(root.selected-index); }
 
     if root.rows.length == 0: VerticalLayout {
         alignment: center;

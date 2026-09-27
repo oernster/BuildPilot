@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 8.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 9.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -324,6 +324,13 @@ operator arranged (ROW-003, ROW-004) are never moved; a stored deck loads in its
 Source: owner, 2026-09-27. Acceptance: adding Stellody, axisdb, PigeonPost, zebra then BuildPilot
 to an empty deck lists axisdb, BuildPilot, PigeonPost, Stellody, zebra. Verified by:
 `domain::deck` tests; `application::deck` test.
+
+**ROW-009 (M) The selected row stays in sight.** When the row list's view gets shorter (the
+output tray opening or growing), the list shall scroll the least that keeps the selected row wholly
+in view; it shall not scroll when that row is already in view or no row is selected. Source:
+owner, Amendment 9. Acceptance: twenty rows, the third selected and in view, the tray opened: the
+third row is still wholly in view. Verified by: `geometry` test
+`expanding_the_tray_keeps_the_selected_row_in_view`.
 
 ### 3.7 Launching (LCH)
 
@@ -1066,3 +1073,9 @@ BuildPilot is a Windows application. With the first major release the owner comm
 things across a major version: the config file stays readable (DATA-002), the install folder and
 Apps list key stay put (INST-007) and the v1 scope in this document is delivered on Windows. A
 change breaking either of the first two carries a new major version.
+
+**Amendment 9 (2026-09-27): the selected row stays in sight.** Adds ROW-009.
+
+Reason: in the first release, opening the output tray shortened the row list without moving it,
+so a selected row near the foot of the list dropped out of sight just as its output appeared.
+Found by the owner on the released build; reproduced by the ROW-009 geometry test before the fix.

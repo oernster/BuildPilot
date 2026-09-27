@@ -48,7 +48,7 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-338 tests, counted from the source.
+339 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
@@ -59,7 +59,7 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 | `tests/ui.rs` | 11 | What rows and the tray say, without a window. |
 | `tests/structural.rs` | 8 | The invariants in [ARCHITECTURE.md](ARCHITECTURE.md), by reading the source. |
 | `tests/guide.rs` | 1 | Every toolbar and row control has a Guide entry, one per state where its label changes. |
-| `tests/geometry.rs` | 8 | Where Slint laid things out, headless: every toolbar tooltip inside the window, row tooltips not clipped by the list, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text, the scroll bars and the counts of rows out of sight. |
+| `tests/geometry` | 9 | Where Slint laid things out, headless: every toolbar tooltip inside the window, row tooltips not clipped by the list, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text, the scroll bars and the counts of rows out of sight, the selected row kept in sight when the tray opens. |
 | `tests/setup.rs` | 6 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
 | `tests/contrast.rs` | 3 | Text at 4.5:1 and rings at 3:1 against their surfaces, in both themes, read from `ui/theme.slint`. |
 | `tests/assets.rs` | 1 | Every image a Slint file names is a small copy in `assets/ui`, none over 256 pixels. |
