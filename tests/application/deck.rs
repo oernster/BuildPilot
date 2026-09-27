@@ -30,18 +30,27 @@ fn draft_uses_the_discovered_icon() {
     ));
 }
 
-// CFG-001, ADD-006: add appends, assigns a fresh identity and saves.
+// CFG-001, ADD-006, ROW-008: add places the row by name, assigns a fresh identity and saves.
 #[test]
-fn add_appends_and_saves() {
+fn add_places_by_name_and_saves() {
     let world = world();
     let mut app = world.app();
     let first = add(&mut app, SCRIPT_A);
     let second = add(&mut app, SCRIPT_A);
     assert_ne!(first, second);
-    assert_eq!(world.save_count(), 2);
-    let saved = &world.state.borrow().saves[1].0;
-    assert_eq!(saved.len(), 2);
-    assert_eq!(saved[1].id(), &second);
+    let earlier = add(&mut app, SCRIPT_B);
+    assert_eq!(world.save_count(), 3);
+    let order: Vec<OperationId> = world.state.borrow().saves[2]
+        .0
+        .iter()
+        .map(|operation| operation.id().clone())
+        .collect();
+    // "alpha build" twice, the second after the first; "beta build" after both.
+    assert_eq!(order, [first, second, earlier]);
+    let mut spec = draft(&app, SCRIPT_C);
+    spec.name = "Aardvark".to_owned();
+    let top = app.add(spec).unwrap();
+    assert_eq!(app.deck().position(&top), Some(0));
 }
 
 // ADD-005: an invalid spec is refused before anything is stored.

@@ -304,6 +304,14 @@ set of operation IDs. No action uses it in v1. Checkbox state is not persisted (
 **ROW-007 (M) Selection.** When the operator clicks a row (or moves focus to it), the flight deck
 shall make it the selected row and the output tray shall show its latest run. Source: spec §11.1.
 
+**ROW-008 (M) New rows slot in by name.** When an operation is added (Add or a folder scan), the
+flight deck shall place it before the first row whose name sorts after its own, ignoring case; an
+equal name goes after the existing one. A deck in name order therefore stays in order. Rows the
+operator arranged (ROW-003, ROW-004) are never moved; a stored deck loads in its saved order.
+Source: owner, 2026-09-27. Acceptance: adding Stellody, axisdb, PigeonPost, zebra then BuildPilot
+to an empty deck lists axisdb, BuildPilot, PigeonPost, Stellody, zebra. Verified by:
+`domain::deck` tests; `application::deck` test.
+
 ### 3.7 Launching (LCH)
 
 **LCH-001 (M) Host by file type.** The launcher shall choose the host from one table keyed by
@@ -520,6 +528,16 @@ every 80 ms, still for 5 seconds at the end, back to the top at 15 pixels every 
 seconds, then again. Any scroll by the operator suspends the cycle for 2.5 seconds, after which it
 carries on from where they left it; it is never switched off. The dialog's buttons stay in place
 below the text. Source: house `/scroll` model.
+
+**UI-012 (M) Scrolling shows itself.** Every surface that scrolls shall show a scroll bar
+whenever its content overflows: at least 12 px wide, in theme colours whose thumb reaches 3:1
+against its track and the surfaces beside it, draggable, with a click on the track moving a page.
+The row list shall also count the rows wholly out of sight at each edge ("▼ 16 more below",
+"▲ 3 more above"), each count scrolling a page that way when clicked. Rationale: Fluent's own bar
+is a 2 px line until the pointer finds it (measured in Slint 1.18.1's
+`widgets/fluent/scrollview.slint`), so with the output tray open 20 rows showed 4 and gave no
+sign of the rest (owner, 2026-09-27). Verified by: `geometry` tests for the bar and the counts;
+the UI-002 contrast test for the thumb; Manual for the look.
 
 **UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark), the data folder
 path with an Open Folder button and the operator's host table (HOST-001). The theme button shown

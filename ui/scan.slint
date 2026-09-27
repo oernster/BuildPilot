@@ -5,6 +5,7 @@ import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Toggle } from "widgets.slint";
 import { Modal } from "dialogs.slint";
+import { ScrollBar } from "scrollbar.slint";
 
 // One project folder found by a scan.
 export struct ScannedRow {
@@ -94,31 +95,52 @@ export component ScanListDialog inherits Modal {
     dismissed => { ScanList.cancel(); }
     init => { cancel-button.focus-me(); }
 
-    ScrollView {
+    HorizontalLayout {
         vertical-stretch: 1;
-        VerticalLayout {
-            spacing: Theme.gap;
-            for row[index] in ScanList.rows: PulsingRow {
-        warn: row.warning != "";
-        HorizontalLayout {
-            padding: Theme.gap;
-            spacing: Theme.gap;
-            Toggle {
-                checked: row.ticked;
-                enabled: !row.locked;
-                label: "Add " + row.name;
-                in-dialog: true;
-                toggled => { ScanList.toggle(index); }
-            }
+        spacing: Theme.gap;
+        list-view := ScrollView {
+            horizontal-stretch: 1;
+            vertical-scrollbar-policy: always-off;
             VerticalLayout {
-                horizontal-stretch: 1;
-                Text { text: row.name; color: Theme.text; font-weight: 600; }
-                Text { text: row.steps; color: Theme.text-muted; wrap: word-wrap; }
-                if row.warning != "": Text { text: row.warning; color: Theme.text; wrap: word-wrap; }
-                if row.note != "": Text { text: row.note; color: Theme.text-muted; wrap: word-wrap; }
+                spacing: Theme.gap;
+                for row[index] in ScanList.rows: PulsingRow {
+                    warn: row.warning != "";
+                    HorizontalLayout {
+                        padding: Theme.gap;
+                        spacing: Theme.gap;
+                        Toggle {
+                            checked: row.ticked;
+                            enabled: !row.locked;
+                            label: "Add " + row.name;
+                            in-dialog: true;
+                            toggled => { ScanList.toggle(index); }
+                        }
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            Text { text: row.name; color: Theme.text; font-weight: 600; }
+                            Text { text: row.steps; color: Theme.text-muted; wrap: word-wrap; }
+                            if row.warning != "": Text {
+                                text: row.warning;
+                                color: Theme.text;
+                                wrap: word-wrap;
+                            }
+                            if row.note != "": Text {
+                                text: row.note;
+                                color: Theme.text-muted;
+                                wrap: word-wrap;
+                            }
+                        }
+                    }
+                }
             }
         }
-            }
+        // UI-012: a bar that shows whenever the projects run past the dialog. Its strip is always
+        // kept: the rows wrap, so their height follows the width; a width that followed the
+        // bar would be a loop.
+        ScrollBar {
+            content-height: list-view.content-height;
+            visible-height: list-view.visible-height;
+            content-y <=> list-view.content-y;
         }
     }
     HorizontalLayout {

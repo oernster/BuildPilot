@@ -11,6 +11,7 @@
 
 import { ScrollView } from "std-widgets.slint";
 import { Ring } from "widgets.slint";
+import { ScrollBar } from "scrollbar.slint";
 
 export struct ReadingState { phase: int, wait-ms: int, ticks-to-step: int, opening: bool }
 export struct ReadingStep { state: ReadingState, delta: length }
@@ -78,8 +79,22 @@ export component ReadingPane inherits Rectangle {
         }
     }
 
+    // The bar's strip is always kept: the text wraps, so its height follows the view's width;
+    // a width that followed the bar would be a loop.
     view := ScrollView {
+        x: 0px;
+        width: parent.width - bar.width;
+        vertical-scrollbar-policy: always-off;
         @children
+    }
+
+    // UI-012: a bar that shows whenever the text runs past the pane.
+    bar := ScrollBar {
+        x: parent.width - self.width;
+        height: parent.height;
+        content-height: view.content-height;
+        visible-height: view.visible-height;
+        content-y <=> view.content-y;
     }
 
     Timer {

@@ -24,6 +24,9 @@ export global Theme {
     out property <color> tooltip-background: dark ? #f0f1f3 : #24262a;
     out property <color> tooltip-text: dark ? #1b1d21 : #f0f1f3;
     out property <color> scrim: dark ? #000000b0 : #00000070;
+    // The house scroll bar (UI-012): a thumb that stands out from its track and every surface.
+    out property <color> scroll-track: surface-hover;
+    out property <color> scroll-thumb: text-muted;
     // How far a placeholder or a control that cannot be used is faded.
     out property <float> dimmed: 0.45;
 
@@ -33,6 +36,8 @@ export global Theme {
     out property <length> handle-icon-size: 40px;
     out property <length> handle-width: 52px;
     out property <length> radius: 6px;
+    out property <length> scroll-bar-width: 12px;
+    out property <length> scroll-thumb-min: 32px;
     out property <length> gap: 8px;
     out property <length> tray-header-height: 36px;
     out property <length> mono-size: 13px;

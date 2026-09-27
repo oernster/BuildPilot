@@ -8,7 +8,40 @@
 import { ScrollView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Ring } from "widgets.slint";
+import { ScrollBar } from "scrollbar.slint";
 import { OperationRow, RowData } from "row.slint";
+
+// UI-012: how many rows lie beyond one edge of the list; a click scrolls a page that way. Its
+// words are its name, as a TextButton's are, so it carries no tooltip.
+component MoreCue inherits Rectangle {
+    // What it shows, e.g. `▼ 16 more below`.
+    in property <string> text;
+    // What it is called, e.g. `16 more rows below`.
+    in property <string> label;
+    callback clicked();
+
+    width: words.preferred-width + 3 * Theme.gap;
+    height: words.preferred-height + Theme.gap;
+    border-radius: self.height / 2;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: touch.has-hover ? Theme.surface-hover : Theme.surface;
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+
+    words := Text {
+        text: root.text;
+        color: Theme.text;
+        font-size: Theme.body-size;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+}
 
 export component RowsList inherits Rectangle {
     in property <[RowData]> rows;
@@ -44,6 +77,21 @@ export component RowsList inherits Rectangle {
         : max(0, min(root.rows.length - 1,
             floor((root.dragging * root.row-pitch + root.drag-offset + root.row-pitch / 2)
                 / root.row-pitch)));
+
+    // UI-012: how far down the view sits; how many whole rows lie out of sight each way. A
+    // row cut by an edge is in sight.
+    property <length> view-top: -rows-view.content-y;
+    property <length> max-top: max(0px, rows-view.content-height - rows-view.visible-height);
+    property <int> hidden-above: root.view-top - root.rows-padding - Theme.row-height < 0px ? 0
+        : min(root.rows.length,
+            floor((root.view-top - root.rows-padding - Theme.row-height) / root.row-pitch) + 1);
+    property <int> hidden-below: max(0, root.rows.length
+        - ceil((root.view-top + rows-view.visible-height - root.rows-padding) / root.row-pitch));
+
+    // Moves the view `delta` down, kept within the rows.
+    function scroll-by(delta: length) {
+        rows-view.content-y = -max(0px, min(root.max-top, root.view-top + delta));
+    }
 
     // Selects the row `delta` places from the selected one (wrapping) then scrolls it into view.
     function select-step(delta: int) {
@@ -136,6 +184,9 @@ export component RowsList inherits Rectangle {
 
     rows-view := ScrollView {
         visible: root.rows.length > 0;
+        width: parent.width - (rows-bar.visible ? rows-bar.width : 0px);
+        x: 0px;
+        vertical-scrollbar-policy: always-off;
         content-height: root.rows.length * root.row-pitch + 2 * root.rows-padding;
         for row[i] in root.rows: OperationRow {
             x: root.rows-padding;
@@ -169,5 +220,29 @@ export component RowsList inherits Rectangle {
                 root.dragging = -1;
             }
         }
+    }
+
+    // UI-012: a bar that shows whenever the rows run past the window.
+    rows-bar := ScrollBar {
+        x: parent.width - self.width;
+        height: parent.height;
+        content-height: rows-view.content-height;
+        visible-height: rows-view.visible-height;
+        content-y <=> rows-view.content-y;
+    }
+
+    if root.hidden-above > 0: MoreCue {
+        x: (rows-view.width - self.width) / 2;
+        y: Theme.gap;
+        text: "\u{25B2} " + root.hidden-above + " more above";
+        label: root.hidden-above + " more rows above";
+        clicked => { root.scroll-by(-rows-view.visible-height); }
+    }
+    if root.hidden-below > 0: MoreCue {
+        x: (rows-view.width - self.width) / 2;
+        y: root.height - self.height - Theme.gap;
+        text: "\u{25BC} " + root.hidden-below + " more below";
+        label: root.hidden-below + " more rows below";
+        clicked => { root.scroll-by(rows-view.visible-height); }
     }
 }

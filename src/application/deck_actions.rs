@@ -32,14 +32,15 @@ impl App {
         Ok(spec)
     }
 
-    /// Adds an operation as the bottom row and saves (CFG-001).
+    /// Adds an operation at its place by name and saves (ROW-008, CFG-001).
     pub fn add(&mut self, spec: OperationSpec) -> Result<OperationId, AppError> {
         let config = OperationConfig::try_from(spec)?;
         self.check_config(&config)?;
         let id = self.ports.ids.next_id();
         let config = self.settle_icon(&id, config, None)?;
         self.record_icon_status(&id, config.icon());
-        self.deck.add(Operation::new(id.clone(), config))?;
+        self.deck
+            .insert_by_name(Operation::new(id.clone(), config))?;
         self.persist();
         Ok(id)
     }

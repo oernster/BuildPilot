@@ -1,6 +1,7 @@
 use buildpilot::domain::deck::{DeckError, FlightDeck};
+use buildpilot::domain::operation::{Operation, OperationConfig};
 
-use super::support::{config, id, operation};
+use super::support::{config, id, operation, spec};
 
 fn deck(ids: &[&str]) -> FlightDeck {
     FlightDeck::new(ids.iter().map(|value| operation(value)).collect()).unwrap()
@@ -37,6 +38,63 @@ fn add_appends_as_the_bottom_row() {
         deck.add(operation("a")).unwrap_err(),
         DeckError::DuplicateId(id("a"))
     );
+}
+
+/// An operation with identity `value` named `name`.
+fn named(value: &str, name: &str) -> Operation {
+    let mut spec = spec(&format!(r"C:\src\{value}\build.ps1"));
+    spec.name = name.to_owned();
+    Operation::new(id(value), OperationConfig::try_from(spec).unwrap())
+}
+
+fn names(deck: &FlightDeck) -> Vec<&str> {
+    deck.operations()
+        .iter()
+        .map(|op| op.config().name())
+        .collect()
+}
+
+// ROW-008: a new row goes before the first whose name sorts after its own, whatever the case;
+// an equal name goes after. A deck in name order stays in order.
+#[test]
+fn insert_by_name_keeps_a_sorted_deck_sorted() {
+    let mut deck = FlightDeck::default();
+    for (value, name) in [
+        ("s", "Stellody"),
+        ("a", "axisdb"),
+        ("p", "PigeonPost"),
+        ("z", "zebra"),
+        ("b", "BuildPilot"),
+        ("s2", "stellody"),
+    ] {
+        deck.insert_by_name(named(value, name)).unwrap();
+    }
+    assert_eq!(
+        names(&deck),
+        [
+            "axisdb",
+            "BuildPilot",
+            "PigeonPost",
+            "Stellody",
+            "stellody",
+            "zebra"
+        ]
+    );
+    assert_eq!(
+        deck.insert_by_name(named("a", "again")).unwrap_err(),
+        DeckError::DuplicateId(id("a"))
+    );
+}
+
+// ROW-008: rows the operator arranged are never moved; the new one lands before the first row
+// whose name sorts after it.
+#[test]
+fn insert_by_name_leaves_an_arranged_deck_alone() {
+    let mut deck = FlightDeck::new(vec![named("z", "zebra"), named("a", "alpha")]).unwrap();
+    assert_eq!(deck.insert_by_name(named("m", "middle")), Ok(0));
+    assert_eq!(names(&deck), ["middle", "zebra", "alpha"]);
+    assert_eq!(deck.insert_by_name(named("zz", "zz top")), Ok(3));
+    assert_eq!(names(&deck), ["middle", "zebra", "alpha", "zz top"]);
 }
 
 // EDIT-001: an edit keeps identity and position.

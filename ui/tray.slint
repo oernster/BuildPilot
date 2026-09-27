@@ -7,6 +7,7 @@
 import { ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Ring } from "widgets.slint";
+import { ScrollBar } from "scrollbar.slint";
 
 export struct OutputLineData { text: string, err: bool }
 
@@ -109,6 +110,9 @@ export component OutputTray inherits Rectangle {
                 }
             }
             list := ListView {
+                x: 0px;
+                width: parent.width - (output-bar.visible ? output-bar.width : 0px);
+                vertical-scrollbar-policy: always-off;
                 scrolled => {
                     root.scrolled(self.content-y <= root.lowest + 2px);
                 }
@@ -129,6 +133,15 @@ export component OutputTray inherits Rectangle {
                         font-size: Theme.mono-size;
                     }
                 }
+            }
+            // UI-012: a bar that shows whenever the output runs past the tray.
+            output-bar := ScrollBar {
+                x: parent.width - self.width;
+                height: parent.height;
+                content-height: list.content-height;
+                visible-height: list.visible-height;
+                content-y <=> list.content-y;
+                scrolled => { root.scrolled(list.content-y <= root.lowest + 2px); }
             }
         }
     }

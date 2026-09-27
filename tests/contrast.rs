@@ -41,6 +41,10 @@ const NON_TEXT_PAIRS: &[(&str, &str)] = &[
     ("danger", "background"),
     ("danger", "surface"),
     ("danger", "surface-selected"),
+    // UI-012: the scroll bar's thumb on its track and on the surfaces a bar sits beside.
+    ("scroll-thumb", "scroll-track"),
+    ("scroll-thumb", "background"),
+    ("scroll-thumb", "surface"),
 ];
 
 /// token -> (light colour, dark colour), from lines of the form

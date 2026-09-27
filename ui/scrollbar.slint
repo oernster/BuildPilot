@@ -1,0 +1,69 @@
+// The house scroll bar (UI-012). Fluent's own is a 2px hairline in its own grey until the pointer
+// finds it, so a list that runs past its window gave no sign of the rest. Every scrolling surface
+// turns that one off and wears this one, bound to its view: shown whenever the content overflows,
+// a thumb that can be dragged and a track where a click moves a page.
+
+import { Theme } from "theme.slint";
+
+export component ScrollBar inherits Rectangle {
+    // The view's figures; `content-y` is bound both ways to the view's.
+    in property <length> content-height;
+    in property <length> visible-height;
+    in-out property <length> content-y;
+    // The operator moved the view with the bar.
+    callback scrolled();
+
+    // How far the view can move; how far the thumb can.
+    property <length> range: max(0px, root.content-height - root.visible-height);
+    property <length> thumb-length: root.range <= 0px ? root.height
+        : max(Theme.scroll-thumb-min, root.height * root.visible-height / root.content-height);
+    property <length> travel: root.height - root.thumb-length;
+
+    visible: root.range > 0px;
+    width: Theme.scroll-bar-width;
+    background: Theme.scroll-track;
+    border-radius: self.width / 2;
+
+    function move-to(top: length) {
+        root.content-y = -max(0px, min(root.range, top));
+        root.scrolled();
+    }
+
+    thumb := Rectangle {
+        y: root.range <= 0px ? 0px : root.travel * (-root.content-y / root.range);
+        width: parent.width;
+        height: root.thumb-length;
+        border-radius: self.width / 2;
+        background: touch.dragging || touch.has-hover ? Theme.text : Theme.scroll-thumb;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.default;
+        // A drag remembers where the view and the pointer were when it began.
+        property <bool> dragging;
+        property <length> start-top;
+        property <length> start-y;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.up) {
+                self.dragging = false;
+            }
+            if (event.kind != PointerEventKind.down || event.button != PointerEventButton.left) {
+                return;
+            }
+            if (self.mouse-y < thumb.y) {
+                root.move-to(-root.content-y - root.visible-height);
+            } else if (self.mouse-y > thumb.y + thumb.height) {
+                root.move-to(-root.content-y + root.visible-height);
+            } else {
+                self.dragging = true;
+                self.start-top = -root.content-y;
+                self.start-y = self.mouse-y;
+            }
+        }
+        moved => {
+            if (self.dragging && root.travel > 0px) {
+                root.move-to(self.start-top + (self.mouse-y - self.start-y) * root.range / root.travel);
+            }
+        }
+    }
+}

@@ -46,13 +46,33 @@ impl FlightDeck {
             .position(|operation| operation.id() == id)
     }
 
-    /// Appends `operation` as the bottom row.
+    /// Appends `operation` as the bottom row: how a stored deck is rebuilt in its saved order.
     pub fn add(&mut self, operation: Operation) -> Result<(), DeckError> {
-        if self.get(operation.id()).is_some() {
-            return Err(DeckError::DuplicateId(operation.id().clone()));
-        }
+        self.refuse_repeat(&operation)?;
         self.operations.push(operation);
         Ok(())
+    }
+
+    /// Places a newly added `operation` before the first row whose name sorts after its own,
+    /// ignoring case; answers its row (ROW-008). A deck in name order stays in order; rows
+    /// the operator arranged by hand are never moved.
+    pub fn insert_by_name(&mut self, operation: Operation) -> Result<usize, DeckError> {
+        self.refuse_repeat(&operation)?;
+        let key = sort_key(operation.config().name());
+        let index = self
+            .operations
+            .iter()
+            .position(|row| sort_key(row.config().name()) > key)
+            .unwrap_or(self.operations.len());
+        self.operations.insert(index, operation);
+        Ok(index)
+    }
+
+    fn refuse_repeat(&self, operation: &Operation) -> Result<(), DeckError> {
+        match self.get(operation.id()) {
+            Some(_) => Err(DeckError::DuplicateId(operation.id().clone())),
+            None => Ok(()),
+        }
     }
 
     /// Replaces the configuration of the operation at `index` (as `position` answered it), keeping
@@ -109,6 +129,11 @@ impl FlightDeck {
         self.position(id)
             .ok_or_else(|| DeckError::NotFound(id.clone()))
     }
+}
+
+/// What a name sorts by: the same letters whatever their case (ROW-008).
+fn sort_key(name: &str) -> String {
+    name.to_lowercase()
 }
 
 /// Why a deck change was refused.
