@@ -78,7 +78,6 @@ export component MainWindow inherits Window {
     in property <string> repository;
     in property <[CreditData]> credits;
     in property <string> licence-text;
-    in property <string> notices-note;
     in property <string> update-message;
     in property <bool> update-offer;
 
@@ -88,7 +87,6 @@ export component MainWindow inherits Window {
     // A Help menu entry was chosen: guide, about, licence or updates.
     callback help(string);
     callback close-help();
-    callback open-notices();
     callback download-update();
     callback skip-update();
     callback close-update();
@@ -347,9 +345,7 @@ export component MainWindow inherits Window {
         }
         if root.show-licence: LicenceDialog {
             licence-text: root.licence-text;
-            notices-note: root.notices-note;
             reading-active: root.reading-active;
-            open-notices => { root.open-notices(); }
             close => { root.close-help(); }
         }
         if root.show-update: UpdateDialog {

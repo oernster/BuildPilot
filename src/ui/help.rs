@@ -3,7 +3,6 @@
 
 use std::cell::RefCell;
 use std::panic::{self, AssertUnwindSafe};
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::mpsc::{self, Receiver, Sender};
@@ -14,7 +13,7 @@ use slint::{ModelRc, SharedString, Timer, TimerMode, VecModel};
 
 use crate::application::ReleaseSource;
 use crate::application::updates::{self, Asked, UpdateOutcome};
-use crate::domain::credits::Credit;
+use crate::domain::credits::{Credit, readable_licence};
 use crate::domain::version::Version;
 
 use super::events::{self, Hook};
@@ -39,8 +38,6 @@ pub struct HelpFacts {
     pub credits: Vec<Credit>,
     /// BuildPilot's licence text.
     pub licence: &'static str,
-    /// Where the third-party notices should be: beside the program (UI-008).
-    pub notices: PathBuf,
     /// Where newer releases are learned (UI-010).
     pub releases: Arc<dyn ReleaseSource>,
 }
@@ -72,7 +69,7 @@ pub fn wire(ui: &Rc<Ui>, window: &MainWindow) -> [Timer; 2] {
         .map(|credit| CreditData {
             name: credit.name.as_str().into(),
             version: credit.version.as_str().into(),
-            licence: credit.licence.as_str().into(),
+            licence: readable_licence(&credit.licence).into(),
         })
         .collect();
     window.set_credits(ModelRc::new(VecModel::from(credits)));
@@ -108,22 +105,7 @@ fn wire_menu(ui: &Rc<Ui>, help: &Rc<Help>, window: &MainWindow) {
     window.on_help(move |entry| match entry.as_str() {
         "guide" => this.with_window(|w| w.set_show_guide(true)),
         "about" => this.with_window(|w| w.set_show_about(true)),
-        "licence" => {
-            let notices = &this.environment.help.notices;
-            let note = if notices.is_file() {
-                String::new()
-            } else {
-                format!(
-                    "The third-party notices are not beside BuildPilot ({}). build.ps1 writes \
-                     them and setup installs them; a build run from source has none.",
-                    notices.display()
-                )
-            };
-            this.with_window(|w| {
-                w.set_notices_note(note.into());
-                w.set_show_licence(true);
-            });
-        }
+        "licence" => this.with_window(|w| w.set_show_licence(true)),
         "updates" => check(&this, &state, Asked::ByOperator),
         _ => {}
     });
@@ -134,11 +116,6 @@ fn wire_menu(ui: &Rc<Ui>, help: &Rc<Help>, window: &MainWindow) {
             w.set_show_about(false);
             w.set_show_licence(false);
         });
-    });
-    let this = ui.clone();
-    window.on_open_notices(move || {
-        let opened = this.app.borrow().open_file(&this.environment.help.notices);
-        this.report(opened);
     });
 }
 

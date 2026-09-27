@@ -115,5 +115,4 @@ program to `dist\BuildPilotSetup.exe`.
 BuildPilot is distributed under the GNU General Public License v3.0; see [LICENSE](LICENSE).
 Slint is used under its GPLv3 licence. Every crate built into BuildPilot is credited in Help >
 About; the list is generated at build time, never written by hand. Their licence texts are
-written to `THIRD-PARTY-NOTICES.txt`, which setup installs beside the program and Help > Licence
-opens.
+written to `THIRD-PARTY-NOTICES.txt`, which setup installs beside the program.

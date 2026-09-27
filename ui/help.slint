@@ -112,6 +112,16 @@ export component AboutDialog inherits Modal {
             Text { text: root.description; color: Theme.text; wrap: word-wrap; }
         }
     }
+    // The header stays where it is; only the credits beneath it read themselves.
+    about-header := VerticalLayout {
+        spacing: 6px;
+        Text { text: "Version " + root.version; color: Theme.text; }
+        Text { text: "By " + root.author; color: Theme.text; }
+        Text { text: root.copyright; color: Theme.text; }
+        Text { text: root.repository; color: Theme.accent; }
+        Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text; wrap: word-wrap; }
+    }
+    Rectangle { height: 1px; background: Theme.border; }
     credits-pane := ReadingPane {
         vertical-stretch: 1;
         label: "About BuildPilot";
@@ -119,15 +129,9 @@ export component AboutDialog inherits Modal {
         VerticalLayout {
             spacing: 6px;
             padding-right: 16px;
-            Text { text: "Version " + root.version; color: Theme.text; }
-            Text { text: "By " + root.author; color: Theme.text; }
-            Text { text: root.copyright; color: Theme.text; }
-            Text { text: root.repository; color: Theme.accent; }
-            Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text; wrap: word-wrap; }
-            Rectangle { height: 1px; background: Theme.border; }
             Text { text: "Open source credits"; font-weight: 600; color: Theme.text; }
             Text {
-                text: "BuildPilot is built from these " + root.credits.length + " crates. Help > Licence opens their licence texts.";
+                text: "BuildPilot is built from these " + root.credits.length + " crates. Their licence texts are installed beside it as THIRD-PARTY-NOTICES.txt.";
                 color: Theme.text-muted;
                 wrap: word-wrap;
             }
@@ -156,13 +160,10 @@ export component AboutDialog inherits Modal {
     buttons := CloseRow { close => { root.close(); } }
 }
 
-// Licence (UI-008): BuildPilot's own, then the way to every crate's.
+// Licence (UI-008): BuildPilot's own.
 export component LicenceDialog inherits Modal {
     in property <string> licence-text;
-    // Empty when the notices file is there to open; otherwise why it is not.
-    in property <string> notices-note;
     in property <bool> reading-active: true;
-    callback open-notices();
     callback close();
     heading: "Licence: GPL-3.0";
     panel-width: 720px;
@@ -170,28 +171,24 @@ export component LicenceDialog inherits Modal {
     dismissed => { root.close(); }
     init => { buttons.focus-me(); }
 
-    ReadingPane {
+    licence-pane := ReadingPane {
         vertical-stretch: 1;
         label: "Licence text";
         active: root.reading-active;
-        Text {
-            text: root.licence-text;
-            color: Theme.text;
-            font-family: "Consolas";
-            font-size: Theme.mono-size;
-            wrap: word-wrap;
+        // In a layout, as every reading surface's content is: a bare Text here opened scrolled
+        // to its foot (tests/geometry.rs, the_licence_opens_at_its_top).
+        VerticalLayout {
+            padding-right: 16px;
+            licence-body := Text {
+                text: root.licence-text;
+                color: Theme.text;
+                font-family: "Consolas";
+                font-size: Theme.mono-size;
+                wrap: word-wrap;
+            }
         }
     }
-    if root.notices-note != "": Text { text: root.notices-note; color: Theme.caution; wrap: word-wrap; }
-    buttons := CloseRow {
-        close => { root.close(); }
-        TextButton {
-            text: "Third-party notices";
-            label: "Open the licence texts of every crate BuildPilot is built from";
-            in-dialog: true;
-            clicked => { root.open-notices(); }
-        }
-    }
+    buttons := CloseRow { close => { root.close(); } }
 }
 
 // The update check's answer (UI-010).

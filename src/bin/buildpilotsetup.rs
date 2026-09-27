@@ -262,7 +262,9 @@ fn licence_page() -> String {
     for credit in credits {
         page.push_str(&format!(
             "{} {}: {}\n",
-            credit.name, credit.version, credit.licence
+            credit.name,
+            credit.version,
+            credits::readable_licence(&credit.licence)
         ));
     }
     page

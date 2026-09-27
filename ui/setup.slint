@@ -212,10 +212,14 @@ export component SetupWindow inherits Window {
                     ReadingPane {
                         vertical-stretch: 1;
                         label: "Licence text";
-                        Text {
-                            text: root.licence-text;
-                            color: Theme.text;
-                            wrap: word-wrap;
+                        // In a layout: a bare Text opened scrolled to its foot.
+                        VerticalLayout {
+                            padding-right: 16px;
+                            Text {
+                                text: root.licence-text;
+                                color: Theme.text;
+                                wrap: word-wrap;
+                            }
                         }
                     }
                     HorizontalLayout {

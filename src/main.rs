@@ -11,7 +11,7 @@ use std::sync::{Arc, mpsc};
 
 use buildpilot::application::{App, Ports};
 use buildpilot::domain::credits;
-use buildpilot::infrastructure::build_info::{CREDITS, LICENCE, NOTICES_FILE};
+use buildpilot::infrastructure::build_info::{CREDITS, LICENCE};
 use buildpilot::infrastructure::config_store::JsonConfigStore;
 use buildpilot::infrastructure::icons::FsIconLibrary;
 use buildpilot::infrastructure::launcher::{EventSink, WindowsLauncher};
@@ -89,11 +89,6 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
     };
     let app = App::start(ports, detect_powershell(env::var_os("PATH").as_deref()));
     let version = env!("BUILDPILOT_VERSION");
-    // Setup installs the notices beside the program (UI-008).
-    let notices = env::current_exe()
-        .ok()
-        .and_then(|exe| exe.parent().map(|folder| folder.join(NOTICES_FILE)))
-        .unwrap_or_else(|| PathBuf::from(NOTICES_FILE));
     let help = HelpFacts {
         description: env!("CARGO_PKG_DESCRIPTION"),
         author: AUTHOR,
@@ -101,7 +96,6 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
         repository: REPOSITORY,
         credits: credits::parse(CREDITS),
         licence: LICENCE,
-        notices,
         releases: Arc::new(GitHubReleases::new(PRODUCT_NAME, version)),
     };
     let environment = Environment {

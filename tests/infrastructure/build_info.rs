@@ -1,4 +1,4 @@
-use buildpilot::domain::credits::parse;
+use buildpilot::domain::credits::{licence_identifiers, licence_name, parse};
 use buildpilot::infrastructure::build_info::{CREDITS, NOTICES};
 
 fn credited(name: &str) -> bool {
@@ -30,6 +30,21 @@ fn the_credits_are_the_shipped_graph() {
             "{not_shipped} does not ship but is credited"
         );
     }
+}
+
+// UI-009: every licence a shipped crate states has a readable name, so none reaches About as a
+// bare identifier.
+#[test]
+fn every_shipped_licence_has_a_name() {
+    let credits = parse(CREDITS);
+    let mut unnamed: Vec<&str> = credits
+        .iter()
+        .flat_map(|credit| licence_identifiers(&credit.licence))
+        .filter(|id| licence_name(id).is_none())
+        .collect();
+    unnamed.sort_unstable();
+    unnamed.dedup();
+    assert!(unnamed.is_empty(), "no readable name for: {unnamed:?}");
 }
 
 // UI-009: every credit names a version and a licence.

@@ -127,6 +127,47 @@ fn every_credit_licence_is_inside_the_pane() {
     }
 }
 
+/// The one element with `id`.
+fn by_id(window: &MainWindow, id: &str) -> ElementHandle {
+    let found: Vec<_> = ElementHandle::find_by_element_id(window, id).collect();
+    found
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("no element {id}"))
+}
+
+// UI-003: About's header (version to licence) stays put above the credits, which alone scroll.
+#[test]
+fn the_about_header_sits_above_the_scrolling_credits() {
+    let window = window();
+    window.set_show_about(true);
+    settle();
+    let header = by_id(&window, "AboutDialog::about-header");
+    let pane = by_id(&window, "AboutDialog::credits-pane");
+    let header_bottom = header.absolute_position().y + header.size().height;
+    assert!(
+        header_bottom <= pane.absolute_position().y + TOLERANCE,
+        "the header ends at y {header_bottom}, below the pane's top at {}",
+        pane.absolute_position().y
+    );
+}
+
+// UI-011: Licence opens at the top of its text; reading starts from there.
+#[test]
+fn the_licence_opens_at_its_top() {
+    let window = window();
+    window.set_licence_text(buildpilot::infrastructure::build_info::LICENCE.into());
+    window.set_show_licence(true);
+    settle();
+    let pane = by_id(&window, "LicenceDialog::licence-pane");
+    let body = by_id(&window, "LicenceDialog::licence-body");
+    let (pane_top, body_top) = (pane.absolute_position().y, body.absolute_position().y);
+    assert!(
+        (body_top - pane_top).abs() <= TOLERANCE,
+        "the text starts at y {body_top}, the pane at {pane_top}"
+    );
+}
+
 fn centre_y(element: &ElementHandle) -> f32 {
     element.absolute_position().y + element.size().height / 2.0
 }

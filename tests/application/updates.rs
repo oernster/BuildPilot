@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use buildpilot::application::updates::{
     Asked, UpdateOutcome, check, download_url, message, tag_version,
@@ -152,19 +152,14 @@ fn a_skip_is_saved() {
     assert_eq!(app.preferences().skipped_update, Some(version("1.2.0")));
 }
 
-// UI-010, UI-008: Download and the notices go through the shell.
+// UI-010: Download goes through the shell.
 #[test]
-fn download_and_notices_open_through_the_shell() {
+fn download_opens_through_the_shell() {
     let world = world();
     let app = world.app();
     app.open_address(SETUP).unwrap();
-    app.open_file(Path::new(r"C:\bp\THIRD-PARTY-NOTICES.txt"))
-        .unwrap();
     assert_eq!(
         world.state.borrow().shell_calls,
-        [
-            ("open_address", PathBuf::from(SETUP)),
-            ("open", PathBuf::from(r"C:\bp\THIRD-PARTY-NOTICES.txt")),
-        ]
+        [("open_address", PathBuf::from(SETUP))]
     );
 }
