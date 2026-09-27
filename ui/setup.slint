@@ -205,7 +205,8 @@ export component SetupWindow inherits Window {
             init => { close.focus-me(); }
             TouchArea { }
             Rectangle {
-                width: parent.width - 80px;
+                // Only as wide as the text needs; Slint centres it in the scrim.
+                width: min(Theme.licence-panel-width, parent.width - 80px);
                 height: parent.height - 80px;
                 background: Theme.surface;
                 border-radius: 8px;
