@@ -21,8 +21,13 @@ export global HostEditor {
 
 export component HostsField inherits VerticalLayout {
     spacing: Theme.gap;
+    Text {
+        text: "Built in, with no host needed: Go and Rust builds (PowerShell .ps1), Python builds (.py, in the project's environment), batch files and executables. A host runs any other type, such as .rb with ruby.exe.";
+        color: Theme.text-muted;
+        wrap: word-wrap;
+    }
     if HostEditor.rows.length == 0: Text {
-        text: "No hosts yet: only the built-in types run.";
+        text: "No hosts yet.";
         color: Theme.text-muted;
         wrap: word-wrap;
     }
