@@ -12,6 +12,10 @@ const MAX_LINES: usize = 400;
 /// A file within this share of the cap must be cut well below it, not trimmed to fit.
 const DANGER_BAND_PERCENT: usize = 5;
 const DANGER_BAND_START: usize = MAX_LINES - MAX_LINES * DANGER_BAND_PERCENT / 100;
+/// Every source file the size rule reads, as a folder and the extension its sources carry.
+/// The Slint markup counts as source too; `build.rs` sits outside these folders, as a build
+/// script is exempt.
+const SIZED_SOURCES: &[(&str, &str)] = &[("src", "rs"), ("tests", "rs"), ("ui", "slint")];
 
 /// The layers that do no I/O, each with the only parts of the standard library it may name.
 /// Neither may touch the file system, processes, threads, the environment or the network.
@@ -227,8 +231,8 @@ fn layers_depend_inwards_only() {
 #[test]
 fn no_module_exceeds_the_line_limit_or_sits_in_the_danger_band() {
     let mut violations = Vec::new();
-    for dir in ["src", "tests"] {
-        for file in rust_files(&Path::new(ROOT).join(dir)) {
+    for (dir, extension) in SIZED_SOURCES {
+        for file in files_with_extension(&Path::new(ROOT).join(dir), extension) {
             let lines = read(&file).lines().count();
             if lines > MAX_LINES {
                 violations.push(format!(
