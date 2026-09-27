@@ -641,30 +641,40 @@ Acceptance: in `C:\src\app`, `venv` and `.venv` holding both files are found; `t
 temporary folder.
 
 **ENV-002 (M) Choice when several.** While the working directory holds more than one environment
-and the operation has a `.py` step, the operation dialog shall list them and refuse to save until
+and the operation has a `.py` or `.ps1` step, the operation dialog shall list them and refuse to save until
 one is chosen. Where exactly one is named `venv` or `.venv`, the dialog shall preselect it. The
 choice is saved by folder name. Measured case: AxisDB holds `venv` and `venv_smoke`.
 Verified by: `domain` test for the preselection; Manual for the dialog.
 
-**ENV-003 (M) Resolution at Run.** When a run of an operation with a `.py` step starts, the run use
-case shall use the environment the operation names; where it names none, the only one found.
+**ENV-003 (M) Resolution at Run.** When a run of an operation with a `.py` or `.ps1` step starts,
+the run use case shall use the environment the operation names; where it names none, the only
+one found.
 Verified by: `application::run` tests.
 
 **ENV-004 (M) No environment.** If a `.py` step has no environment at Run (none found; the named
 one gone), then no step shall start; the row shall show Failed naming the working directory
-searched and saying BuildPilot uses an existing environment and does not create one.
-Verified by: `application::run` test.
+searched and saying BuildPilot uses an existing environment and does not create one. A `.ps1` step with no environment found runs without one
+(deactivated as ENV-009 states), so a PowerShell build with no Python keeps working.
+Verified by: `application::run` tests for both kinds.
 
 **ENV-005 (M) Several found, none chosen.** If Run finds several environments where the operation
 names none (one appeared after it was saved), then no step shall start; the row shall name the
 environments found and say to choose one in Edit. Verified by: `application::run` test.
 
-**ENV-006 (M) Activation.** When the launcher starts a `.py` step, it shall start
-`<environment>\Scripts\python.exe` with the script and its arguments. In that process alone it
-shall set `VIRTUAL_ENV` to the environment folder, remove `PYTHONHOME` and put
-`<environment>\Scripts` first on `PATH`. BuildPilot's own environment is unchanged.
+**ENV-006 (M) Activation.** When the launcher starts a `.py` or `.ps1` step with an environment,
+it shall give that process the variables `activate.bat` would give it, applied to the
+deactivated variables of ENV-009: `VIRTUAL_ENV` set to the environment folder,
+`VIRTUAL_ENV_PROMPT` set to its folder name, `_OLD_VIRTUAL_PATH` set to the deactivated `PATH`,
+`_OLD_VIRTUAL_PYTHONHOME` set to `PYTHONHOME` where that was set, `PYTHONHOME` removed and
+`<environment>\Scripts` put first on `PATH`. For OUT-001 and OUT-008 it shall also set
+`PYTHONUNBUFFERED=1` and `PYTHONIOENCODING=utf-8` (R-5). A `.py` step's program is
+`<environment>\Scripts\python.exe` with the script and its arguments; a `.ps1` step's program is
+the PowerShell host of LCH-001. A script that activates another environment itself then
+deactivates this one correctly, as the `_OLD_` variables are present. BuildPilot's own
+environment is unchanged. `.bat` and `.cmd` steps are not activated (OQ-18).
 Acceptance: given `C:\src\app\venv`, a fixture `.py` printing `sys.executable` and
-`VIRTUAL_ENV` prints `C:\src\app\venv\Scripts\python.exe` and `C:\src\app\venv`.
+`VIRTUAL_ENV` prints `C:\src\app\venv\Scripts\python.exe` and `C:\src\app\venv`; its line
+`café`, printed 2 s before it exits, reaches the tray as `café` before it exits.
 Verified by: `infrastructure::process` test with a real environment made by the test setup.
 
 **ENV-007 (M) Never builds an environment.** BuildPilot shall not create, install into, upgrade or
@@ -672,9 +682,33 @@ repair any environment; it runs no `venv`, `virtualenv`, `pip`, `uv`, `poetry` o
 of its own. Source: owner, 2026-09-27. Verified by: inspection; a structural test that the source
 names none of those commands.
 
-**ENV-008 (M) Interpreter named.** When a `.py` step starts, the output tray's line for it shall
-name the interpreter path, including for a single-step operation. Verified by: `application::output`
-test.
+**ENV-008 (M) Environment named.** When a `.py` or `.ps1` step starts with an environment, the
+output tray's line for it shall name the environment folder (plus the interpreter path for `.py`),
+including for a single-step operation. Verified by: `application::output` test.
+
+**ENV-009 (M) Deactivate first, every step.** Before the launcher gives any step its variables,
+activated or not, it shall undo an activation inherited from BuildPilot's own environment, as
+`deactivate.bat` does: `PATH` taken from `_OLD_VIRTUAL_PATH` where that is set; `PYTHONHOME`
+taken from `_OLD_VIRTUAL_PYTHONHOME` where that is set; `VIRTUAL_ENV`, `VIRTUAL_ENV_PROMPT`,
+`_OLD_VIRTUAL_PATH`, `_OLD_VIRTUAL_PYTHONHOME` and `_OLD_VIRTUAL_PROMPT` removed. Source: owner,
+2026-09-27 ("environments may be wildly different and conflict"); `deactivate.bat` and
+`Activate.ps1` read on the reference machine the same day.
+Rationale: every step is its own process built from BuildPilot's environment (read in
+`infrastructure::launcher`), so no step inherits another step's activation; the one route for a
+foreign environment is a BuildPilot started from a shell where one was active.
+Acceptance: BuildPilot started with `VIRTUAL_ENV=C:\other\venv`, `PATH` beginning
+`C:\other\venv\Scripts` and `_OLD_VIRTUAL_PATH=C:\Windows`; a step in `C:\src\app` with
+`C:\src\app\venv` sees `VIRTUAL_ENV=C:\src\app\venv` and `PATH=C:\src\app\venv\Scripts;C:\Windows`;
+a `.bat` step sees no `VIRTUAL_ENV` and `PATH=C:\Windows`.
+Verified by: `domain` tests over the variable transformation; `infrastructure::process` test
+with a fixture printing its variables.
+
+**ENV-010 (M) No stray environment on PATH.** After ENV-009, the launcher shall remove from the
+step's `PATH` every entry that is the `Scripts` folder of an environment (its parent holds
+`pyvenv.cfg`), other than the step's own. Rationale: ENV-009 cannot see two cases. One is an
+activation that left no `_OLD_VIRTUAL_PATH` behind; the other is an environment added to the
+Windows `PATH` by hand. Either would still put a foreign `python.exe` ahead of the system one. Verified by: `infrastructure` test in a temporary
+folder.
 
 ### 3.19 Operator hosts (HOST)
 
@@ -719,7 +753,7 @@ Personal developer utility: a full FMEA is judged disproportionate. Named risks,
 | R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Run is clicked. |
 | R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone; Rust's standard library is believed to refuse arguments it cannot quote safely for batch files (to verify). | LCH-003 fixture test covers `.cmd` too; surface a refusal as a launch failure. |
 | R-4 | A script that breaks away from its Job Object would survive Stop. | Accept for v1; STOP-003 reports survivors by PID. |
-| R-5 | Hypothesis, not measured: Python writing to a pipe buffers its output (so OUT-001's live lines would arrive in bursts) and encodes it in the ANSI code page, which OUT-008 would misread as OEM. | Measure before ENV-006 is built: run a fixture `.py` through the real launcher, timing when lines arrive and reading the bytes of `é`. Only if either is confirmed, amend ENV-006 to set `PYTHONUNBUFFERED` or `PYTHONIOENCODING` for the run. |
+| R-5 | Python writing to a pipe holds its output back and encodes it in the ANSI code page. | **Retired 2026-09-27 by measurement.** A venv's Python 3 started with piped output and no window printed three lines 2 s apart: all three arrived together at 4.06 s; with `PYTHONUNBUFFERED=1` at 0.04, 2.04 and 4.04 s. `é` arrived as the single byte 0xE9 (stdout encoding cp1252), which OUT-008's OEM fallback (code page 850) reads as `Ú`; with `PYTHONIOENCODING=utf-8` it arrived as C3 A9. ENV-006 sets both. |
 
 ---
 
@@ -739,7 +773,8 @@ Every use case is runnable from a test before any window exists.
 ## Appendix B. Decisions register
 
 Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
-accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4; OQ-18 is open.
+accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4 and are
+decided. No question is open.
 
 | ID | Question | Decision |
 |---|---|---|
@@ -760,7 +795,7 @@ accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment
 | OQ-15 | Several environments in one working directory? | The operation dialog asks; the choice is saved (ENV-002). Decided 2026-09-27. |
 | OQ-16 | No environment for a `.py` step? | Refuse to run; never fall back to a Python on PATH and never create one (ENV-004, ENV-007). Decided 2026-09-27. |
 | OQ-17 | Where does a host for another script type live? | One table in Settings keyed by extension (HOST). Decided 2026-09-27. |
-| OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | **Open.** Owner: Oliver. Until decided, only `.py` steps are activated. |
+| OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | `.ps1` steps yes, running without one when none is found; `.bat` and `.cmd` no. Every step is deactivated first (ENV-009). Decided 2026-09-27. |
 
 ## Appendix C. Traceability
 
@@ -818,7 +853,7 @@ it means one request to GitHub. The About credit list was measured against the s
 built into Windows, so BuildPilot still carries no HTTP or TLS crate.
 
 **Amendment 4 (2026-09-27): steps, Python environments and operator hosts.** Changes §1.4, §1.5,
-ADD-001, CFG-003, LCH-001, UI-004 and Appendix D; adds STEP-001 to STEP-008, ENV-001 to ENV-008,
+ADD-001, CFG-003, LCH-001, UI-004 and Appendix D; adds STEP-001 to STEP-008, ENV-001 to ENV-010,
 HOST-001 to HOST-003, R-5 and OQ-14 to OQ-18. Baseline 1.0 launched one script per operation and
 listed `.py` as won't-this-time.
 
@@ -827,5 +862,7 @@ run in order (`buildexe.py`, then `buildinstaller.py`). Measured on the referenc
 projects hold an environment, each a `venv` folder with `pyvenv.cfg`; one holds two; 15 document
 the two-script order. The owner ruled that BuildPilot detects and activates an environment that
 exists but never builds one. It also ruled that BuildPilot refuses a `.py` step with no environment rather than
-guessing at a Python on PATH. A host table in Settings covers other script types without a
+guessing at a Python on PATH. `.ps1` steps are activated as well, so a PowerShell build that
+calls Python finds its environment. Every step first undoes any activation BuildPilot inherited,
+since two environments may conflict. A host table in Settings covers other script types without a
 per-operation field. Existing config files migrate each operation to a single step.
