@@ -20,9 +20,13 @@ violation and watching the test fail.
 | The setup program's policy (`src/setup`) names only `std::fmt` plus one layer: the domain (for `Version`). | `pure_layers_use_only_allowed_std`, `layers_depend_inwards_only` |
 | No pure layer names an external crate. | `pure_layers_use_no_external_crates` |
 | Layers depend inwards only: the domain names no other layer, the application names neither infrastructure nor UI, infrastructure never names the UI. | `layers_depend_inwards_only` |
-| No source file exceeds 400 lines; none sits in the danger band of 381 to 399. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
+| No Rust source or test file and no Slint file exceeds 400 lines; none sits in the danger band of 381 to 399. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
+| No source names a command that builds a Python environment (`venv`, `virtualenv`, `pip`, `uv`, `poetry`, `conda`; ENV-007). | `no_source_builds_an_environment` |
+| The interface draws only the small copies in `assets/ui`, none over 256 pixels (UI-013). | `the_interface_draws_only_small_copies` in `tests/assets.rs` |
 | `unsafe` appears only under `src/infrastructure/win32`, each block with its SAFETY reasoning. | `unsafe_code_lives_only_in_win32` |
 | `Cargo.toml` carries the version in `VERSION` and no other. | `cargo_version_matches_the_version_file` |
+| Slint's frame counter never shows: each executable's `main` first removes `SLINT_DEBUG_PERFORMANCE`, before any window exists. | `every_main_hides_the_frame_counter_first` in `tests/frame_counter.rs` |
+| The site under `docs/` names the version in `VERSION` and no other. | `the_site_names_the_version_file` in `tests/site.rs` |
 | Every control wears the house ring: no standard Slint `Button` or `CheckBox`, no border in the accent colour. | `every_control_follows_the_ring_model` |
 | Every text colour reaches 4.5:1 and every ring 3:1 against the surfaces it is drawn on, in both themes. | `tests/contrast.rs` |
 | Every toolbar and row control is named in the Guide. | `the_guide_names_every_control` |
@@ -30,16 +34,21 @@ violation and watching the test fail.
 
 ## Layers
 
-- **Domain** (`src/domain`). BuildPilot's nouns and rules: an operation and its validation, the
-  flight deck and its order, the run state machine, the launch plan for each kind of script,
-  cutting output bytes into lines and decoding them, the output buffer and its caps, the tray's
-  follow state, selection and preferences, release versions, the open source credits and the
-  self-reading cycle of a surface of text. No I/O, no clock, no framework.
+- **Domain** (`src/domain`). BuildPilot's nouns and rules: an operation, its ordered steps and
+  their validation, folders compared as Windows compares them, the flight deck with its order
+  and where a new row slots in by name, the run state machine, the launch plan for each kind of
+  script, the operator's host table, finding a Python environment and the variables that
+  deactivate and activate one, the folder-scan patterns and what a scan proposes, cutting output
+  bytes into lines and decoding them, the output buffer and its caps, the tray's follow state,
+  selection and preferences, release versions, the open source credits and the self-reading cycle
+  of a surface of text. No I/O, no clock, no framework.
 - **Application** (`src/application`). `App` owns all state and is driven from one thread. It
   offers one method per thing the operator can do and never waits on a process: a launch
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
   from the machine is stated as traits in `ports.rs`: `ConfigStore`, `IdSource`, `Clock`,
-  `PathProbe`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and `ReleaseSource`.
+  `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and
+  `ReleaseSource`. A folder scan reads the folder through `PathProbe` and proposes; nothing is
+  added until the operator confirms through `App::add`.
   `updates.rs` decides what an update check found and what to say about it. Every refusal
   is an `AppError` whose message names the thing and what the operator can do; everything else
   worth saying is a `Notice`, worded once and shown and logged in the same words.
@@ -57,9 +66,11 @@ violation and watching the test fail.
 
 ## Running a script
 
-1. `App::run` checks the script and its folder exist (LCH-007, LCH-008), builds the launch plan
-   and asks the `Launcher` to start it. A missing file is not an error: the row reads Failed
-   with the reason.
+1. `App::run` refuses a second run of the operation (LCH-005) and a run in a folder another
+   running operation holds (LCH-010). It then checks every step's script, the folder and the
+   environment before step 1 starts (STEP-005), builds the first step's launch plan and asks the
+   `Launcher` to start it. A missing file is not an error: the row reads Failed with the reason.
+   Each later step starts when the one before exits with code 0 (STEP-002).
 2. `WindowsLauncher` starts the program suspended with no console window, puts it in a fresh
    job object, then resumes it. Nothing the script starts can escape the job, so Stop ends the
    whole tree (STOP-001).
@@ -81,7 +92,8 @@ left running (a compiler server, a build daemon) is released rather than killed 
 not valid UTF-8 is decoded in the OEM code page, which hidden console programs write in.
 Terminal escape sequences are removed rather than interpreted (OUT-008). A run keeps its latest
 100,000 lines and splits a longer line into pieces of 16,384 characters (OUT-004). The tray
-reads the buffer directly rather than a copy.
+reads the buffer directly rather than a copy. Every line is drawn in the plain text colour
+whichever stream it came on; the run's outcome is one closing line in its own colour (OUT-007).
 
 ## Help, the credits and the update check
 
@@ -124,7 +136,8 @@ The house model, applied to every surface (A11Y-002, A11Y-003).
   controls follow the stop, the other rows' do not.
 - The output is a stop only while it overflows, reached by Tab alone and never ringed.
 - A dialog opens on its first control. While one is open, `Ring.modal-open` takes every other
-  stop off the ring. Escape closes it and focus returns to the control that opened it.
+  stop off the ring. Closing it returns focus to the control that opened it. Escape closes it in
+  the headless suite but not on the real window, a known limitation (TESTING.md).
 - Every stop reports itself to the `Ring.focused` global, which is how `tests/keyboard.rs` reads
   the ring without pixels.
 

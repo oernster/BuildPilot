@@ -7,6 +7,12 @@ several at once, shows each one's state and live output, then stops them cleanly
 they started. It orchestrates the commands you already have; it never becomes the build system.
 Every script stays runnable without it.
 
+> **Commercial licences available.** BuildPilot is free and open source under the GNU General
+> Public License v3.0. If those terms do not suit what you are building, such as a closed-source
+> product, a commercial licence can be bought from me separately. It covers my own code; Slint
+> and the other crates keep their own licences. See
+> [commercial licensing](https://ernster.dev/commercial-licensing.html).
+
 ## Who it is for
 
 - Developers on Windows who run the same handful of build, package or release scripts every day.
@@ -18,20 +24,35 @@ Every script stays runnable without it.
 
 - Anyone wanting a build system. BuildPilot runs your scripts; it does not replace PowerShell,
   cmd, Make, Cargo, npm or any other tool.
-- Anyone wanting a pipeline. There is no sequencing, no dependency graph and no Run All.
+- Anyone wanting a pipeline. There is no dependency graph, no condition and no Run All; the one
+  sequence is an operation's own steps, run in order.
+- Anyone wanting environments built. BuildPilot uses a Python environment that already exists;
+  it never creates, installs into or repairs one.
 - Anyone wanting a terminal. Output is shown as it arrives; a running script cannot be typed
   into.
 - Anyone on macOS or Linux. BuildPilot is Windows only.
 
 ## What it does
 
-- **Remembers your scripts.** Each operation holds a script or executable, its working directory,
-  its arguments (one per line) and a name. `.ps1`, `.bat`, `.cmd` and `.exe` are supported.
+- **Remembers your scripts.** Each operation holds one or more steps run in order (each a script
+  or executable with its arguments, one per line), a working directory and a name. `.ps1`,
+  `.bat`, `.cmd`, `.exe`, `.com` and `.py` are supported. Settings maps any other extension to
+  the program that runs it. A step that fails stops the rest.
+- **Finds a project's build.** Add takes a script or a folder. A folder holding `build.ps1` is
+  proposed as an operation; so is one holding `buildexe.py` then `buildinstaller.py`. A folder
+  of projects lists each one with a tick box. A partial match says which file is missing. Nothing is added until
+  you confirm.
+- **Uses the project's Python environment.** A `.py` or `.ps1` step runs inside the environment
+  in its working directory (a folder holding `pyvenv.cfg`), chosen in the dialog when there are
+  several. Any environment BuildPilot inherited from your shell is undone first.
 - **Runs several at once.** Each run is its own process. Rows show the state (running, succeeded,
-  failed, stopped) with a glyph and in words, plus the elapsed time.
+  failed, stopped) with a glyph and in words, plus the elapsed time. Run the ticked builds starts
+  every ticked row. Two builds never run in the same folder at once, since they would overwrite
+  each other's output.
 - **Shows output live.** The tray at the foot of the window shows the selected run's output as it
   arrives, following the last line until you scroll up. It keeps the latest 100,000 lines of a
-  run.
+  run. Lines are drawn plainly whichever stream they came on; the run's outcome closes the output
+  in green, red or muted grey.
 - **Stops the whole tree.** Stop ends the script and everything it started, through a Windows job
   object. A tree still alive five seconds after Stop is reported by process id.
 - **Opens and reveals scripts.** Open a script with its associated application or show it in
@@ -39,8 +60,9 @@ Every script stays runnable without it.
 - **Uses PowerShell sensibly.** A `.ps1` runs under `pwsh` when it is on PATH and Windows
   PowerShell otherwise, with no profile, no prompts and `-ExecutionPolicy Bypass`. No console
   window opens.
-- **Keeps its order.** Drag a row by its handle (Alt+Up and Alt+Down do the same) to reorder
-  the deck; the order is saved.
+- **Keeps its order.** A new row slots in by name; drag a row by its handle (Alt+Up and
+  Alt+Down do the same) to reorder the deck. The order is saved and a row you placed never
+  moves.
 - **Shows icons.** An icon beside a script is found for you; any image can be chosen instead.
 - **Looks after its settings file.** An entry it cannot read is kept in the file untouched. A
   file it cannot read at all is set aside as `buildpilot.json.unreadable` rather than
@@ -91,7 +113,8 @@ keeps your operations and settings unless you untick that. Neither executable is
 ## Testing
 
 The gate checks formatting, runs clippy with warnings as errors, then runs every test under
-coverage with a floor of 100% of lines and of regions over the domain and application layers.
+coverage with a floor of 100% of lines and of regions over the domain and application layers
+and the setup program's policy.
 
 ```powershell
 ./test.ps1
@@ -116,9 +139,13 @@ BuildPilot is free and stays free: there is no paid tier, no licence key and no 
 back behind a donation. The toolbar's drink button opens the donation page in your browser;
 BuildPilot hands the address to Windows and sends nothing itself.
 
+<a href="https://www.paypal.com/ncp/payment/XC9S6VZ96K9Q4"><img src="docs/donate.png" alt="Donate to BuildPilot" width="120"></a>
+
 ## Licence
 
 BuildPilot is distributed under the GNU General Public License v3.0; see [LICENSE](LICENSE).
 Slint is used under its GPLv3 licence. Every crate built into BuildPilot is credited in Help >
 About; the list is generated at build time, never written by hand. Their licence texts are
 written to `THIRD-PARTY-NOTICES.txt`, which setup installs beside the program.
+
+For terms other than the GPL, see [commercial licensing](https://ernster.dev/commercial-licensing.html).

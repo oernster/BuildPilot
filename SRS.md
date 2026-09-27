@@ -1,7 +1,7 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27.** Every question in Appendix B is closed. From here, changes
-arrive as numbered amendments with a reason, never as silent edits.
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 8.** Every question in Appendix B is
+closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
 2026-09-27. Each requirement's Source line points at the spec section it comes from.
@@ -49,7 +49,9 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 - a CPU-core or thread scheduler for the underlying tools;
 - a build-artifact manager;
 - a terminal emulator (no cursor addressing, no interactive input to a running script);
-- Run All / Stop All; no action of any kind on checked rows (§4.2 of the spec).
+- Run All / Stop All; the one action on checked rows is Run the ticked builds (LCH-011,
+  Amendment 7);
+- a macOS or Linux application: BuildPilot is Windows only (Amendment 8).
 
 ### 1.5 Definitions
 
@@ -62,7 +64,7 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 | Flight deck | The ordered list of operations shown in the main window. |
 | Row | The visual representation of one operation in the flight deck. |
 | Selected row | The row whose output the output tray shows. Exactly zero or one. Distinct from a checked row. |
-| Checked row | A row whose checkbox is ticked. Has no action attached in v1. |
+| Checked row | A row whose checkbox is ticked. Run the ticked builds runs every one (LCH-011). |
 | Output tray | The collapsible panel at the foot of the main window showing one run's output. |
 | Process tree | The launched process plus every process it starts, directly or indirectly. |
 | Host | The program that executes a script, e.g. `pwsh.exe` for a `.ps1`. |
@@ -83,8 +85,9 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 
 A new, standalone, local-only desktop application. It depends on nothing networked: its one
 network request is the update check (UI-010), whose failure changes nothing. It interacts with
-the operating system in five ways only: launching processes, terminating process trees, opening
-a file with its associated application, revealing a file in Explorer, reading and writing its
+the operating system in six ways only: launching processes, terminating process trees, opening
+a file with its associated application, revealing a file in Explorer, handing a web address to
+Windows to open in the operator's browser (UI-010 Download, UI-014) and reading and writing its
 own data folder.
 
 ### 2.2 User classes
@@ -96,7 +99,8 @@ operator's normal user rights and never requests elevation.
 ### 2.3 Operating environment
 
 - Windows 11 x64 (reference machine: the author's development PC). Windows 10 x64 is not tested
-  in v1; see Appendix D.
+  in v1; see Appendix D. BuildPilot is Windows only; there is no macOS or Linux build
+  (Amendment 8).
 - PowerShell 7 (`pwsh.exe`) optional; Windows PowerShell 5.1 (`powershell.exe`) is present on
   every supported Windows.
 
@@ -108,7 +112,7 @@ operator's normal user rights and never requests elevation.
 | CON-002 | UI framework is Slint, used under its GPLv3 licence. | See 2.6. |
 | CON-003 | Code layering is `ui → application → domain ← infrastructure`, enforced by a structural test. | House architecture invariant; keeps OS integration behind narrow adapters (spec §16, §17). |
 | CON-004 | The supplied artwork in `assets/` is product artwork and is used as supplied. | Spec §15. |
-| CON-005 | The version has one home, the `VERSION` file at the repo root; nothing else holds a version literal by hand. | House versioning rule. The build script stamps Cargo.toml from `VERSION`; a structural test fails when they differ (OQ-12). |
+| CON-005 | The version has one home, the `VERSION` file at the repo root; nothing else holds a version literal by hand. | House versioning rule. `stamp_version.ps1`, run by the build script, stamps Cargo.toml and the site from `VERSION`; tests fail when either differs (OQ-12). |
 | CON-006 | Repository licence is GPL-3.0. | Existing `LICENSE`; compatible with Slint's GPLv3 option. |
 
 ### 2.5 Assumptions
@@ -117,7 +121,7 @@ operator's normal user rights and never requests elevation.
 |---|---|---|---|
 | AS-001 | The operator's scripts report failure through a non-zero exit code. A script that fails yet exits 0 will show as Succeeded; BuildPilot does not parse output to second-guess it (spec §10). | Oliver | 2026-10-04 |
 | AS-002 | Scripts do not need interactive input. Standard input is closed at launch, so a script that prompts receives end of input. | Oliver | 2026-10-04 |
-| AS-003 | Rust will be installed by the operator (`rustup-init`). Measured 2026-09-27: `cargo` absent from PATH and from `~\.cargo\bin`; `~\.rustup` present. | Oliver | before implementation |
+| AS-003 | Rust will be installed by the operator (`rustup-init`). Confirmed: installed through rustup; DEVELOPMENT.md names the toolchain. | Oliver | Confirmed |
 
 ### 2.6 Framework decision record
 
@@ -143,7 +147,8 @@ implementation spikes (R-1, R-2) settle them before the design depends on them.
 (or changes a global preference), the configuration store shall write the config file.
 Source: spec §12. Acceptance: Given two operations, when the second is dragged above the first
 and BuildPilot is restarted, then the order is second, first.
-Verified by: `infrastructure::config_store` test `reorder_survives_reload`.
+Verified by: `infrastructure::config_store` test `every_field_and_the_order_round_trip`;
+`application::deck` test `reordering_saves_when_it_moves`.
 
 **CFG-002 (M) Atomic write.** The configuration store shall write the config file by writing a
 temporary file in the data folder and renaming it over the old one.
@@ -156,12 +161,12 @@ absolute, plus arguments), working directory (absolute), the chosen environment'
 where ENV-002 asked for one, icon reference, position in the flight deck. Globally it shall hold
 the schema version, the theme preference and the operator's host table (HOST-001). Source: spec
 §12; amended by Amendment 4. An operation saved by an earlier schema migrates to one step (CFG-009).
-Verified by: `domain::config` round-trip test `every_field_round_trips`.
+Verified by: `infrastructure::config_store` test `every_field_and_the_order_round_trip`.
 
 **CFG-004 (M) Runtime state is never persisted.** The config file shall hold no process ID,
 run state, output or timestamp of a run. Source: spec §12.
 Acceptance: after a restart during a run, the row shows Idle, never Running.
-Verified by: `domain::config` test `serialised_form_has_no_runtime_fields`.
+Verified by: `infrastructure::config_store` test `serialised_form_has_no_runtime_fields`.
 
 **CFG-005 (M) One bad operation does not block the rest.** If one operation entry in the config
 file cannot be parsed, then the configuration store shall load every other operation. It shall
@@ -192,7 +197,7 @@ Verified by: `config_store` tests `older_schema_migrates`, `newer_schema_is_read
 
 **CFG-010 (S) Window layout.** BuildPilot shall persist the window size and position, the output
 tray's expanded state and the tray height. It shall restore them at start.
-Verified by: `domain::config` round-trip test; Manual for restore.
+Verified by: `application::deck` test `preferences_are_saved`; Manual for restore.
 
 ### 3.2 Adding operations (ADD)
 
@@ -239,7 +244,7 @@ BuildPilot default placeholder icon. Source: spec §5.1.
 
 **ICON-003 (M) Isolated conventions.** The icon resolver shall take its conventions from one
 ordered list, so a further convention is added as one entry with no change elsewhere.
-Verified by: inspection; `icon_discovery` test iterates the list.
+Verified by: inspection; `infrastructure::icons` test `conventions_are_tried_in_order`.
 
 **ICON-004 (M) Choose icon.** When the operator activates Choose Icon in the operation dialog,
 BuildPilot shall open an image picker (PNG, JPEG, ICO) and use the chosen image.
@@ -248,7 +253,10 @@ so it survives the original moving; a discovered icon is referenced by path.
 
 **ICON-005 (M) Missing icon at start.** If an operation's icon file is missing or unreadable at
 start, then its row shall show the placeholder plus a marker whose tooltip names the missing path.
-Source: spec §18. Verified by: `icon_discovery` test; Manual for the marker.
+Source: spec §18. Verified by: `infrastructure::icons` test
+`readable_means_a_known_image_signature`; `application::startup` test
+`icon_status_reflects_what_can_be_shown`; `ui` test `icon_problem_only_for_missing_icons`; Manual
+for the marker.
 
 **ICON-006 (M) No distortion.** The rendering of every icon and every supplied asset shall
 preserve its aspect ratio. Source: spec §15. `negative.png` is 1278x1230 (measured), so this
@@ -296,11 +304,12 @@ flight deck shall move the operation to the drop position and save the order. So
 
 **ROW-004 (M) Keyboard reorder.** When a row has focus and the operator presses Alt+Up or
 Alt+Down, the flight deck shall move it one place and save the order. Source: spec §19.
-Verified by: `domain::deck` tests `move_up`, `move_down`, `move_at_edge_is_no_op`.
+Verified by: `domain::deck` tests `move_up_and_down`, `move_at_edge_is_no_op`.
 
 **ROW-005 (M) Reorder does not touch runs.** Reordering shall not interrupt, restart or
 re-attribute any running operation or its output. Source: spec §4.3.
-Verified by: `application::deck` test `reorder_during_run_keeps_run`.
+Verified by: **no test yet.** `application::deck` test `reorder_during_run_keeps_run` is
+planned and not written.
 
 **ROW-006 (M) Checkboxes.** Each row shall have a checkbox whose state the flight deck holds as a
 set of operation IDs. Run the ticked builds uses it (LCH-011). Checkbox state is not persisted
@@ -615,7 +624,12 @@ than overwrite it.
 folder, defaulting to keep.
 **INST-006 (M)** The application and the setup program shall carry the icon made from
 `assets\application-icon.png`, which the taskbar and shortcuts also show. Source: spec §16.
-Verified by (all): Manual build-and-launch; install policy logic unit-tested.
+**INST-007 (M)** Every release of one major version shall install to the same folder and keep its
+Apps list entry under the same key (both in `infrastructure/locations.rs`), so any such release
+updates any earlier one in place. Moving either carries a new major version. Source: owner,
+Amendment 8.
+Verified by (all): Manual build-and-launch; install policy logic unit-tested; INST-007 by
+release review.
 
 ### 3.15 Non-functional requirements (NFR)
 
@@ -631,7 +645,7 @@ Verified by (all): Manual build-and-launch; install policy logic unit-tested.
 | NFR-SEC-002 | BuildPilot shall never write to, rename or delete a script. | Inspection: the shell and process adapters expose no write operation on scripts. |
 | NFR-MAINT-001 | Domain and application code shall hold 100% line and region coverage (`cargo llvm-cov`), with the gate failing the build below either. | `test.ps1`. |
 | NFR-MAINT-002 | `cargo fmt --check` and `cargo clippy -- -D warnings` shall pass. | `test.ps1`. |
-| NFR-MAINT-003 | No source file shall exceed 400 lines, excluding build scripts. | Structural test. |
+| NFR-MAINT-003 | No Rust source or test file and no Slint file shall exceed 400 lines or sit in the danger band of 381 to 399; build scripts are excluded. | Structural test. |
 | NFR-MAINT-004 | README.md, ARCHITECTURE.md, TESTING.md and DEVELOPMENT.md shall exist and match the tree. | Handover gate. |
 | NFR-PORT-001 | OS integration (process launch, tree termination, file association, Explorer reveal, paths) shall sit behind interfaces in infrastructure, so another platform means new adapters only. | Structural test on imports. |
 
@@ -647,6 +661,12 @@ the single writer.
 **DATA-001 (M) Single instance.** When BuildPilot is started while another instance is running for
 the same Windows user, the new process shall bring the running instance's window forward and exit.
 Source: OQ-10. Verified by: Manual.
+
+**DATA-002 (M) The config file holds across a major version.** Every release of one major version
+shall read a config file written by any earlier release of that major version, keeping every
+operation and preference in it (CFG-009 migrates the schema). A release that cannot shall carry a
+new major version. Source: owner, Amendment 8. Verified by: `infrastructure::config_store` test
+`older_schema_migrates`; release review.
 
 ### 3.17 Steps (STEP)
 
@@ -892,7 +912,7 @@ Personal developer utility: a full FMEA is judged disproportionate. Named risks,
 |---|---|---|
 | R-1 | Slint has no ready-made drag reordering for list rows. | **Retired 2026-09-27 by a throwaway spike (since removed).** A `TouchArea` on the handle keeps receiving `moved` after the pointer leaves it in any direction and receives the release, so the drag is built from it. Measured flaw to design out: a twitch of a few pixels retargeted the row; the target must change only when the pointer passes the middle of the next row. |
 | R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Run is clicked. |
-| R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone; Rust's standard library is believed to refuse arguments it cannot quote safely for batch files (to verify). | LCH-003 fixture test covers `.cmd` too; surface a refusal as a launch failure. |
+| R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone. | **Settled by Amendment 1:** the standard library quotes batch arguments by `cmd.exe` rules and refuses one it cannot escape. The LCH-003 fixture test covers `.cmd`; a refusal is a launch failure. |
 | R-4 | A script that breaks away from its Job Object would survive Stop. | Accept for v1; STOP-003 reports survivors by PID. |
 | R-5 | Python writing to a pipe holds its output back and encodes it in the ANSI code page. | **Retired 2026-09-27 by measurement.** A venv's Python 3 started with piped output and no window printed three lines 2 s apart: all three arrived together at 4.06 s; with `PYTHONUNBUFFERED=1` at 0.04, 2.04 and 4.04 s. `é` arrived as the single byte 0xE9 (stdout encoding cp1252), which OUT-008's OEM fallback (code page 850) reads as `Ú`; with `PYTHONIOENCODING=utf-8` it arrived as C3 A9. ENV-006 sets both. |
 
@@ -915,7 +935,8 @@ Every use case is runnable from a test before any window exists.
 
 Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
 accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4, OQ-19
-with Amendment 5 and OQ-20 ahead of the macOS and Linux port; all are decided. No question is open.
+with Amendment 5 and OQ-20 over a macOS and Linux port that Amendment 8 later ruled out; all are
+decided. No question is open. Where a later amendment changed an answer, the row says so.
 
 | ID | Question | Decision |
 |---|---|---|
@@ -927,35 +948,35 @@ with Amendment 5 and OQ-20 ahead of the macOS and Linux port; all are decided. N
 | OQ-6 | Chosen icons: copy into the data folder? Or reference by path? | Copy chosen icons; reference discovered ones by path. |
 | OQ-7 | Persist checkbox state? | No; transient. |
 | OQ-8 | Arguments as a list or as one string? | List, one per line in the dialog. |
-| OQ-9 | What does Settings hold in v1? | Theme (Light, Dark, Follow Windows) plus the data folder path with an Open Folder button. Nothing else until use earns it. |
+| OQ-9 | What does Settings hold in v1? | Theme (Light, Dark) plus the data folder path with an Open Folder button; Amendment 4 added the host table and Amendment 6 removed Follow Windows. Nothing else until use earns it. |
 | OQ-10 | Single instance per user? | Yes; a second launch brings the first window forward. |
-| OQ-11 | Supported script types beyond `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`? | None in v1 (see Appendix D). |
+| OQ-11 | Supported script types beyond `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`? | `.py` only, added by Amendment 4; any other type through the operator's host table (HOST-001). |
 | OQ-12 | How Cargo.toml's version follows `VERSION` (CON-005). | The build script stamps Cargo.toml from `VERSION`; a structural test fails when they differ. |
 | OQ-13 | Theme toggle location: toolbar buttons using the light/dark artwork? Settings? Both? | Toolbar toggle using the artwork; Settings mirrors it. |
 | OQ-14 | How is a sequence such as `buildexe.py` then `buildinstaller.py` expressed? | Ordered steps inside one operation, stopping on the first failure (STEP). Decided 2026-09-27. |
 | OQ-15 | Several environments in one working directory? | The operation dialog asks; the choice is saved (ENV-002). Decided 2026-09-27. |
 | OQ-16 | No environment for a `.py` step? | Refuse to run; never fall back to a Python on PATH and never create one (ENV-004, ENV-007). Decided 2026-09-27. |
 | OQ-17 | Where does a host for another script type live? | One table in Settings keyed by extension (HOST). Decided 2026-09-27. |
-| OQ-20 | macOS and Linux: how delivered, which build scripts, where checked, when? | DMG and Flatpak as the owner's other apps; the setup program stays Windows-only. Patterns: macOS runs `builddmg.py` (Python) or `builddmg.sh`; Linux runs `cleanup_flatpak.sh` or `clean_flatpak.sh`, then `build_flatpak.sh`. Checked on the owner's own Mac and Linux machines. Started once the Windows work is finished; its requirements become an amendment then. Decided 2026-09-27. |
+| OQ-20 | macOS and Linux: how delivered, which build scripts, where checked, when? | Neither: BuildPilot stays Windows only (Amendment 8, which replaced a plan for a DMG and a Flatpak). Decided 2026-09-27. |
 | OQ-19 | Add from a folder: how offered, how far, partial matches, where the patterns live? | The one Add button takes a script or a folder; a parent folder may be scanned for several projects at once; a partial match proposes the files present; the patterns are a built-in list (SCAN). Decided 2026-09-27. |
 | OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | `.ps1` steps yes, running without one when none is found; `.bat` and `.cmd` no. Every step is deactivated first (ENV-009). Decided 2026-09-27. |
 
 ## Appendix C. Traceability
 
-Each requirement above carries its own Verified by line. The test names are planned; a test
-that lands names its requirement ID in a comment above it, so traceability runs from code back to
-this document as well as forwards.
+Each requirement above carries its own Verified by line. Every test named there exists in
+`tests/`, except where the line says **no test yet**. A test names its requirement ID in a
+comment above it, so traceability runs from code back to this document as well as forwards.
 
 ## Appendix D. Won't this time (v1)
 
-- Run All / Stop All and any action on checked rows.
+- Run All / Stop All; any action on checked rows beyond Run the ticked builds (LCH-011).
 - Graceful stop (Ctrl+Break then wait), per OQ-1.
 - A progress protocol for scripts to report percentages (the model allows it: LIFE-006).
 - Keeping output from runs before the latest.
 - Built-in script types beyond those in LCH-001, e.g. `.sh`; the operator's host table
   (HOST-001) covers them instead.
 - A working directory per step; environments other than Python virtual environments.
-- Windows 10 testing; macOS and Linux builds.
+- Windows 10 testing. (macOS and Linux are not deferred but ruled out: §1.4, Amendment 8.)
 - Localisation.
 - Per-operation preferences (spec §12), until a real one is found.
 - Environment variable overrides per operation.
@@ -1023,4 +1044,26 @@ answer. Baseline 1.0 offered Light, Dark and Follow Windows.
 
 Reason: the owner intends BuildPilot for macOS and Linux as well, where a button named after
 Windows does not belong. The first run still starts in the system's theme (UI-001); choosing
-Light or Dark replaces that for good.
+Light or Dark replaces that for good. (Amendment 8 later ruled macOS and Linux out; the change
+here stands on its own, since two theme buttons are simpler than three.)
+
+**Amendment 7 (2026-09-27): changes from the owner's use of the installed build.** Adds ROW-008,
+LCH-010, LCH-011, UI-012, UI-013 and UI-014. Changes ICON-001 (the ICO, folder-named and
+`docs\assets` conventions), OUT-007 (the outcome is coloured, not the stream), SCAN-006 (a folder
+already on the deck cannot be ticked), ROW-006 and §1.4 (checked rows gain Run the ticked
+builds). These were written into the requirements as they were decided, without an amendment
+of their own; this one records them.
+
+Reason: each came from the owner running real builds through the installed application; each
+requirement's Source and Rationale lines give the case. The measured ones: a drag at 20 frames a
+second from full-size images (UI-013), a hairline scroll bar hiding 16 of 20 rows (UI-012) and a
+PyInstaller build reading as failed because it logs to stderr (OUT-007).
+
+**Amendment 8 (2026-09-27): Windows only; what the first major release commits to.** Changes
+§1.4, §2.3, OQ-20 and Appendix D; adds DATA-002 and INST-007.
+
+Reason: the owner ruled macOS and Linux out, replacing OQ-20's plan for a DMG and a Flatpak;
+BuildPilot is a Windows application. With the first major release the owner commits to three
+things across a major version: the config file stays readable (DATA-002), the install folder and
+Apps list key stay put (INST-007) and the v1 scope in this document is delivered on Windows. A
+change breaking either of the first two carries a new major version.

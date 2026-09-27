@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BuildPilot: a flight deck for your build scripts</title>
+    <meta name="description" content="BuildPilot remembers the build scripts you run often, starts several at once, shows each one's state and live output, then stops them with everything they started. For Windows.">
+    <meta name="theme-color" content="#1c1d20">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BuildPilot: a flight deck for your build scripts">
+    <meta property="og:description" content="Start the builds you run every day side by side, watch them live and stop them cleanly. It runs your scripts; it never becomes the build system. For Windows.">
+    <meta property="og:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta property="og:url" content="https://ernster.dev/BuildPilot/">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "BuildPilot",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Windows",
+        "description": "Remembers build scripts, runs several at once, shows their live output and stops their process trees.",
+        "author": {"@type": "Person", "name": "Oliver Ernster", "url": "https://ernster.dev"},
+        "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+        "offers": {"@type": "Offer", "price": "0", "priceCurrency": "GBP"}
+    }
+    </script>
+</head>
+<body>
+
+<header class="wrap site-head">
+    <a class="brand" href="#top"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
+    <nav aria-label="Sections">
+        <a href="#what">What it does</a>
+        <a href="#engineering" class="hide-sm">Engineering</a>
+        <a href="#install">Install</a>
+        <a href="https://github.com/oernster/BuildPilot">GitHub</a>
+    </nav>
+</header>
+
+<main id="top">
+
+    <div class="wrap hero">
+        <div>
+            <p class="eyebrow">
+                <span class="pill">v<!--VERSION-->1.0.0<!--/VERSION--></span>
+                <span class="pill">Windows</span>
+                <span class="pill">Free and open source</span>
+            </p>
+            <h1>A flight deck for your build scripts.</h1>
+            <p class="lead">BuildPilot remembers the scripts you run every day. It starts them
+                side by side, shows each one's state and live output, then stops them
+                <strong>with everything they started</strong>. It runs the commands you already
+                have; it never becomes the build system.</p>
+            <div class="cta">
+                <a class="btn btn-primary" href="https://github.com/oernster/BuildPilot/releases/latest">Download for Windows</a>
+                <a class="btn" href="https://github.com/oernster/BuildPilot">View the source</a>
+            </div>
+        </div>
+        <figure class="shot">
+            <img src="screenshot.png" alt="The BuildPilot window: a list of build operations, each with its status and controls, above the output of the selected run.">
+        </figure>
+    </div>
+
+    <section class="wrap" id="what">
+        <p class="kicker">The feature list</p>
+        <h2>Your scripts, several at once, in one window.</h2>
+        <div class="two-col">
+            <div class="card">
+                <h3>What it does</h3>
+                <ul>
+                    <li><strong>Remembers your builds.</strong> An operation is one or more
+                        steps run in order, a working directory and a name. <code>.ps1</code>,
+                        <code>.bat</code>, <code>.cmd</code>, <code>.exe</code>,
+                        <code>.com</code> and <code>.py</code> run out of the box; Settings maps
+                        any other type to the program that runs it.</li>
+                    <li><strong>Finds them for you.</strong> Point Add at a project folder (or a
+                        folder of projects) and it proposes the build it recognises:
+                        <code>build.ps1</code> alone, else <code>buildexe.py</code> then
+                        <code>buildinstaller.py</code>. Nothing is added until you confirm.</li>
+                    <li><strong>Uses your Python environment.</strong> A <code>venv</code> in the
+                        project is found and activated for each step; an environment left active
+                        in your shell is undone first.</li>
+                    <li><strong>Runs several at once.</strong> Each run is its own process, with
+                        its state shown by a glyph and in words, plus the elapsed time. Tick rows
+                        to start them together. Two builds never share a folder.</li>
+                    <li><strong>Shows output live.</strong> The tray follows the latest line until
+                        you scroll up. Lines are plain whatever stream they came on; the run's
+                        outcome closes it in green, red or grey.</li>
+                    <li><strong>Stops the whole tree.</strong> Stop ends the script and every
+                        process it started, through a Windows job object.</li>
+                </ul>
+            </div>
+            <div class="card">
+                <h3>What it does not do</h3>
+                <ul>
+                    <li><strong>Replace your build system.</strong> PowerShell, Cargo, npm and
+                        the rest stay in charge. Every script stays runnable without
+                        BuildPilot.</li>
+                    <li><strong>Pipelines.</strong> No dependency graph, no conditions and no
+                        Run All. The only sequence is an operation's own steps.</li>
+                    <li><strong>Build environments.</strong> It uses a Python environment that
+                        exists; it never creates, installs into or repairs one.</li>
+                    <li><strong>Terminals.</strong> Output is shown as it arrives; a running
+                        script cannot be typed into.</li>
+                    <li><strong>Touch your scripts.</strong> It never writes to, renames or
+                        deletes one. Remove takes an operation off the deck along with any
+                        icon BuildPilot copied for it; nothing else.</li>
+                    <li><strong>Anything but Windows.</strong> Windows only, for good.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="wrap" id="engineering">
+        <p class="kicker">How it is built</p>
+        <h2>A small tool, held to a large standard.</h2>
+        <div class="prose">
+            <p>BuildPilot is written in Rust with a Slint interface. Every number below was
+                measured from the code, not rounded up for the page.</p>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <span class="n">337</span>
+                <p>Tests, from pure rules through real processes started and stopped to the
+                    keyboard ring driven by real key events.</p>
+            </div>
+            <div class="stat">
+                <span class="n">100%</span>
+                <p>Of lines and of branches covered in the rules, the use cases and the setup
+                    program's policy. The build refuses to run below it.</p>
+            </div>
+            <div class="stat">
+                <span class="n">1,069</span>
+                <p>Lines of requirements, each tied to the test that proves it. Every change
+                    of mind is a numbered amendment.</p>
+            </div>
+            <div class="stat">
+                <span class="n">1</span>
+                <p>Network request: asking GitHub whether a newer release is out. It carries
+                    nothing about you or your scripts.</p>
+            </div>
+            <div class="stat">
+                <span class="n">0</span>
+                <p>Administrator prompts. It installs for your own account and runs with your
+                    normal rights.</p>
+            </div>
+            <div class="stat">
+                <span class="n">4.5 : 1</span>
+                <p>The least contrast of any text against its background, in light and dark,
+                    checked by a test.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="wrap" id="install">
+        <p class="kicker">Install</p>
+        <h2>Three steps to the first build.</h2>
+        <ol class="steps">
+            <li><strong>Download</strong> <code>BuildPilotSetup.exe</code> from the
+                <a href="https://github.com/oernster/BuildPilot/releases/latest">latest
+                release</a>.</li>
+            <li><strong>Run it</strong> and choose Install. It installs for your account only,
+                in <code>%LOCALAPPDATA%\Programs\BuildPilot</code>, so Windows never asks for
+                administrator rights.</li>
+            <li><strong>Add a project.</strong> Choose Add, pick a script or a folder and
+                press Run.</li>
+        </ol>
+        <div class="prose after-steps">
+            <p>Built and tested on Windows 11. Run setup again to update, go back to an
+                earlier version, repair or reinstall. Uninstall from Settings &gt; Apps; it
+                keeps your operations and settings unless you untick that. Neither executable
+                is signed.</p>
+        </div>
+    </section>
+
+    <section class="wrap support" id="support">
+        <p class="kicker">Supporting BuildPilot</p>
+        <h2>Free. It stays free.</h2>
+        <div class="prose">
+            <p>There is no paid tier, no licence key and no feature held back behind a
+                donation. If BuildPilot saves you time, a contribution supports its
+                maintenance. The same link sits in the toolbar as the drink button.</p>
+        </div>
+        <div class="cta">
+            <a class="btn btn-donate" href="https://www.paypal.com/ncp/payment/XC9S6VZ96K9Q4">
+                <img src="donate.png" alt="">
+                Donate
+            </a>
+        </div>
+    </section>
+
+</main>
+
+<footer class="wrap site-foot">
+    <span>&copy; Oliver Ernster. GPL-3.0.
+        <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
+    <span><a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+        <a href="https://ernster.dev">ernster.dev</a></span>
+</footer>
+
+</body>
+</html>

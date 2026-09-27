@@ -1,5 +1,5 @@
-# The build. Reads VERSION, stamps it into Cargo.toml, runs the gate, builds the application,
-# then builds the setup program carrying it.
+# The build. Reads VERSION, stamps it into Cargo.toml and the site, runs the gate, builds the
+# application, then builds the setup program carrying it.
 #
 #   ./build.ps1                   the application and the setup program
 #   ./build.ps1 -SkipInstaller    the application only
@@ -35,14 +35,8 @@ if ($version -notmatch '^\d+\.\d+\.\d+$') {
 }
 Write-Host "Building BuildPilot $version"
 
-# 2. Cargo.toml carries the same version (CON-005, OQ-12): the package's own line only.
-$manifestPath = Join-Path $root 'Cargo.toml'
-$manifest = Get-Content $manifestPath -Raw
-$stamped = [regex]::Replace($manifest, '(?m)^version = "[^"]*"', "version = `"$version`"", 1)
-if ($stamped -ne $manifest) {
-    Set-Content -Path $manifestPath -Value $stamped -NoNewline
-    Write-Host "Stamped Cargo.toml with $version"
-}
+# 2. Cargo.toml and the site under docs/ carry the same version (CON-005, OQ-12).
+Invoke-Step 'Stamping the version' { & (Join-Path $root 'stamp_version.ps1') }
 
 # 3. The gate.
 Invoke-Step 'Running the gate' { & (Join-Path $root 'test.ps1') }

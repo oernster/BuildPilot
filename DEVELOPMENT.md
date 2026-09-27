@@ -59,7 +59,8 @@ The first build downloads the crates in `Cargo.lock`; after that nothing needs t
 It does six things in order and stops at the first failure:
 
 1. Reads `VERSION`, refusing anything that is not three numbers joined by dots.
-2. Stamps that version into `Cargo.toml`, the package's own line only.
+2. Runs `stamp_version.ps1`, which writes that version into `Cargo.toml` (the package's own
+   line only) and into every version token on the site under `docs/`.
 3. Runs the gate, `test.ps1`. There is no switch to skip it: a gate that can be skipped is a
    gate that is skipped on the day it would have caught something.
 4. Builds the application.
@@ -83,8 +84,9 @@ name and version Windows shows on every executable. Through `build_credits.rs` i
 `cargo tree` and `cargo metadata` (offline, against `Cargo.lock`) which crates a release build
 compiles in, then writes the open source credits About lists and `THIRD-PARTY-NOTICES.txt`, the
 licence texts setup installs beside the program. Outside a release build it keeps the Slint
-element names, so the geometry tests can find elements and measure where they landed. A setup program built without a payload
-(by `cargo build` alone) refuses to run and says why. Neither executable is signed.
+element names, so the geometry tests can find elements and measure where they landed. A setup
+program built without a payload (by `cargo build` alone) refuses to run and says why. Neither
+executable is signed.
 
 ## Installing what you built
 
@@ -144,8 +146,23 @@ your everyday one.
 
 ## Versioning
 
-The version lives in `VERSION` and nowhere else. `Cargo.toml` must carry the same string, which
-`tests/structural.rs` checks; the running application reads it through `build.rs`.
+The version lives in `VERSION` and nowhere else. The running application reads it through
+`build.rs`. Two places cannot read it, so `stamp_version.ps1` writes it into them. One is
+`Cargo.toml`, which `tests/structural.rs` checks. The other is the site under `docs/`, where each
+mention is a `<!--VERSION-->` token that `tests/site.rs` checks. No other document names a version. After
+changing `VERSION`, stamp before running the tests:
+
+```powershell
+./stamp_version.ps1
+```
+
+It is idempotent: a second run writes nothing.
+
+## The website
+
+`docs/` is the GitHub Pages site: `index.html`, `styles.css`, the icon, the donate artwork and
+`screenshot.png`. It carries no dates. Its colours are the application's tokens from
+`ui/theme.slint`, light or dark as the reader's system is set.
 
 ## Where things live
 
@@ -160,9 +177,13 @@ The version lives in `VERSION` and nowhere else. `Cargo.toml` must carry the sam
 | `src/bin/buildpilotsetup.rs` | The setup program's composition root |
 | `src/infrastructure/locations.rs` | Every name and folder the application and setup share, plus the author and copyright |
 | `build_credits.rs` | Part of the build script: generates the credits and the third-party notices |
+| `stamp_version.ps1` | Writes `VERSION` into `Cargo.toml` and the site |
 | `tools/genicons.py` | Makes the `.ico` from the PNG master |
+| `tools/uiicons.py` | Makes the small copies in `assets/ui` the interface draws |
 | `ui/` | The Slint interface: `theme.slint` holds every colour and size |
-| `assets/` | The application icon and every button image |
+| `assets/` | The application icon and every button image, as masters |
+| `assets/ui` | The small copies of those masters, the only images the interface names |
+| `docs/` | The GitHub Pages site |
 | `tests/` | Every suite; `tests/fixtures` holds the scripts the process tests run |
 | `SRS.md` | The requirements |
 

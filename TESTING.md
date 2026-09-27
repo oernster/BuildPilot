@@ -40,7 +40,7 @@ Read the exit code rather than the last line of output: `0` means every step pas
 | `src/domain`, `src/application` and `src/setup` | 100% of lines and of regions | The correctness core and the setup program's policy: no files, no processes, no clock, no window, so every line and every branch is reachable from a test. |
 | `src/infrastructure`, `src/ui`, `src/main.rs`, `src/bin` | measured, not floored | They need real processes, files, Explorer, the registry or a window; a number over them would mean little. Their behaviour is covered by the suites below and the checks by hand. |
 
-Every line and every region in the floor is covered: 1,915 regions. A region is a branch as
+Every line and every region in the floor is covered: 3,060 regions over 2,124 lines. A region is a branch as
 well as a line, so an untaken `?` fails the gate even when its line ran. Where a branch could
 not be taken in production it was deleted rather than tested (an operation looked up twice, a
 refusal repeated after it had already been made). The region floor was proved by planting a
@@ -48,19 +48,22 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-239 tests, counted from the source.
+337 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
-| `tests/domain` | 89 | The rules: validation, deck order, the run state machine, launch plans per kind of script, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
-| `tests/application` | 60 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running, stopping, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
-| `tests/infrastructure` | 50 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders, finding and ending a process by name and clearing setup's stale copy; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
+| `tests/domain` | 135 | The rules: validation, steps, folders compared as Windows compares them, deck order and slotting in by name, the run state machine, launch plans per kind of script, the host table, environment discovery with the deactivate and activate variables, the scan patterns and proposals, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
+| `tests/application` | 90 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running steps in order, one build per folder, running the ticked rows, stopping, environments, hosts, folder scans, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
+| `tests/infrastructure` | 58 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders, finding and ending a process by name and clearing setup's stale copy; the donation address; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
+| `tests/keyboard` | 14 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down, a folder already on the deck off the ring. |
+| `tests/ui.rs` | 11 | What rows and the tray say, without a window. |
+| `tests/structural.rs` | 9 | The invariants in [ARCHITECTURE.md](ARCHITECTURE.md), by reading the source. |
+| `tests/geometry.rs` | 8 | Where Slint laid things out, headless: every toolbar tooltip inside the window, row tooltips not clipped by the list, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text, the scroll bars and the counts of rows out of sight. |
 | `tests/setup.rs` | 6 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
-| `tests/keyboard.rs` | 11 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down. |
-| `tests/geometry.rs` | 5 | Where Slint laid things out, headless: every toolbar tooltip inside the window, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text. |
-| `tests/structural.rs` | 8 | The invariants in [ARCHITECTURE.md](ARCHITECTURE.md), by reading the source. |
-| `tests/ui.rs` | 7 | What rows and the tray say, without a window. |
 | `tests/contrast.rs` | 3 | Text at 4.5:1 and rings at 3:1 against their surfaces, in both themes, read from `ui/theme.slint`. |
+| `tests/assets.rs` | 1 | Every image a Slint file names is a small copy in `assets/ui`, none over 256 pixels. |
+| `tests/frame_counter.rs` | 1 | Each executable removes Slint's frame counter variable before anything else. |
+| `tests/site.rs` | 1 | The site under `docs/` names the version in `VERSION` and no other. |
 
 ## How each layer is tested
 
@@ -114,6 +117,14 @@ These need a real desktop and a real person; the SRS marks them Manual.
 | UI-011 reading | Guide, About, Licence and setup's licence page hold still 5 seconds, read down slowly, hold, rewind fast; a wheel or a key holds them 2.5 seconds, then they carry on. |
 | UI-010 update check | With the network watched: one request to api.github.com 3 seconds after opening; Help > Check for Updates says one of the three answers; with the network off it says GitHub could not be reached. |
 | INST-006 icon | The taskbar, the shortcuts and both executables show the application icon. |
+| CFG-010 layout | Move and resize the window, resize the tray, restart: all come back as left. |
+| ICON-005 missing icon | Delete a chosen icon's file, restart: the row shows the placeholder with a marker naming the path. |
+| STEP-008, ENV-002 dialog | The operation dialog adds, removes and moves steps, refuses to remove the last and lists the environments when there are several. |
+| SCAN-002 to SCAN-009 folders | Add a project folder, then a parent of several: the proposals, the ticks, a folder already on the deck dimmed, a partial match on the warning background pulsing twice. |
+| OUT-007 outcome | A run that logs to stderr shows plain lines; its closing line is green on success, red on failure, muted when stopped. |
+| UI-012 scroll bars | With the tray open and 20 rows, the bar shows, drags and pages; the counts read how many rows are out of sight. |
+| UI-013 drag | With 20 rows, a drag follows the pointer smoothly. |
+| UI-014 donate | The toolbar's drink button opens the donation page in the browser. |
 
 ## Running part of the suite
 
