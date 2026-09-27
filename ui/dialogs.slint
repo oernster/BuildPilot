@@ -209,8 +209,6 @@ export component ConfirmDialog inherits Modal {
 
 // Global options only (UI-004).
 export component SettingsDialog inherits Modal {
-    // 0 light, 1 dark, 2 follow Windows.
-    in property <int> theme-choice;
     in property <string> data-folder;
     callback choose-theme(int);
     callback open-data-folder();
@@ -227,7 +225,7 @@ export component SettingsDialog inherits Modal {
             text: "Light";
             label: "Light theme";
             in-dialog: true;
-            checked: root.theme-choice == 0;
+            checked: !Theme.dark;
             icon: @image-url("../assets/light-mode.png");
             clicked => { root.choose-theme(0); }
         }
@@ -235,16 +233,9 @@ export component SettingsDialog inherits Modal {
             text: "Dark";
             label: "Dark theme";
             in-dialog: true;
-            checked: root.theme-choice == 1;
+            checked: Theme.dark;
             icon: @image-url("../assets/dark-mode.png");
             clicked => { root.choose-theme(1); }
-        }
-        TextButton {
-            text: "Follow Windows";
-            label: "Follow the Windows theme";
-            in-dialog: true;
-            checked: root.theme-choice == 2;
-            clicked => { root.choose-theme(2); }
         }
     }
     FieldLabel { text: "Data folder"; }

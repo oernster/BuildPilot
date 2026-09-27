@@ -521,9 +521,10 @@ seconds, then again. Any scroll by the operator suspends the cycle for 2.5 secon
 carries on from where they left it; it is never switched off. The dialog's buttons stay in place
 below the text. Source: house `/scroll` model.
 
-**UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark, Follow Windows),
-the data folder path with an Open Folder button and the operator's host table (HOST-001).
-Source: OQ-9; amended by Amendment 4.
+**UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark), the data folder
+path with an Open Folder button and the operator's host table (HOST-001). The theme button shown
+chosen is the theme in effect, including while the first-run default (UI-001) still follows the
+system. Source: OQ-9; amended by Amendments 4 and 6.
 
 **UI-005 (M) Theme toggle.** The toolbar shall carry a theme toggle using the light and dark
 artwork; Settings shall show the same choice. Source: OQ-13.
@@ -844,8 +845,8 @@ Every use case is runnable from a test before any window exists.
 ## Appendix B. Decisions register
 
 Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
-accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4 and OQ-19
-with Amendment 5; all are decided. No question is open.
+accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4, OQ-19
+with Amendment 5 and OQ-20 ahead of the macOS and Linux port; all are decided. No question is open.
 
 | ID | Question | Decision |
 |---|---|---|
@@ -866,6 +867,7 @@ with Amendment 5; all are decided. No question is open.
 | OQ-15 | Several environments in one working directory? | The operation dialog asks; the choice is saved (ENV-002). Decided 2026-09-27. |
 | OQ-16 | No environment for a `.py` step? | Refuse to run; never fall back to a Python on PATH and never create one (ENV-004, ENV-007). Decided 2026-09-27. |
 | OQ-17 | Where does a host for another script type live? | One table in Settings keyed by extension (HOST). Decided 2026-09-27. |
+| OQ-20 | macOS and Linux: how delivered, which build scripts, where checked, when? | DMG and Flatpak as the owner's other apps; the setup program stays Windows-only. Patterns: macOS runs `builddmg.py` (Python) or `builddmg.sh`; Linux runs `cleanup_flatpak.sh` or `clean_flatpak.sh`, then `build_flatpak.sh`. Checked on the owner's own Mac and Linux machines. Started once the Windows work is finished; its requirements become an amendment then. Decided 2026-09-27. |
 | OQ-19 | Add from a folder: how offered, how far, partial matches, where the patterns live? | The one Add button takes a script or a folder; a parent folder may be scanned for several projects at once; a partial match proposes the files present; the patterns are a built-in list (SCAN). Decided 2026-09-27. |
 | OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | `.ps1` steps yes, running without one when none is found; `.bat` and `.cmd` no. Every step is deactivated first (ENV-009). Decided 2026-09-27. |
 
@@ -946,3 +948,10 @@ Reason: the owner asked for a folder's build to be recognised rather than assemb
 two patterns are the two measured across the owner's projects (3.20). The owner chose a built-in
 pattern list, a partial match proposing what exists and a parent folder scanned for several
 projects at once. Every proposal is shown before anything is added.
+
+**Amendment 6 (2026-09-27): Settings no longer offers Follow Windows.** Changes UI-004 and OQ-9's
+answer. Baseline 1.0 offered Light, Dark and Follow Windows.
+
+Reason: the owner intends BuildPilot for macOS and Linux as well, where a button named after
+Windows does not belong. The first run still starts in the system's theme (UI-001); choosing
+Light or Dark replaces that for good.

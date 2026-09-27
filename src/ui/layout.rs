@@ -38,10 +38,7 @@ impl Ui {
         let choice = self.app.borrow().preferences().theme;
         let dark = choice.resolve(self.environment.windows_uses_dark)
             == crate::domain::preferences::Theme::Dark;
-        self.with_window(|window| {
-            window.invoke_apply_theme(dark);
-            window.set_theme_choice(theme_index(choice));
-        });
+        self.with_window(|window| window.invoke_apply_theme(dark));
     }
 
     pub(super) fn save_layout(&self) {
@@ -68,19 +65,12 @@ impl Ui {
     }
 }
 
-/// Settings' theme buttons, left to right.
-pub(super) fn theme_index(choice: ThemeChoice) -> i32 {
-    match choice {
-        ThemeChoice::Light => 0,
-        ThemeChoice::Dark => 1,
-        ThemeChoice::FollowWindows => 2,
-    }
-}
-
+/// Settings' theme buttons, left to right: 0 Light, 1 Dark. Following the system theme is the
+/// first-run default only; Settings no longer offers it (UI-004, Amendment 6).
 pub(super) fn theme_from_index(index: i32) -> ThemeChoice {
-    match index {
-        0 => ThemeChoice::Light,
-        1 => ThemeChoice::Dark,
-        _ => ThemeChoice::FollowWindows,
+    if index == 0 {
+        ThemeChoice::Light
+    } else {
+        ThemeChoice::Dark
     }
 }

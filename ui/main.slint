@@ -66,7 +66,6 @@ export component MainWindow inherits Window {
     in property <string> confirm-label;
 
     in property <bool> show-settings;
-    in property <int> theme-choice;
     in property <string> data-folder;
 
     // Help (UI-006 to UI-010): the menu, then whichever surface it opened.
@@ -320,7 +319,6 @@ export component MainWindow inherits Window {
             cancel => { root.cancel-confirm(); }
         }
         if root.show-settings: SettingsDialog {
-            theme-choice: root.theme-choice;
             data-folder: root.data-folder;
             choose-theme(choice) => { root.choose-theme(choice); }
             open-data-folder => { root.open-data-folder(); }
