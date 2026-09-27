@@ -23,7 +23,7 @@ use buildpilot::infrastructure::setup::{self as work, UNINSTALL_ARGUMENT};
 use buildpilot::infrastructure::win32::diagnostics::show_error;
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::setup::plan::{self, Choices, Step};
-use buildpilot::setup::route::{Installed, Route, route};
+use buildpilot::setup::route::{Route, route};
 use buildpilot::setup::wording::{self, route_words, step_words, verdict};
 use buildpilot::ui::{
     FooterAction, Reading, Ring, SetupScreen, SetupWindow, step_ring, wire_reading,
@@ -342,7 +342,8 @@ fn main() -> ExitCode {
     // Options open on what is already true.
     let has_desktop = work::desktop_shortcut().is_some_and(|link| link.exists());
     window.set_desktop_shortcut(has_desktop);
-    window.set_launch_after(installed == Installed::Nothing);
+    // Starting BuildPilot afterwards is on for every route; uninstall never reads it.
+    window.set_launch_after(true);
     let setup = Rc::new(Setup {
         window: window.as_weak(),
         route: route(installed, carried),
