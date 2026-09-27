@@ -4,7 +4,7 @@
 
 use std::collections::HashSet;
 
-use buildpilot::ui::{CreditData, MainWindow, step_ring};
+use buildpilot::ui::{CreditData, MainWindow, RowData, step_ring};
 use i_slint_backend_testing::{ElementHandle, ElementQuery};
 use slint::platform::WindowEvent;
 use slint::{ComponentHandle, LogicalPosition, LogicalSize, ModelRc, VecModel};
@@ -82,6 +82,54 @@ fn every_toolbar_tooltip_stays_inside_the_window() {
             "{label}'s tooltip spans x {} to {} in a window {WIDTH} wide",
             at.x,
             at.x + size.width
+        );
+    }
+}
+
+// A row's tooltips are drawn by the window, never inside the rows' scrolling view, which clips
+// what it holds (the first row's tooltips were cut off there); each stays inside the window.
+#[test]
+fn row_tooltips_are_not_clipped_by_the_list() {
+    let window = window();
+    let row = RowData {
+        id: "a".into(),
+        name: "Alpha".into(),
+        selected: true,
+        can_run: true,
+        can_remove: true,
+        ..Default::default()
+    };
+    window.set_rows(ModelRc::new(VecModel::from(vec![row])));
+    window.set_selected_index(0);
+    settle();
+    let list = ElementHandle::find_by_element_id(&window, "RowsList::rows-view")
+        .next()
+        .expect("the rows' scrolling view");
+    let buttons: Vec<ElementHandle> = list
+        .query_descendants()
+        .match_type_name("IconButton")
+        .find_all();
+    assert!(!buttons.is_empty(), "the row has buttons");
+    for button in &buttons {
+        hover(&window, button);
+        let tips: Vec<_> = ElementHandle::find_by_element_type_name(&window, "Tooltip").collect();
+        let label = button.accessible_label().unwrap_or_default();
+        assert_eq!(tips.len(), 1, "hovering {label} shows one tooltip");
+        let (at, size) = (tips[0].absolute_position(), tips[0].size());
+        assert!(
+            at.x >= -TOLERANCE
+                && at.y >= -TOLERANCE
+                && at.x + size.width <= WIDTH + TOLERANCE
+                && at.y + size.height <= HEIGHT + TOLERANCE,
+            "{label}'s tooltip at {at:?} size {size:?} leaves the window"
+        );
+        let inside = list
+            .query_descendants()
+            .match_type_name("Tooltip")
+            .find_all();
+        assert!(
+            inside.is_empty(),
+            "{label}'s tooltip is inside the clipping list"
         );
     }
 }

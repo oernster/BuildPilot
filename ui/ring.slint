@@ -1,0 +1,72 @@
+// What every control and both windows share: keyboard state, the ring's look and the one
+// tooltip drawn over everything.
+
+import { Theme } from "theme.slint";
+
+// Keyboard state the whole window shares.
+export global Ring {
+    // True while a dialog is open: only the dialog's own controls are stops then.
+    in-out property <bool> modal-open;
+    // The label of the stop holding keyboard focus, for the tests; empty when none does.
+    in-out property <string> focused;
+    // The window's size, kept by the window, so a tooltip can stay inside it.
+    in-out property <length> window-width;
+    in-out property <length> window-height;
+}
+
+// The one tooltip, drawn by the window over everything else, so no list clips it and nothing
+// drawn later covers it. A control fills it in while the pointer is on it.
+export global TooltipLayer {
+    in-out property <bool> shown;
+    in-out property <string> text;
+    // The label of the control it belongs to, so leaving another control cannot hide it.
+    in-out property <string> owner;
+    // The control's place in the window.
+    in-out property <length> host-x;
+    in-out property <length> host-y;
+    in-out property <length> host-width;
+    in-out property <length> host-height;
+    // Below the control rather than above, where there is room.
+    in-out property <bool> below;
+}
+
+// The ring's width, the same in every state so nothing moves when it appears.
+export global RingMetrics {
+    out property <length> width: 2px;
+}
+
+// The ring colour for a control in `enabled`, `hovered` and `focused`.
+export global RingColour {
+    pure public function of(enabled: bool, hovered: bool, focused: bool) -> color {
+        if (!enabled) {
+            return Theme.danger;
+        }
+        return hovered || focused ? Theme.ring : transparent;
+    }
+}
+
+// The tooltip `TooltipLayer` describes, placed in window coordinates by the window: centred on
+// its control, moved along as far as it takes to stay inside the window at either end; then
+// turned to the other side of the control where its own side has no room.
+export component Tooltip inherits Rectangle {
+    // The space kept between the tooltip and the control; the same between it and the window's edge.
+    property <length> gap: 4px;
+    property <length> above-y: TooltipLayer.host-y - self.height - root.gap;
+    property <length> below-y: TooltipLayer.host-y + TooltipLayer.host-height + root.gap;
+    property <bool> fits-above: root.above-y >= root.gap;
+    property <bool> fits-below: root.below-y + self.height <= Ring.window-height - root.gap;
+    y: (TooltipLayer.below && root.fits-below) || !root.fits-above ? root.below-y : root.above-y;
+    x: max(
+        root.gap,
+        min(TooltipLayer.host-x + (TooltipLayer.host-width - self.width) / 2,
+            Ring.window-width - root.gap - self.width));
+    width: tip.preferred-width + 16px;
+    height: tip.preferred-height + 10px;
+    border-radius: 4px;
+    background: Theme.tooltip-background;
+    tip := Text {
+        text: TooltipLayer.text;
+        color: Theme.tooltip-text;
+        font-size: 12px;
+    }
+}

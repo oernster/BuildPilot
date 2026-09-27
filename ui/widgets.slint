@@ -4,57 +4,8 @@
 
 import { Theme } from "theme.slint";
 
-// Keyboard state the whole window shares.
-export global Ring {
-    // True while a dialog is open: only the dialog's own controls are stops then.
-    in-out property <bool> modal-open;
-    // The label of the stop holding keyboard focus, for the tests; empty when none does.
-    in-out property <string> focused;
-    // The window's width, kept by the window, so a tooltip can stay inside it.
-    in-out property <length> window-width;
-}
-
-// The ring's width, the same in every state so nothing moves when it appears.
-export global RingMetrics {
-    out property <length> width: 2px;
-}
-
-// The ring colour for a control in `enabled`, `hovered` and `focused`.
-export global RingColour {
-    pure public function of(enabled: bool, hovered: bool, focused: bool) -> color {
-        if (!enabled) {
-            return Theme.danger;
-        }
-        return hovered || focused ? Theme.ring : transparent;
-    }
-}
-
-// Shown above or below a control while the pointer is on it: centred on the control, then moved
-// along as far as it takes to stay inside the window at either end.
-component Tooltip inherits Rectangle {
-    in property <string> text;
-    // Where the control starts across the window.
-    in property <length> host-x;
-    in property <length> host-width;
-    in property <length> host-height;
-    in property <bool> below;
-    // The space kept between the tooltip and the control; the same between it and the window's edge.
-    property <length> gap: 4px;
-    y: root.below ? root.host-height + root.gap : -self.height - root.gap;
-    x: max(
-        root.gap - root.host-x,
-        min((root.host-width - self.width) / 2,
-            Ring.window-width - root.gap - self.width - root.host-x));
-    width: tip.preferred-width + 16px;
-    height: tip.preferred-height + 10px;
-    border-radius: 4px;
-    background: Theme.tooltip-background;
-    tip := Text {
-        text: root.text;
-        color: Theme.tooltip-text;
-        font-size: 12px;
-    }
-}
+import { Ring, RingMetrics, RingColour, TooltipLayer, Tooltip } from "ring.slint";
+export { Ring, RingMetrics, RingColour, TooltipLayer, Tooltip } from "ring.slint";
 
 // What every stop shares: focus, activation by Space or Enter, reporting itself to `Ring`.
 component Stop inherits FocusScope {
@@ -127,6 +78,21 @@ export component IconButton inherits Rectangle {
                 root.activated();
             }
         }
+        changed has-hover => {
+            if (self.has-hover) {
+                TooltipLayer.text = root.enabled || root.disabled-reason == ""
+                    ? root.label : root.label + ": " + root.disabled-reason;
+                TooltipLayer.owner = root.label;
+                TooltipLayer.host-x = root.absolute-position.x;
+                TooltipLayer.host-y = root.absolute-position.y;
+                TooltipLayer.host-width = root.width;
+                TooltipLayer.host-height = root.height;
+                TooltipLayer.below = root.tooltip-below;
+                TooltipLayer.shown = true;
+            } else if (TooltipLayer.owner == root.label) {
+                TooltipLayer.shown = false;
+            }
+        }
     }
 
     stop := Stop {
@@ -135,15 +101,6 @@ export component IconButton inherits Rectangle {
         on-ring: root.on-ring;
         in-dialog: root.in-dialog;
         activated => { root.activated(); }
-    }
-
-    if touch.has-hover: Tooltip {
-        text: root.enabled || root.disabled-reason == ""
-            ? root.label : root.label + ": " + root.disabled-reason;
-        host-x: root.absolute-position.x;
-        host-width: root.width;
-        host-height: root.height;
-        below: root.tooltip-below;
     }
 }
 

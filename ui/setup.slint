@@ -5,7 +5,7 @@
 
 import { ReadingPane } from "reading.slint";
 import { Theme } from "theme.slint";
-import { IconButton, TextButton, Toggle, Ring } from "widgets.slint";
+import { IconButton, TextButton, Toggle, Ring, TooltipLayer, Tooltip } from "widgets.slint";
 
 export enum SetupScreen { route, uninstall, running, progress, verdict }
 
@@ -40,8 +40,12 @@ export component SetupWindow inherits Window {
     min-width: 640px;
     min-height: 480px;
     background: Theme.background;
-    init => { Ring.window-width = self.width; }
+    init => {
+        Ring.window-width = self.width;
+        Ring.window-height = self.height;
+    }
     changed width => { Ring.window-width = self.width; }
+    changed height => { Ring.window-height = self.height; }
 
     in property <SetupScreen> screen;
     in property <string> heading;
@@ -235,4 +239,6 @@ export component SetupWindow inherits Window {
             }
         }
     }
+    // Last, so over everything (see TooltipLayer).
+    if TooltipLayer.shown: Tooltip { }
 }

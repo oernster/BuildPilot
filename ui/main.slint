@@ -7,7 +7,7 @@
 
 import { Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
-import { IconButton, TextButton, Ring } from "widgets.slint";
+import { IconButton, TextButton, Ring, TooltipLayer, Tooltip } from "widgets.slint";
 import { RowData, StatusKind } from "row.slint";
 import { RowsList } from "rows_list.slint";
 import { OutputTray, OutputLineData } from "tray.slint";
@@ -136,8 +136,12 @@ export component MainWindow inherits Window {
         Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light;
     }
 
-    init => { Ring.window-width = self.width; }
+    init => {
+        Ring.window-width = self.width;
+        Ring.window-height = self.height;
+    }
     changed width => { Ring.window-width = self.width; }
+    changed height => { Ring.window-height = self.height; }
 
     out property <bool> modal-open: root.show-operation-dialog || root.show-confirm
         || root.show-settings || root.show-help-menu || root.show-guide || root.show-about
@@ -146,6 +150,8 @@ export component MainWindow inherits Window {
     property <bool> reading-active: !root.show-update;
     changed modal-open => {
         Ring.modal-open = self.modal-open;
+        // The control under the pointer may now be covered or gone.
+        TooltipLayer.shown = false;
         if (!self.modal-open) {
             root.return-focus();
         }
@@ -361,4 +367,6 @@ export component MainWindow inherits Window {
         if ScanList.choosing: AddChoiceDialog { }
         if ScanList.listing: ScanListDialog { }
     }
+    // Last, so over everything: no list clips it and nothing covers it.
+    if TooltipLayer.shown: Tooltip { }
 }
