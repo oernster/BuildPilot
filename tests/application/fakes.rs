@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use buildpilot::application::ports::LoadedConfig;
 use buildpilot::application::{
-    App, Clock, ConfigStore, IconLibrary, IdSource, Launcher, PathProbe, Ports, ProcessHandle,
+    App, Clock, ConfigStore, IconLibrary, IdSource, Launcher, Log, PathProbe, Ports, ProcessHandle,
     RunKey, Shell, StoreError,
 };
 use buildpilot::domain::launch_plan::{LaunchPlan, PowerShellHost};
@@ -36,6 +36,7 @@ pub struct WorldState {
     pub stop_error: Option<String>,
     pub shell_calls: Vec<(&'static str, PathBuf)>,
     pub shell_error: Option<String>,
+    pub log: Vec<String>,
 }
 
 /// A test's whole world: shared state plus a clock the test moves.
@@ -80,8 +81,14 @@ impl World {
             icons: Box::new(FakeIcons(self.state.clone())),
             launcher: Box::new(FakeLauncher(self.state.clone())),
             shell: Box::new(FakeShell(self.state.clone())),
+            log: Box::new(FakeLog(self.state.clone())),
         };
         App::start(ports, PowerShellHost::Pwsh)
+    }
+
+    /// Every line logged so far.
+    pub fn logged(&self) -> Vec<String> {
+        self.state.borrow().log.clone()
     }
 
     pub fn save_count(&self) -> usize {
@@ -221,6 +228,14 @@ impl FakeShell {
         }
         state.shell_calls.push((action, path.to_path_buf()));
         Ok(())
+    }
+}
+
+struct FakeLog(Rc<RefCell<WorldState>>);
+
+impl Log for FakeLog {
+    fn record(&self, line: &str) {
+        self.0.borrow_mut().log.push(line.to_owned());
     }
 }
 

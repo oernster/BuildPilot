@@ -1,13 +1,12 @@
-//! The UI's pure wording: what rows, notices and the tray say. No window is opened.
+//! The UI's pure wording: what rows and the tray say. No window is opened.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use buildpilot::application::{IconStatus, LoadProblem, Notice, StoreError};
+use buildpilot::application::IconStatus;
 use buildpilot::domain::lifecycle::{Failure, LaunchError, RunState};
-use buildpilot::domain::operation::OperationId;
 use buildpilot::ui::rows::{
-    RowFacts, SPINNER, StatusClass, detail, dropped_note, icon_problem, notice_text, row_text,
+    RowFacts, SPINNER, StatusClass, detail, dropped_note, icon_problem, row_text,
 };
 
 const SCRIPT: &str = r"C:\src\app\build.ps1";
@@ -139,31 +138,4 @@ fn icon_problem_only_for_missing_icons() {
 fn dropped_note_appears_only_after_drops() {
     assert!(dropped_note(0).is_empty());
     assert_eq!(dropped_note(12), "Oldest 12 lines not kept");
-}
-
-#[test]
-fn every_notice_has_words() {
-    let path = PathBuf::from(r"C:\data\buildpilot.json");
-    let notices = [
-        Notice::Load(LoadProblem::UnreadableEntries(2)),
-        Notice::Load(LoadProblem::SetAside(path.clone())),
-        Notice::Load(LoadProblem::NewerSchema),
-        Notice::Load(LoadProblem::Unreadable {
-            path: path.clone(),
-            message: "denied".to_owned(),
-        }),
-        Notice::DuplicateDropped(OperationId::new("x").unwrap()),
-        Notice::SaveFailed(StoreError {
-            path,
-            message: "full".to_owned(),
-        }),
-        Notice::StopFailed {
-            name: "app".to_owned(),
-            message: "denied".to_owned(),
-        },
-    ];
-    for notice in &notices {
-        assert!(notice_text(notice).len() > 20, "{notice:?}");
-    }
-    assert!(notice_text(&notices[0]).starts_with('2'));
 }

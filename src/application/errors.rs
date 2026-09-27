@@ -8,6 +8,9 @@ use crate::domain::deck::DeckError;
 use crate::domain::lifecycle::TransitionError;
 use crate::domain::operation::OperationError;
 
+use super::Notice;
+use super::ports::LoadProblem;
+
 /// An action the application refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AppError {
@@ -57,6 +60,38 @@ impl fmt::Display for AppError {
 }
 
 impl Error for AppError {}
+
+/// What the notice area and the log say about a notice.
+impl fmt::Display for Notice {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Load(LoadProblem::UnreadableEntries(count)) => write!(
+                f,
+                "{count} saved operation(s) could not be read. They are kept in the settings file, untouched."
+            ),
+            Self::Load(LoadProblem::SetAside(path)) => write!(
+                f,
+                "The settings file could not be read, so BuildPilot started empty. The old file was kept as {}.",
+                path.display()
+            ),
+            Self::Load(LoadProblem::NewerSchema) => f.write_str(
+                "The settings file was written by a newer BuildPilot. \
+                It is shown here but changes will not be saved.",
+            ),
+            Self::Load(LoadProblem::Unreadable { path, message }) => write!(
+                f,
+                "The settings file {} could not be read ({message}). Changes will not be saved this session.",
+                path.display()
+            ),
+            Self::DuplicateDropped(id) => write!(
+                f,
+                "Two saved operations shared the identity {id}; the second was left out."
+            ),
+            Self::SaveFailed(error) => error.fmt(f),
+            Self::StopFailed { name, message } => write!(f, "Could not stop {name}: {message}"),
+        }
+    }
+}
 
 impl From<OperationError> for AppError {
     fn from(error: OperationError) -> Self {

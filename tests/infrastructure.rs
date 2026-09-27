@@ -7,6 +7,10 @@ mod infrastructure {
     #[cfg(windows)]
     mod instance;
     #[cfg(windows)]
+    mod log_file;
+    #[cfg(windows)]
     mod process;
+    #[cfg(windows)]
+    mod reader_panic;
     mod system;
 }

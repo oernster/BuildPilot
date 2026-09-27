@@ -28,8 +28,8 @@ pub use deck_actions::EditOutcome;
 pub use errors::AppError;
 pub use navigation::LocateOutcome;
 pub use ports::{
-    Clock, ConfigStore, IconLibrary, IdSource, Launcher, LoadProblem, PathProbe, ProcessHandle,
-    RunEvent, RunEventKind, RunKey, Shell, StoreError,
+    Clock, ConfigStore, IconLibrary, IdSource, Launcher, LoadProblem, Log, PathProbe,
+    ProcessHandle, RunEvent, RunEventKind, RunKey, Shell, StoreError,
 };
 pub use run_actions::{OverdueStop, STOP_TIMEOUT};
 
@@ -51,6 +51,8 @@ pub struct Ports {
     pub launcher: Box<dyn Launcher>,
     /// Opening files and folders.
     pub shell: Box<dyn Shell>,
+    /// The log file.
+    pub log: Box<dyn Log>,
 }
 
 /// Something the operator should be told that is not the answer to their last action.
@@ -100,25 +102,26 @@ impl App {
     /// loading becomes a notice; it never stops BuildPilot starting.
     pub fn start(mut ports: Ports, powershell: PowerShellHost) -> Self {
         let loaded = ports.store.load();
-        let mut notices: Vec<Notice> = loaded.problems.into_iter().map(Notice::Load).collect();
-        let mut deck = FlightDeck::default();
-        for operation in loaded.operations {
-            let id = operation.id().clone();
-            if deck.add(operation).is_err() {
-                notices.push(Notice::DuplicateDropped(id));
-            }
-        }
         let mut app = Self {
-            deck,
+            deck: FlightDeck::default(),
             selection: DeckSelection::default(),
             preferences: loaded.preferences,
             runtimes: HashMap::new(),
             icon_status: HashMap::new(),
-            notices,
+            notices: Vec::new(),
             powershell,
             runs_started: 0,
             ports,
         };
+        for problem in loaded.problems {
+            app.raise(Notice::Load(problem));
+        }
+        for operation in loaded.operations {
+            let id = operation.id().clone();
+            if app.deck.add(operation).is_err() {
+                app.raise(Notice::DuplicateDropped(id));
+            }
+        }
         let icons: Vec<(OperationId, IconRef)> = app
             .deck
             .operations()
@@ -167,8 +170,19 @@ impl App {
             .store
             .save(self.deck.operations(), &self.preferences);
         if let Err(error) = saved {
-            self.notices.push(Notice::SaveFailed(error));
+            self.raise(Notice::SaveFailed(error));
         }
+    }
+
+    /// Logs `notice` and holds it for the notice area.
+    fn raise(&mut self, notice: Notice) {
+        self.ports.log.record(&notice.to_string());
+        self.notices.push(notice);
+    }
+
+    /// Logs a refusal the operator has been shown (NFR-OBS-001).
+    pub fn record_refusal(&self, error: &AppError) {
+        self.ports.log.record(&format!("Refused: {error}"));
     }
 
     /// Checks whether `icon`, operation `id`'s icon, can be shown and records the answer.

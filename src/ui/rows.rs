@@ -1,10 +1,10 @@
-//! What a row, a notice or the tray says, worked out from application state. Pure: no Slint
+//! What a row or the tray says, worked out from application state. Pure: no Slint
 //! types, no window, so every wording is tested without one.
 
 use std::path::Path;
 use std::time::Duration;
 
-use crate::application::{IconStatus, LoadProblem, Notice};
+use crate::application::IconStatus;
 use crate::domain::elapsed::format_elapsed;
 use crate::domain::lifecycle::{Failure, RunState};
 
@@ -165,33 +165,6 @@ pub fn icon_problem(status: &IconStatus) -> String {
     match status {
         IconStatus::Missing(path) => format!("Icon not found or not an image: {}", path.display()),
         IconStatus::Placeholder | IconStatus::Ready(_) => String::new(),
-    }
-}
-
-/// A notice in words.
-pub fn notice_text(notice: &Notice) -> String {
-    match notice {
-        Notice::Load(LoadProblem::UnreadableEntries(count)) => format!(
-            "{count} saved operation(s) could not be read. They are kept in the settings file, untouched."
-        ),
-        Notice::Load(LoadProblem::SetAside(path)) => format!(
-            "The settings file could not be read, so BuildPilot started empty. The old file was kept as {}.",
-            path.display()
-        ),
-        Notice::Load(LoadProblem::NewerSchema) => {
-            "The settings file was written by a newer BuildPilot. \
-            It is shown here but changes will not be saved."
-                .to_owned()
-        }
-        Notice::Load(LoadProblem::Unreadable { path, message }) => format!(
-            "The settings file {} could not be read ({message}). Changes will not be saved this session.",
-            path.display()
-        ),
-        Notice::DuplicateDropped(id) => {
-            format!("Two saved operations shared the identity {id}; the second was left out.")
-        }
-        Notice::SaveFailed(error) => error.to_string(),
-        Notice::StopFailed { name, message } => format!("Could not stop {name}: {message}"),
     }
 }
 

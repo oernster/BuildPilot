@@ -164,7 +164,7 @@ impl Ui {
     fn refresh(&self) {
         let notices = self.app.borrow_mut().take_notices();
         for notice in &notices {
-            self.notify(rows::notice_text(notice));
+            self.notify(notice.to_string());
         }
         self.sync_rows();
         self.sync_output();
@@ -192,6 +192,7 @@ impl Ui {
         let value = match result {
             Ok(value) => Some(value),
             Err(error) => {
+                self.app.borrow().record_refusal(&error);
                 self.notify(error.to_string());
                 None
             }

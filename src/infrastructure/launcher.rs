@@ -144,19 +144,24 @@ fn spawn_reader(
     thread::Builder::new()
         .name(format!("run {} {stream:?}", key.run))
         .spawn(move || {
-            let read = catch_unwind(AssertUnwindSafe(|| read_pipe(pipe, stream, &key, &sink)));
-            if read.is_err() {
-                sink.line(
-                    &key,
-                    Stream::Stderr,
-                    "BuildPilot stopped reading this output after an internal error.".to_owned(),
-                );
-            }
+            read_guarded(pipe, stream, &key, &sink);
             // The waiter may already have stopped listening; that is fine.
             let _ = done.send(());
         })
         .map(|_| ())
         .map_err(|error| error.to_string())
+}
+
+/// What the output says when reading it failed inside BuildPilot (NFR-REL-001).
+pub const READER_FAILED: &str = "BuildPilot stopped reading this output after an internal error.";
+
+/// Reads `pipe` to its end as `key`'s `stream`. A panic while reading ends the reading, not
+/// BuildPilot: the panic hook logs it and the run's output says so (NFR-REL-001).
+pub fn read_guarded(pipe: Box<dyn Read + Send>, stream: Stream, key: &RunKey, sink: &EventSink) {
+    let read = catch_unwind(AssertUnwindSafe(|| read_pipe(pipe, stream, key, sink)));
+    if read.is_err() {
+        sink.line(key, Stream::Stderr, READER_FAILED.to_owned());
+    }
 }
 
 fn read_pipe(mut pipe: Box<dyn Read + Send>, stream: Stream, key: &RunKey, sink: &EventSink) {

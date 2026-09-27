@@ -47,6 +47,8 @@ impl App {
             operation: id.clone(),
             run,
         };
+        let launch = plan(&config, self.powershell);
+        let command = display_command(&launch);
         let outcome = if !self.ports.paths.is_file(config.script_path()) {
             Err(LaunchError::ScriptNotFound(
                 config.script_path().to_path_buf(),
@@ -56,15 +58,21 @@ impl App {
                 config.working_dir().to_path_buf(),
             ))
         } else {
-            let launch = plan(&config, self.powershell);
             self.ports
                 .launcher
                 .spawn(key, &launch)
                 .map_err(|message| LaunchError::Os {
-                    command: display_command(&launch),
+                    command: command.clone(),
                     message,
                 })
         };
+
+        let name = config.name();
+        let line = match &outcome {
+            Ok(process) => format!("Started {name} (process {}): {command}", process.pid()),
+            Err(error) => format!("{name} could not start: {error}"),
+        };
+        self.ports.log.record(&line);
 
         let now = self.ports.clock.now();
         let runtime = self.runtimes.entry(id.clone()).or_default();
@@ -90,10 +98,13 @@ impl App {
         };
         runtime.state = runtime.state.stop_requested()?;
         runtime.stop_requested_at.get_or_insert(now);
-        if let Some(process) = runtime.process.as_mut()
-            && let Err(message) = process.stop()
-        {
-            self.notices.push(Notice::StopFailed { name, message });
+        let refused = runtime
+            .process
+            .as_mut()
+            .and_then(|process| process.stop().err());
+        self.ports.log.record(&format!("Stop asked for {name}"));
+        if let Some(message) = refused {
+            self.raise(Notice::StopFailed { name, message });
         }
         Ok(())
     }
@@ -116,16 +127,27 @@ impl App {
         if runtime.run != Some(event.key.run) {
             return;
         }
-        match event.kind {
-            RunEventKind::Line { stream, text } => runtime.output.push(stream, &text),
-            RunEventKind::Exited { code } => {
-                if let Ok(next) = runtime.state.exited(code) {
-                    runtime.state = next;
-                    runtime.finished_at = Some(now);
-                    runtime.process = None;
-                }
+        let code = match event.kind {
+            RunEventKind::Line { stream, text } => {
+                runtime.output.push(stream, &text);
+                return;
             }
-        }
+            RunEventKind::Exited { code } => code,
+        };
+        let Ok(next) = runtime.state.exited(code) else {
+            return;
+        };
+        let stopped = next == RunState::Stopped;
+        runtime.state = next;
+        runtime.finished_at = Some(now);
+        runtime.process = None;
+        let name = self.name_of(&event.key.operation);
+        let line = if stopped {
+            format!("{name} stopped (exit code {code})")
+        } else {
+            format!("{name} exited with code {code}")
+        };
+        self.ports.log.record(&line);
     }
 
     /// Operation `id`'s run state; Idle when it has not run (LIFE-001).

@@ -10,6 +10,7 @@ use std::io;
 use std::iter::once;
 use std::num::NonZeroIsize;
 use std::os::windows::io::{AsRawHandle, FromRawHandle, OwnedHandle};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 use std::ptr::null;
 use std::thread;
@@ -97,7 +98,8 @@ impl Instance {
             while unsafe { WaitForSingleObject(self.event.as_raw_handle(), INFINITE) }
                 == WAIT_OBJECT_0
             {
-                summoned();
+                // NFR-REL-001: the panic hook has logged it; the next summons is still answered.
+                let _ = catch_unwind(AssertUnwindSafe(&summoned));
             }
         });
     }

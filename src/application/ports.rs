@@ -75,6 +75,13 @@ impl fmt::Display for StoreError {
     }
 }
 
+/// Keeps the log file (NFR-OBS-001). Writing never fails from the caller's side: a log that
+/// cannot be written must not stop a build.
+pub trait Log {
+    /// Records one line; the log adds the time.
+    fn record(&self, line: &str);
+}
+
 /// Hands out new operation identities (CFG-003).
 pub trait IdSource {
     /// A fresh identity, never handed out before.
