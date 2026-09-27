@@ -43,6 +43,7 @@ const PURE_LAYERS: &[(&str, &[&str])] = &[
             "std::time::Instant",
         ],
     ),
+    ("setup", &["std::fmt"]),
 ];
 
 /// Ways of reading the clock directly; a pure layer must be handed the time instead.
@@ -52,6 +53,7 @@ const CLOCK_READS: &[&str] = &["Instant::now", "SystemTime"];
 const FORBIDDEN_DEPENDENCIES: &[(&str, &[&str])] = &[
     ("domain", &["application", "infrastructure", "ui"]),
     ("application", &["infrastructure", "ui"]),
+    ("setup", &["application", "domain", "infrastructure", "ui"]),
     // Infrastructure implements the application's port traits, so it may name the application.
     ("infrastructure", &["ui"]),
 ];

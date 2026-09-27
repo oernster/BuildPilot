@@ -20,8 +20,10 @@ use windows_sys::Win32::System::Threading::{
     CreateEventW, INFINITE, SetEvent, WaitForSingleObject,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    ASFW_ANY, AllowSetForegroundWindow, IsIconic, SW_RESTORE, SetForegroundWindow, ShowWindow,
+    IsIconic, SW_RESTORE, SetForegroundWindow, ShowWindow,
 };
+
+use super::processes::allow_any_foreground;
 
 /// What every BuildPilot event name starts with, including the namespace it lives in.
 const NAME_PREFIX: &str = r"Local\BuildPilot.";
@@ -79,9 +81,7 @@ pub fn claim(key: &str) -> io::Result<Claim> {
     }
     // The running instance is not the foreground process, so Windows would refuse its request to
     // come forward; this one was just started by the operator and may pass that right on.
-    // SAFETY: plain call with a constant argument. A refusal only means the window may flash in
-    // the taskbar instead of coming forward.
-    unsafe { AllowSetForegroundWindow(ASFW_ANY) };
+    allow_any_foreground();
     // SAFETY: `event` is a valid event handle opened with full access by CreateEventW.
     if unsafe { SetEvent(event.as_raw_handle()) } == FALSE {
         return Err(io::Error::last_os_error());

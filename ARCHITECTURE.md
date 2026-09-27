@@ -16,7 +16,8 @@ violation and watching the test fail.
 |---|---|
 | The domain names only `std::collections`, `error`, `fmt`, `ops`, `path`, `str` and `time::Duration`: no files, processes, threads, environment or clock. | `pure_layers_use_only_allowed_std` in `tests/structural.rs` |
 | The application adds `iter`, `mem` and `time::Instant`; it gets every instant from its `Clock` port. | `pure_layers_use_only_allowed_std` |
-| Neither pure layer names an external crate. | `pure_layers_use_no_external_crates` |
+| The setup program's policy (`src/setup`) names only `std::fmt` and no other layer. | `pure_layers_use_only_allowed_std`, `layers_depend_inwards_only` |
+| No pure layer names an external crate. | `pure_layers_use_no_external_crates` |
 | Layers depend inwards only: the domain names no other layer, the application names neither infrastructure nor UI, infrastructure never names the UI. | `layers_depend_inwards_only` |
 | No source file exceeds 400 lines; none sits in the danger band of 381 to 399. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
 | `unsafe` appears only under `src/infrastructure/win32`, each block with its SAFETY reasoning. | `unsafe_code_lives_only_in_win32` |
@@ -105,6 +106,28 @@ The house model, applied to every surface (A11Y-002, A11Y-003).
 - **A settings file that cannot be read** is set aside; where it cannot even be moved, it is
   left alone and not saved over. The notice area says which.
 
+## The setup program
+
+A second binary in the same crate, `src/bin/buildpilotsetup.rs`, with the release application
+built into it by `build.ps1` (INST-001 to INST-006).
+
+- **Policy is pure.** `src/setup` decides the route from one reading of the Apps list entry
+  (install, update, downgrade or manage), what each run does as an ordered list of steps and
+  every word it shows. It is tested without a window or a machine.
+- **Work is infrastructure.** `infrastructure/setup.rs` does each step: the files, the shortcuts
+  (through Windows PowerShell's `WScript.Shell`, started with no window), the Apps list entry
+  under `HKEY_CURRENT_USER` and removal. Names and folders come from `locations.rs`, which the
+  application uses too, so the two cannot disagree.
+- **Screens, not greyed controls.** One screen shows at a time: the route, uninstall, running,
+  progress and the verdict. The footer holds that screen's actions; progress offers none.
+- **Nothing is touched while BuildPilot runs** (INST-004). Setup finds it by executable name
+  (never by process tree) then offers to close it.
+- **The bar moves with the work.** Each step is weighted by its time measured on a real install.
+- **Removing its own folder.** Started from the install folder, as the Apps list does, setup
+  copies itself to the temporary folder and runs from there, so the install folder can go.
+- **Every path ends in a verdict** or in BuildPilot running, with each step written to a log as
+  it happens.
+
 ## Data locations
 
 | What | Where |
@@ -113,9 +136,13 @@ The house model, applied to every surface (A11Y-002, A11Y-003).
 | A settings file that could not be read | `buildpilot.json.unreadable` beside it |
 | Chosen icons | `%APPDATA%\BuildPilot\icons\` |
 | Log | `%APPDATA%\BuildPilot\buildpilot.log` and `buildpilot.previous.log` |
+| The program and setup's copy of itself | `%LOCALAPPDATA%\Programs\BuildPilot` |
+| The Apps list entry | `HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Uninstall\BuildPilot` |
+| Setup's log and its temporary copy of itself | `%TEMP%\BuildPilot Setup\` |
 
 `BUILDPILOT_DATA_DIR` names a different data folder, for testing without touching the real one.
-BuildPilot never writes to a script, a working directory or anywhere outside its data folder.
+BuildPilot itself never writes to a script, a working directory or anywhere outside its data
+folder; only setup writes the program folder, the shortcuts and the Apps list entry.
 
 ## Design decisions
 

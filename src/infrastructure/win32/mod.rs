@@ -5,5 +5,8 @@ pub mod codepage;
 pub mod diagnostics;
 pub mod instance;
 pub mod job;
+pub mod known_folders;
+pub mod processes;
+pub mod registry;
 pub mod shell;
 pub mod theme;

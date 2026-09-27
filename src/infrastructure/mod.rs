@@ -8,9 +8,12 @@ pub mod config_store;
 pub mod icons;
 #[cfg(windows)]
 pub mod launcher;
+pub mod locations;
 #[cfg(windows)]
 pub mod log_file;
 pub mod powershell;
+#[cfg(windows)]
+pub mod setup;
 #[cfg(windows)]
 pub mod shell;
 pub mod system;

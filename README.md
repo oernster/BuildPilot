@@ -59,6 +59,7 @@ Every script stays runnable without it.
 | Settings and operations | `%APPDATA%\BuildPilot\buildpilot.json` |
 | Chosen icons | `%APPDATA%\BuildPilot\icons\` |
 | Log | `%APPDATA%\BuildPilot\buildpilot.log`, with one previous file kept as `buildpilot.previous.log` |
+| The program | `%LOCALAPPDATA%\Programs\BuildPilot` |
 
 Settings shows the folder and opens it. The settings file is not encrypted.
 
@@ -74,8 +75,12 @@ Settings shows the folder and opens it. The settings file is not encrypted.
 
 ## Getting it
 
-There is no setup program yet; BuildPilot is built from source for now.
-[DEVELOPMENT.md](DEVELOPMENT.md) covers the tools and the steps.
+Run `BuildPilotSetup.exe`. It installs BuildPilot for your own Windows account in
+`%LOCALAPPDATA%\Programs\BuildPilot`, so it never asks for administrator rights. It adds a
+Start menu shortcut, offers a desktop one and adds BuildPilot to the Apps list, where Modify,
+Repair and Uninstall all reopen it. Run it again to update, go back to an earlier version,
+repair or reinstall; it reads what is installed and offers the one that fits. Uninstalling
+keeps your operations and settings unless you untick that. Neither executable is signed.
 
 ## Testing
 
@@ -91,10 +96,11 @@ coverage with a floor of 100% of lines over the domain and application layers.
 ## Building
 
 ```powershell
-cargo build --release
+./build.ps1
 ```
 
-The application is written to `target\release\buildpilot.exe`.
+It runs the gate, then writes the application to `target\release\buildpilot.exe` and the setup
+program to `dist\BuildPilotSetup.exe`.
 [DEVELOPMENT.md](DEVELOPMENT.md) sets up a machine to build it;
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together and why.
 

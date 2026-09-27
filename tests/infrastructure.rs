@@ -12,5 +12,7 @@ mod infrastructure {
     mod process;
     #[cfg(windows)]
     mod reader_panic;
+    #[cfg(windows)]
+    mod setup_machine;
     mod system;
 }

@@ -13,6 +13,7 @@ use buildpilot::application::{App, Ports};
 use buildpilot::infrastructure::config_store::JsonConfigStore;
 use buildpilot::infrastructure::icons::FsIconLibrary;
 use buildpilot::infrastructure::launcher::{EventSink, WindowsLauncher};
+use buildpilot::infrastructure::locations::{PRODUCT_NAME, data_folder};
 use buildpilot::infrastructure::log_file::LogFile;
 use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::shell::ExplorerShell;
@@ -22,27 +23,8 @@ use buildpilot::infrastructure::win32::instance::{self, Claim};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::ui::{self, Environment, Waker};
 
-/// The product's name, as Windows shows it in an error box's title.
-const PRODUCT_NAME: &str = "BuildPilot";
-/// The data folder's name under %APPDATA%.
-const DATA_FOLDER_NAME: &str = PRODUCT_NAME;
 /// The folder under the data folder where chosen icons are copied.
 const ICONS_FOLDER_NAME: &str = "icons";
-
-/// Names a different data folder, for testing without touching the real one.
-const DATA_FOLDER_OVERRIDE: &str = "BUILDPILOT_DATA_DIR";
-
-/// `BUILDPILOT_DATA_DIR` when set, else `%APPDATA%\BuildPilot`; the temporary folder if Windows
-/// gives no APPDATA, so BuildPilot still opens and Settings shows where it is saving.
-fn data_folder() -> PathBuf {
-    if let Some(folder) = env::var_os(DATA_FOLDER_OVERRIDE) {
-        return PathBuf::from(folder);
-    }
-    env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .unwrap_or_else(env::temp_dir)
-        .join(DATA_FOLDER_NAME)
-}
 
 fn main() -> ExitCode {
     let data = data_folder();

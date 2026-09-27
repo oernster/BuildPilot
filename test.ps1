@@ -19,7 +19,7 @@ Set-Location $root
 # Line floor over the correctness core (NFR-MAINT-001).
 $coverageFloor = 100
 # Files outside the floor: everything that is not domain or application code.
-$outsideFloor = '(src[\\/](infrastructure|ui)[\\/]|src[\\/]main\.rs|tests[\\/])'
+$outsideFloor = '(src[\\/](infrastructure|ui|bin)[\\/]|src[\\/]main\.rs|tests[\\/])'
 
 function Invoke-Step([string]$name, [scriptblock]$step) {
     Write-Host "$name..."

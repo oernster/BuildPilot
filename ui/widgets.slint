@@ -142,6 +142,8 @@ export component TextButton inherits Rectangle {
     in property <string> label: root.text;
     in property <image> icon;
     in property <bool> primary;
+    // A destructive go-ahead: its words are in the danger colour.
+    in property <bool> danger;
     // For a set of choices: this one is the current choice.
     in property <bool> checked;
     in property <bool> enabled: true;
@@ -184,6 +186,7 @@ export component TextButton inherits Rectangle {
             vertical-alignment: center;
             font-size: Theme.body-size;
             color: root.primary && root.enabled ? Theme.surface
+                : root.danger && root.enabled ? Theme.danger
                 : root.enabled ? Theme.text : Theme.text-muted;
         }
     }

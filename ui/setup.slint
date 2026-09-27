@@ -1,0 +1,232 @@
+// The setup program's window (INST-001 to INST-006), in the house shape: a header, a hairline,
+// ONE screen centred in the body, a hairline, then a footer holding the actions of the screen
+// that is showing. Work moves to the progress screen, which offers no actions at all; nothing is
+// ever greyed out in place. Every word comes from `src/setup/wording.rs`.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { IconButton, TextButton, Toggle, Ring } from "widgets.slint";
+
+export enum SetupScreen { route, uninstall, running, progress, verdict }
+
+// One footer button: what it says, the id its press reports and how it looks.
+export struct FooterAction { label: string, id: string, primary: bool, danger: bool }
+
+// A tickable option with its words beside the box.
+component Option inherits HorizontalLayout {
+    in property <string> text;
+    in-out property <bool> checked;
+    spacing: 10px;
+    alignment: start;
+    Toggle {
+        label: root.text;
+        checked: root.checked;
+        on-ring: true;
+        toggled => { root.checked = !root.checked; }
+    }
+    Text { text: root.text; color: Theme.text; vertical-alignment: center; }
+}
+
+component Hairline inherits Rectangle {
+    height: 1px;
+    background: Theme.border;
+}
+
+export component SetupWindow inherits Window {
+    title: "BuildPilot Setup";
+    icon: @image-url("../assets/application-icon.png");
+    preferred-width: 760px;
+    preferred-height: 560px;
+    min-width: 640px;
+    min-height: 480px;
+    background: Theme.background;
+
+    in property <SetupScreen> screen;
+    in property <string> heading;
+    in property <string> flow;
+    in property <string> lead;
+    in property <string> desktop-label;
+    in property <string> launch-label;
+    in property <string> keep-label;
+    in-out property <bool> desktop-shortcut;
+    in-out property <bool> launch-after;
+    in-out property <bool> keep-data: true;
+    in property <string> step;
+    // 0 to 1: how much of the work is done.
+    in property <float> progress;
+    in property <bool> succeeded;
+    in property <[FooterAction]> actions;
+    in property <bool> show-licence;
+    in property <string> licence-text;
+
+    callback action(string);
+    callback toggle-theme();
+    callback step-ring(bool);
+
+    public function apply-theme(dark: bool) {
+        Theme.dark = dark;
+    }
+
+    // On a machine where this version is installed the option applies at once (Rust decides).
+    changed desktop-shortcut => { root.action("desktop-changed"); }
+
+    FocusScope {
+        enabled: false;
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.RightArrow) { root.step-ring(true); return accept; }
+            if (event.text == Key.LeftArrow) { root.step-ring(false); return accept; }
+            if (event.text == Key.Escape && root.show-licence) { root.action("close-licence"); return accept; }
+            return reject;
+        }
+        // The neutral start: nothing wears a ring until the first key.
+        FocusScope {
+            width: 0;
+            height: 0;
+            focus-on-click: false;
+            focus-on-tab-navigation: false;
+            init => { self.focus(); }
+        }
+
+        VerticalLayout {
+            HorizontalLayout {
+                padding: 16px;
+                spacing: 16px;
+                Image {
+                    source: @image-url("../assets/application-icon.png");
+                    width: 126px;
+                    height: 126px;
+                    image-fit: contain;
+                }
+                VerticalLayout {
+                    alignment: center;
+                    horizontal-stretch: 1;
+                    Text { text: "BuildPilot"; font-size: 32px; font-weight: 700; color: Theme.text; wrap: no-wrap; }
+                    Text { text: "A build flight deck for Windows"; color: Theme.text-muted; }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    TextButton {
+                        text: "Licence";
+                        clicked => { root.action("licence"); }
+                    }
+                }
+                VerticalLayout {
+                    alignment: center;
+                    IconButton {
+                        icon: Theme.dark ? @image-url("../assets/light-mode.png")
+                            : @image-url("../assets/dark-mode.png");
+                        label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
+                        tooltip-below: true;
+                        activated => { root.toggle-theme(); }
+                    }
+                }
+            }
+            Hairline { }
+
+            VerticalLayout {
+                vertical-stretch: 1;
+                alignment: center;
+                padding-left: 40px;
+                padding-right: 40px;
+                spacing: 12px;
+
+                if root.screen == SetupScreen.verdict: Text {
+                    text: root.succeeded ? "\u{2713}" : "\u{2717}";
+                    font-size: 48px;
+                    horizontal-alignment: center;
+                    color: root.succeeded ? Theme.success : Theme.failure;
+                }
+                Text {
+                    text: root.heading;
+                    font-size: 24px;
+                    font-weight: 600;
+                    color: Theme.text;
+                    wrap: word-wrap;
+                    horizontal-alignment: root.screen == SetupScreen.verdict ? center : left;
+                }
+                if root.flow != "": Text { text: root.flow; color: Theme.accent; font-size: Theme.title-size; }
+                if root.lead != "": Text {
+                    text: root.lead;
+                    color: Theme.text;
+                    wrap: word-wrap;
+                    horizontal-alignment: root.screen == SetupScreen.verdict ? center : left;
+                }
+                if root.screen == SetupScreen.route: VerticalLayout {
+                    spacing: 8px;
+                    padding-top: 8px;
+                    Option { text: root.desktop-label; checked <=> root.desktop-shortcut; }
+                    Option { text: root.launch-label; checked <=> root.launch-after; }
+                }
+                if root.screen == SetupScreen.uninstall: VerticalLayout {
+                    padding-top: 8px;
+                    Option { text: root.keep-label; checked <=> root.keep-data; }
+                }
+                if root.screen == SetupScreen.progress: VerticalLayout {
+                    spacing: 8px;
+                    Rectangle {
+                        height: 10px;
+                        border-radius: 5px;
+                        background: Theme.surface-hover;
+                        Rectangle {
+                            x: 0;
+                            width: parent.width * clamp(root.progress, 0, 1);
+                            border-radius: 5px;
+                            background: Theme.accent;
+                        }
+                    }
+                    Text { text: root.step; color: Theme.text-muted; }
+                }
+            }
+
+            Hairline { }
+            HorizontalLayout {
+                padding: 12px;
+                spacing: Theme.gap;
+                alignment: end;
+                for act in root.actions: TextButton {
+                    text: act.label;
+                    primary: act.primary;
+                    danger: act.danger;
+                    clicked => { root.action(act.id); }
+                }
+            }
+        }
+
+        if root.show-licence: Rectangle {
+            background: Theme.scrim;
+            init => { close.focus-me(); }
+            TouchArea { }
+            Rectangle {
+                width: parent.width - 80px;
+                height: parent.height - 80px;
+                background: Theme.surface;
+                border-radius: 8px;
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 12px;
+                    // Text to read: never a stop and never ringed.
+                    ScrollView {
+                        vertical-stretch: 1;
+                        Text {
+                            text: root.licence-text;
+                            color: Theme.text;
+                            wrap: word-wrap;
+                            width: parent.width - 16px;
+                        }
+                    }
+                    HorizontalLayout {
+                        alignment: end;
+                        close := TextButton {
+                            text: "Close";
+                            primary: true;
+                            in-dialog: true;
+                            clicked => { root.action("close-licence"); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -53,16 +53,51 @@ The first build downloads the crates in `Cargo.lock`; after that nothing needs t
 ## Building
 
 ```powershell
-cargo build --release
+./build.ps1
 ```
 
-The build script, `build.rs`, does two things before the code compiles:
+It does six things in order and stops at the first failure:
 
-1. Reads `VERSION` and hands it to the code as `BUILDPILOT_VERSION`, falling back to
-   `0.0.0-dev` if the file is missing, so no version literal lives in the source.
-2. Compiles the Slint interface in `ui/` into Rust.
+1. Reads `VERSION`, refusing anything that is not three numbers joined by dots.
+2. Stamps that version into `Cargo.toml`, the package's own line only.
+3. Runs the gate, `test.ps1`. There is no switch to skip it: a gate that can be skipped is a
+   gate that is skipped on the day it would have caught something.
+4. Builds the application.
+5. Builds the setup program with the application inside it, through the `BUILDPILOT_PAYLOAD`
+   variable `build.rs` reads.
+6. Copies the setup program into `dist\`.
 
-The application is written to `target\release\buildpilot.exe`. There is no setup program yet.
+| Output | What it is |
+|---|---|
+| `target\release\buildpilot.exe` | The application, one file with its images inside |
+| `dist\BuildPilotSetup.exe` | The setup program, carrying the application |
+
+For the application alone, skipping steps 5 and 6:
+
+```powershell
+./build.ps1 -SkipInstaller
+```
+
+`build.rs` hands `VERSION` to the code, compiles the Slint interface and puts the icon plus the
+name and version Windows shows on every executable. A setup program built without a payload
+(by `cargo build` alone) refuses to run and says why. Neither executable is signed.
+
+## Installing what you built
+
+Run `dist\BuildPilotSetup.exe`. Everything it writes is for your own account:
+`%LOCALAPPDATA%\Programs\BuildPilot`, the shortcuts and the Apps list entry under
+`HKEY_CURRENT_USER`. Its log is `%TEMP%\BuildPilot Setup\buildpilot.log`.
+
+## Regenerating the icon
+
+Only needed after changing `assets\application-icon.png`; the result is committed.
+
+```powershell
+python tools/genicons.py
+```
+
+It writes `assets\application-icon.ico` at every size Windows asks for, from 16 to 256 pixels.
+It needs Pillow.
 
 ## Running from source
 
@@ -101,7 +136,11 @@ The version lives in `VERSION` and nowhere else. `Cargo.toml` must carry the sam
 | `src/application` | `App`, its use cases and its ports |
 | `src/infrastructure` | The ports against the real machine; `win32/` holds every Windows call |
 | `src/ui` | The Rust side of the window |
-| `src/main.rs` | The composition root |
+| `src/main.rs` | The application's composition root |
+| `src/setup` | The setup program's policy: routes, plans and words, with no I/O |
+| `src/bin/buildpilotsetup.rs` | The setup program's composition root |
+| `src/infrastructure/locations.rs` | Every name and folder the application and setup share |
+| `tools/genicons.py` | Makes the `.ico` from the PNG master |
 | `ui/` | The Slint interface: `theme.slint` holds every colour and size |
 | `assets/` | The application icon and every button image |
 | `tests/` | Every suite; `tests/fixtures` holds the scripts the process tests run |
