@@ -592,6 +592,7 @@ name = "buildpilot"
 version = "0.1.0"
 dependencies = [
  "i-slint-backend-testing",
+ "image",
  "raw-window-handle",
  "rfd",
  "serde",

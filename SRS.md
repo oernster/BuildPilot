@@ -539,6 +539,14 @@ is a 2 px line until the pointer finds it (measured in Slint 1.18.1's
 sign of the rest (owner, 2026-09-27). Verified by: `geometry` tests for the bar and the counts;
 the UI-002 contrast test for the thumb; Manual for the look.
 
+**UI-013 (M) Images drawn at their size.** The interface shall draw each bundled image from a
+copy no larger than twice the largest size it is drawn. It shall draw each operation's icon from a copy
+scaled once, when it is loaded, to the pixels its row covers on the display in use. Rationale:
+measured by the owner 2026-09-27 on an installed build with 20 rows, a drag ran at 20 frames a
+second with every image drawn from its 1254 px master and at 60 with the copies. Verified by:
+`assets` test that every image the Slint files name is a copy in `assets/ui` of at most 256 px;
+Manual for the frame rate.
+
 **UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark), the data folder
 path with an Open Folder button and the operator's host table (HOST-001). The theme button shown
 chosen is the theme in effect, including while the first-run default (UI-001) still follows the

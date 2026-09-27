@@ -34,7 +34,7 @@ component Hairline inherits Rectangle {
 
 export component SetupWindow inherits Window {
     title: "BuildPilot Setup";
-    icon: @image-url("../assets/application-icon.png");
+    icon: @image-url("../assets/ui/application-icon.png");
     preferred-width: 760px;
     preferred-height: 560px;
     min-width: 640px;
@@ -100,7 +100,7 @@ export component SetupWindow inherits Window {
                 padding: 16px;
                 spacing: 16px;
                 Image {
-                    source: @image-url("../assets/application-icon.png");
+                    source: @image-url("../assets/ui/application-icon.png");
                     width: 126px;
                     height: 126px;
                     image-fit: contain;
@@ -121,8 +121,8 @@ export component SetupWindow inherits Window {
                 VerticalLayout {
                     alignment: center;
                     IconButton {
-                        icon: Theme.dark ? @image-url("../assets/light-mode.png")
-                            : @image-url("../assets/dark-mode.png");
+                        icon: Theme.dark ? @image-url("../assets/ui/light-mode.png")
+                            : @image-url("../assets/ui/dark-mode.png");
                         label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
                         tooltip-below: true;
                         activated => { root.toggle-theme(); }

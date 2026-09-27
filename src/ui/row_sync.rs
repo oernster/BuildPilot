@@ -4,13 +4,13 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use slint::{Image, Model, SharedString};
+use slint::{ComponentHandle, Image, Model, Rgba8Pixel, SharedPixelBuffer, SharedString};
 
 use crate::application::{App, IconStatus};
 use crate::domain::operation::{Operation, OperationId};
 
 use super::rows::{self, RowFacts, StatusClass};
-use super::{RowData, StatusKind, Ui};
+use super::{RowData, StatusKind, Theme, Ui};
 
 /// What `selected-index` holds when no row is selected; the window reads it that way.
 const NONE_SELECTED: i32 = -1;
@@ -109,14 +109,40 @@ impl Ui {
         }
     }
 
-    /// Loads and caches an image; the same path is decoded only once per session.
+    /// Loads and caches an image; the same path is decoded only once per session. It is scaled
+    /// down once, here, to the pixels the row's icon covers on this display: drawn from the
+    /// full-size file, every row paid for the scaling on every frame of a drag.
     pub(super) fn load_image(&self, path: &Path) -> Option<Image> {
+        let pixels = self
+            .with_window_value(|w| {
+                w.global::<Theme>().get_operation_icon_size() * w.window().scale_factor()
+            })
+            .unwrap_or_default()
+            .ceil() as u32;
         self.icons
             .borrow_mut()
             .entry(path.to_path_buf())
-            .or_insert_with(|| Image::load_from_path(path).ok())
+            .or_insert_with(|| load_scaled(path, pixels))
             .clone()
     }
+}
+
+/// The image at `path`, shrunk to fit `pixels` square when it is larger; `None` when it cannot
+/// be read as an image.
+fn load_scaled(path: &Path, pixels: u32) -> Option<Image> {
+    let decoded = image::open(path).ok()?;
+    let fitted = if pixels > 0 && decoded.width().max(decoded.height()) > pixels {
+        decoded.thumbnail(pixels, pixels)
+    } else {
+        decoded
+    };
+    let rgba = fitted.into_rgba8();
+    let buffer = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(
+        rgba.as_raw(),
+        rgba.width(),
+        rgba.height(),
+    );
+    Some(Image::from_rgba8(buffer))
 }
 
 fn status_kind(class: StatusClass) -> StatusKind {

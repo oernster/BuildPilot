@@ -103,6 +103,19 @@ python tools/genicons.py
 It writes `assets\application-icon.ico` at every size Windows asks for, from 16 to 256 pixels.
 It needs Pillow.
 
+## Regenerating the interface images
+
+Only needed after changing a PNG master in `assets`; the results are committed.
+
+```powershell
+python tools/uiicons.py
+```
+
+The interface never draws a master: drawn from those 1254 pixel files, twenty rows held a drag at
+20 frames a second. The script writes a small copy of each master to `assets\ui`, twice the
+largest size the interface draws it (128 pixels; 256 for the application icon). The `assets`
+test refuses a Slint file that names anything else. It needs Pillow.
+
 ## Running from source
 
 ```powershell

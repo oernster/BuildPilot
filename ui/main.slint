@@ -28,7 +28,7 @@ enum Opener { rows, add, settings, help }
 
 export component MainWindow inherits Window {
     title: "BuildPilot";
-    icon: @image-url("../assets/application-icon.png");
+    icon: @image-url("../assets/ui/application-icon.png");
     min-width: 760px;
     min-height: 480px;
     preferred-width: 1100px;
@@ -207,7 +207,7 @@ export component MainWindow inherits Window {
                 padding: 10px;
                 spacing: Theme.gap;
                 add-button := IconButton {
-                    icon: @image-url("../assets/add.png");
+                    icon: @image-url("../assets/ui/add.png");
                     label: "Add a build script";
                     tooltip-below: true;
                     activated => { root.opener = Opener.add; root.add(); }
@@ -221,20 +221,20 @@ export component MainWindow inherits Window {
                     horizontal-stretch: 1;
                 }
                 IconButton {
-                    icon: Theme.dark ? @image-url("../assets/light-mode.png")
-                        : @image-url("../assets/dark-mode.png");
+                    icon: Theme.dark ? @image-url("../assets/ui/light-mode.png")
+                        : @image-url("../assets/ui/dark-mode.png");
                     label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
                     tooltip-below: true;
                     activated => { root.toggle-theme(); }
                 }
                 settings-button := IconButton {
-                    icon: @image-url("../assets/settings.png");
+                    icon: @image-url("../assets/ui/settings.png");
                     label: "Settings";
                     tooltip-below: true;
                     activated => { root.opener = Opener.settings; root.open-settings(); }
                 }
                 help-button := IconButton {
-                    icon: @image-url("../assets/help-about.png");
+                    icon: @image-url("../assets/ui/help-about.png");
                     label: "Help";
                     tooltip-below: true;
                     activated => { root.opener = Opener.help; root.show-help-menu = true; }

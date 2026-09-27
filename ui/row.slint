@@ -77,11 +77,10 @@ export component OperationRow inherits Rectangle {
             accessible-role: text;
             accessible-label: "Drag to reorder " + root.data.name + "; Alt+Up and Alt+Down also move it";
             Image {
-                source: @image-url("../assets/reorder-rows.png");
+                source: @image-url("../assets/ui/reorder-rows.png");
                 width: Theme.handle-icon-size;
                 height: Theme.handle-icon-size;
                 image-fit: contain;
-                colorize: Theme.text-muted;
             }
             TouchArea {
                 mouse-cursor: root.being-dragged ? MouseCursor.grabbing : MouseCursor.grab;
@@ -114,7 +113,7 @@ export component OperationRow inherits Rectangle {
             alignment: center;
             Image {
                 source: root.data.icon-is-placeholder
-                    ? @image-url("../assets/application-icon.png") : root.data.icon;
+                    ? @image-url("../assets/ui/application-icon.png") : root.data.icon;
                 width: Theme.operation-icon-size;
                 height: Theme.operation-icon-size;
                 image-fit: contain;
@@ -176,7 +175,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/run.png");
+                    icon: @image-url("../assets/ui/run.png");
                     label: "Run " + root.data.name;
                     enabled: root.data.can-run;
                     disabled-reason: "already running";
@@ -187,7 +186,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/stop.png");
+                    icon: @image-url("../assets/ui/stop.png");
                     label: "Stop " + root.data.name;
                     enabled: root.data.can-stop;
                     disabled-reason: "not running";
@@ -198,7 +197,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/edit-script.png");
+                    icon: @image-url("../assets/ui/edit-script.png");
                     label: "Edit " + root.data.name;
                     on-ring: root.data.selected;
                     activated => { root.edit(); }
@@ -207,7 +206,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/open-script.png");
+                    icon: @image-url("../assets/ui/open-script.png");
                     label: "Open script";
                     on-ring: root.data.selected;
                     activated => { root.open-script(); }
@@ -216,7 +215,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/browse-locate-script.png");
+                    icon: @image-url("../assets/ui/browse-locate-script.png");
                     label: "Show script in Explorer";
                     on-ring: root.data.selected;
                     activated => { root.locate-script(); }
@@ -225,7 +224,7 @@ export component OperationRow inherits Rectangle {
             VerticalLayout {
                 alignment: center;
                 IconButton {
-                    icon: @image-url("../assets/negative.png");
+                    icon: @image-url("../assets/ui/negative.png");
                     label: "Remove " + root.data.name + " from BuildPilot";
                     enabled: root.data.can-remove;
                     disabled-reason: "stop it first";

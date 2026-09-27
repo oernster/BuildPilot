@@ -53,31 +53,31 @@ export component GuideDialog inherits Modal {
     init => { close-button.focus-me(); }
 
     property <[GuideEntry]> toolbar: [
-        { icon: @image-url("../assets/add.png"), name: "Add a build script",
+        { icon: @image-url("../assets/ui/add.png"), name: "Add a build script",
           text: "choose a script (.ps1, .bat, .cmd, .exe, .com, .py or a type in your host table) or a folder to recognise; BuildPilot remembers it from then on, with its working directory and arguments." },
-        { icon: @image-url("../assets/dark-mode.png"), name: "Switch to dark theme",
+        { icon: @image-url("../assets/ui/dark-mode.png"), name: "Switch to dark theme",
           text: "the toggle shows the theme it switches INTO, so the moon appears while BuildPilot is light and the sun while it is dark." },
-        { icon: @image-url("../assets/settings.png"), name: "Settings",
+        { icon: @image-url("../assets/ui/settings.png"), name: "Settings",
           text: "the theme (Light or Dark), the folder BuildPilot keeps its settings and log in, then hosts: the program that runs each other script type, such as ruby.exe for .rb." },
-        { icon: @image-url("../assets/help-about.png"), name: "Help",
+        { icon: @image-url("../assets/ui/help-about.png"), name: "Help",
           text: "this guide, About, the licence and Check for Updates." },
     ];
     property <[GuideEntry]> row-controls: [
-        { icon: @image-url("../assets/reorder-rows.png"), name: "Drag to reorder",
+        { icon: @image-url("../assets/ui/reorder-rows.png"), name: "Drag to reorder",
           text: "drag a row by its handle to move it; the order is saved at once and never touches a run." },
-        { icon: @image-url("../assets/application-icon.png"), name: "Select",
+        { icon: @image-url("../assets/ui/application-icon.png"), name: "Select",
           text: "the checkbox marks a row. Nothing acts on marked rows yet; click the row itself to show its output." },
-        { icon: @image-url("../assets/run.png"), name: "Run",
+        { icon: @image-url("../assets/ui/run.png"), name: "Run",
           text: "starts the script with its working directory and arguments and no console window. Greyed out while it is already running." },
-        { icon: @image-url("../assets/stop.png"), name: "Stop",
+        { icon: @image-url("../assets/ui/stop.png"), name: "Stop",
           text: "ends the script and every process it started, leaving every other run alone." },
-        { icon: @image-url("../assets/edit-script.png"), name: "Edit",
+        { icon: @image-url("../assets/ui/edit-script.png"), name: "Edit",
           text: "change the name, script, working directory, arguments or icon. BuildPilot never changes the script itself." },
-        { icon: @image-url("../assets/open-script.png"), name: "Open script",
+        { icon: @image-url("../assets/ui/open-script.png"), name: "Open script",
           text: "opens the script in whatever Windows opens that type of file with." },
-        { icon: @image-url("../assets/browse-locate-script.png"), name: "Show script in Explorer",
+        { icon: @image-url("../assets/ui/browse-locate-script.png"), name: "Show script in Explorer",
           text: "opens its folder with the script selected." },
-        { icon: @image-url("../assets/negative.png"), name: "Remove",
+        { icon: @image-url("../assets/ui/negative.png"), name: "Remove",
           text: "takes the row out of BuildPilot after asking; the script stays where it is. Stop it first if it is running." },
     ];
     property <[GuideRule]> rules: [
