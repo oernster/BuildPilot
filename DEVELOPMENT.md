@@ -161,7 +161,7 @@ It is idempotent: a second run writes nothing.
 ## The website
 
 `docs/` is the GitHub Pages site: `index.html`, `styles.css`, the icon, the donate artwork and
-`screenshot.png`. It carries no dates. Its colours are the application's tokens from
+`screenshots/screenshot.png`. It carries no dates. Its colours are the application's tokens from
 `ui/theme.slint`, light or dark as the reader's system is set.
 
 ## Where things live
