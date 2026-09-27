@@ -13,17 +13,39 @@ const MAX_LINES: usize = 400;
 const DANGER_BAND_PERCENT: usize = 5;
 const DANGER_BAND_START: usize = MAX_LINES - MAX_LINES * DANGER_BAND_PERCENT / 100;
 
-/// The only parts of the standard library the domain may name. No file system, processes,
-/// threads, environment, network or clock (`std::time::Duration` is a length of time, not a
-/// reading of one).
-const DOMAIN_STD_ALLOWED: &[&str] = &[
-    "std::collections",
-    "std::error",
-    "std::fmt",
-    "std::ops",
-    "std::path",
-    "std::time::Duration",
+/// The layers that do no I/O, each with the only parts of the standard library it may name.
+/// Neither may touch the file system, processes, threads, the environment or the network.
+/// The domain may not hold an instant at all (`Duration` is a length of time, not a reading of
+/// one); the application may hold one but only ever gets it from its `Clock` port.
+const PURE_LAYERS: &[(&str, &[&str])] = &[
+    (
+        "domain",
+        &[
+            "std::collections",
+            "std::error",
+            "std::fmt",
+            "std::ops",
+            "std::path",
+            "std::time::Duration",
+        ],
+    ),
+    (
+        "application",
+        &[
+            "std::collections",
+            "std::error",
+            "std::fmt",
+            "std::iter",
+            "std::mem",
+            "std::path",
+            "std::time::Duration",
+            "std::time::Instant",
+        ],
+    ),
 ];
+
+/// Ways of reading the clock directly; a pure layer must be handed the time instead.
+const CLOCK_READS: &[&str] = &["Instant::now", "SystemTime"];
 
 /// Which layers each layer may not name (CON-003): `ui -> application -> domain <- infrastructure`.
 const FORBIDDEN_DEPENDENCIES: &[(&str, &[&str])] = &[
@@ -71,47 +93,74 @@ fn paths_after<'a>(source: &'a str, prefix: &'a str) -> impl Iterator<Item = &'a
 }
 
 #[test]
-fn domain_uses_only_allowed_std() {
+fn pure_layers_use_only_allowed_std() {
     let mut violations = Vec::new();
-    for file in rust_files(&Path::new(ROOT).join("src/domain")) {
-        let source = read(&file);
-        for path in paths_after(&source, "std::") {
-            let allowed = DOMAIN_STD_ALLOWED
-                .iter()
-                .any(|allowed| path == *allowed || path.starts_with(&format!("{allowed}::")));
-            if !allowed {
-                violations.push(format!("{}: {path}", relative(&file)));
+    for (layer, allowed_paths) in PURE_LAYERS {
+        for file in rust_files(&Path::new(ROOT).join("src").join(layer)) {
+            let source = read(&file);
+            for path in paths_after(&source, "std::") {
+                let allowed = allowed_paths
+                    .iter()
+                    .any(|allowed| path == *allowed || path.starts_with(&format!("{allowed}::")));
+                if !allowed {
+                    violations.push(format!("{}: {path}", relative(&file)));
+                }
+            }
+            for read_of_clock in CLOCK_READS {
+                if source.contains(read_of_clock) {
+                    violations.push(format!("{}: {read_of_clock}", relative(&file)));
+                }
             }
         }
     }
     assert!(
         violations.is_empty(),
-        "domain names forbidden std paths:\n{}",
+        "pure layers name forbidden std paths:\n{}",
         violations.join("\n")
     );
 }
 
-#[test]
-fn domain_uses_no_external_crates() {
-    let own_roots = ["std::", "crate::", "super::", "self::"];
-    let mut violations = Vec::new();
-    for file in rust_files(&Path::new(ROOT).join("src/domain")) {
-        for line in read(&file).lines() {
+/// The modules a layer declares in its `mod.rs`, which its files may `use` by bare name.
+fn declared_modules(layer_dir: &Path) -> Vec<String> {
+    read(&layer_dir.join("mod.rs"))
+        .lines()
+        .filter_map(|line| {
             let line = line.trim_start();
-            let Some(used) = line
-                .strip_prefix("use ")
-                .or_else(|| line.strip_prefix("pub use "))
-            else {
-                continue;
-            };
-            if !own_roots.iter().any(|root| used.starts_with(root)) {
-                violations.push(format!("{}: {line}", relative(&file)));
+            let rest = line
+                .strip_prefix("pub mod ")
+                .or_else(|| line.strip_prefix("mod "))?;
+            Some(format!("{}::", rest.trim_end_matches(';')))
+        })
+        .collect()
+}
+
+#[test]
+fn pure_layers_use_no_external_crates() {
+    let mut violations = Vec::new();
+    for (layer, _) in PURE_LAYERS {
+        let layer_dir = Path::new(ROOT).join("src").join(layer);
+        let mut own_roots: Vec<String> = ["std::", "crate::", "super::", "self::"]
+            .map(str::to_owned)
+            .to_vec();
+        own_roots.extend(declared_modules(&layer_dir));
+        for file in rust_files(&layer_dir) {
+            for line in read(&file).lines() {
+                let line = line.trim_start();
+                let Some(used) = line
+                    .strip_prefix("use ")
+                    .or_else(|| line.strip_prefix("pub use "))
+                else {
+                    continue;
+                };
+                if !own_roots.iter().any(|root| used.starts_with(root.as_str())) {
+                    violations.push(format!("{}: {line}", relative(&file)));
+                }
             }
         }
     }
     assert!(
         violations.is_empty(),
-        "domain uses external crates:\n{}",
+        "pure layers use external crates:\n{}",
         violations.join("\n")
     );
 }
