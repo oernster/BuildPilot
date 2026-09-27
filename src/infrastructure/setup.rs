@@ -107,6 +107,20 @@ fn copy_files(folder: &Path, payload: &[u8]) -> io::Result<()> {
     Ok(())
 }
 
+/// Deletes `copy`, the copy of setup an earlier uninstall ran from in the temporary folder, unless
+/// `this` process is that copy. True when a copy was deleted; one already gone is not an error,
+/// and one still running cannot be deleted, so it answers the error and is left for next time.
+pub fn remove_stale_copy(this: &Path, copy: &Path) -> io::Result<bool> {
+    if same_file(this, copy) {
+        return Ok(false);
+    }
+    match fs::remove_file(copy) {
+        Ok(()) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
 fn same_file(a: &Path, b: &Path) -> bool {
     match (a.canonicalize(), b.canonicalize()) {
         (Ok(a), Ok(b)) => a == b,

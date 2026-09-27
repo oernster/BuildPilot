@@ -159,7 +159,8 @@ built into it by `build.ps1` (INST-001 to INST-006).
   (never by process tree) then offers to close it.
 - **The bar moves with the work.** Each step is weighted by its time measured on a real install.
 - **Removing its own folder.** Started from the install folder, as the Apps list does, setup
-  copies itself to the temporary folder and runs from there, so the install folder can go.
+  copies itself to the temporary folder and runs from there, so the install folder can go. The
+  next setup that is not that copy deletes it; a copy still running is left for the time after.
 - **Every path ends in a verdict** or in BuildPilot running, with each step written to a log as
   it happens.
 

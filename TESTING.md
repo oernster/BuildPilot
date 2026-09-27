@@ -48,13 +48,13 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-237 tests, counted from the source.
+239 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
 | `tests/domain` | 89 | The rules: validation, deck order, the run state machine, launch plans per kind of script, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
 | `tests/application` | 60 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running, stopping, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
-| `tests/infrastructure` | 48 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders and finding and ending a process by name; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
+| `tests/infrastructure` | 50 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders, finding and ending a process by name and clearing setup's stale copy; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
 | `tests/setup.rs` | 6 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
 | `tests/keyboard.rs` | 11 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down. |
 | `tests/geometry.rs` | 5 | Where Slint laid things out, headless: every toolbar tooltip inside the window, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text. |

@@ -295,6 +295,15 @@ fn main() -> ExitCode {
     }
     let log = LogFile::open(&setup_log_folder(), ROTATE_AT_BYTES);
     log.record_panics();
+    // An uninstall ran from a copy in the temporary folder; this run clears it away.
+    if let Ok(this) = env::current_exe() {
+        let copy = setup_log_folder().join(SETUP_EXE);
+        match work::remove_stale_copy(&this, &copy) {
+            Ok(true) => log.write(&format!("Removed the earlier copy {}", copy.display())),
+            Ok(false) => {}
+            Err(error) => log.write(&format!("Left {} in place: {error}", copy.display())),
+        }
+    }
     let Some(carried) = Version::parse(env!("BUILDPILOT_VERSION")) else {
         show_error(
             PRODUCT_NAME,
