@@ -552,7 +552,7 @@ Verified by (all): Manual build-and-launch; install policy logic unit-tested.
 | NFR-OBS-001 | BuildPilot shall write a log file in the data folder, recording launches, exits, stops and errors, rotated at 1 MB with one previous file kept. | Inspection. |
 | NFR-SEC-001 | BuildPilot shall make no network connection except the update check of UI-010, a single HTTPS GET to api.github.com carrying nothing about the operator or their operations. It shall use the HTTP client built into Windows (WinHTTP), adding no HTTP or TLS crate. Amended by Amendment 3. | Inspection of dependencies; Manual with a network monitor. |
 | NFR-SEC-002 | BuildPilot shall never write to, rename or delete a script. | Inspection: the shell and process adapters expose no write operation on scripts. |
-| NFR-MAINT-001 | Domain and application code shall hold 100% line coverage (`cargo llvm-cov`), with the gate failing the build below it. | `test.ps1`. |
+| NFR-MAINT-001 | Domain and application code shall hold 100% line and region coverage (`cargo llvm-cov`), with the gate failing the build below either. | `test.ps1`. |
 | NFR-MAINT-002 | `cargo fmt --check` and `cargo clippy -- -D warnings` shall pass. | `test.ps1`. |
 | NFR-MAINT-003 | No source file shall exceed 400 lines, excluding build scripts. | Structural test. |
 | NFR-MAINT-004 | README.md, ARCHITECTURE.md, TESTING.md and DEVELOPMENT.md shall exist and match the tree. | Handover gate. |

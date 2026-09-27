@@ -241,6 +241,48 @@ fn select_and_check_known_rows_only() {
     assert!(app.toggle_checked(&ghost).is_err());
 }
 
+// ROW-004: only a known row moves.
+#[test]
+fn moving_an_unknown_row_is_refused() {
+    let world = world();
+    let mut app = world.app();
+    add(&mut app, SCRIPT_A);
+    let ghost = OperationId::new("ghost").unwrap();
+    let not_found = Err(AppError::Deck(DeckError::NotFound(ghost.clone())));
+    assert_eq!(app.move_up(&ghost), not_found);
+    assert_eq!(app.move_down(&ghost), not_found);
+}
+
+// CFG-003: an identity already in the deck is refused rather than doubled.
+#[test]
+fn a_repeated_identity_is_refused() {
+    let world = world();
+    let mut app = world.app();
+    let a = add(&mut app, SCRIPT_A);
+    world.state.borrow_mut().next_id = 0;
+    let spec = draft(&app, SCRIPT_B);
+    assert_eq!(
+        app.add(spec),
+        Err(AppError::Deck(DeckError::DuplicateId(a)))
+    );
+    assert_eq!(app.deck().operations().len(), 1);
+}
+
+// EDIT-001: an edit whose chosen icon cannot be copied changes nothing.
+#[test]
+fn failed_icon_import_on_edit_changes_nothing() {
+    let world = world();
+    let mut app = world.app();
+    let a = add(&mut app, SCRIPT_A);
+    let before = app.deck().get(&a).unwrap().config().clone();
+    world.state.borrow_mut().import_error = Some("Access is denied.".to_owned());
+    let mut spec = before.to_spec();
+    spec.name = "renamed".to_owned();
+    spec.icon = IconRef::Chosen(PathBuf::from(r"C:\Pictures\rocket.png"));
+    assert!(app.edit(&a, spec).is_err());
+    assert_eq!(app.deck().get(&a).unwrap().config(), &before);
+}
+
 // UI-001, CFG-010
 #[test]
 fn preferences_are_saved() {

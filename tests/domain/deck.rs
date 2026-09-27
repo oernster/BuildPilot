@@ -44,13 +44,14 @@ fn add_appends_as_the_bottom_row() {
 fn replace_config_keeps_position() {
     let mut deck = deck(&["a", "b"]);
     let replacement = config(r"C:\src\elsewhere\build.ps1");
-    deck.replace_config(&id("b"), replacement.clone()).unwrap();
+    let index = deck.position(&id("b")).unwrap();
+    deck.replace_config_at(index, replacement.clone());
     assert_eq!(order(&deck), ["a", "b"]);
     assert_eq!(deck.get(&id("b")).unwrap().config(), &replacement);
-    assert_eq!(
-        deck.replace_config(&id("z"), replacement).unwrap_err(),
-        DeckError::NotFound(id("z"))
-    );
+    // A position with no operation changes nothing.
+    let before = deck.clone();
+    deck.replace_config_at(deck.operations().len(), replacement);
+    assert_eq!(deck, before);
 }
 
 // REM-002

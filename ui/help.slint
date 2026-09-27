@@ -3,7 +3,7 @@
 // ReadingPane (UI-011), with the buttons held still beneath it.
 
 import { Theme } from "theme.slint";
-import { TextButton, MenuItem } from "widgets.slint";
+import { TextButton, MenuItem, LinkText } from "widgets.slint";
 import { Modal } from "dialogs.slint";
 import { ReadingPane } from "reading.slint";
 
@@ -90,6 +90,7 @@ export component AboutDialog inherits Modal {
     in property <string> repository;
     in property <[CreditData]> credits;
     in property <bool> reading-active: true;
+    callback open-repository();
     callback close();
     heading: "About BuildPilot";
     panel-width: 560px;
@@ -118,7 +119,12 @@ export component AboutDialog inherits Modal {
         Text { text: "Version " + root.version; color: Theme.text; }
         Text { text: "By " + root.author; color: Theme.text; }
         Text { text: root.copyright; color: Theme.text; }
-        Text { text: root.repository; color: Theme.accent; }
+        LinkText {
+            text: root.repository;
+            label: "Open the repository in your browser";
+            in-dialog: true;
+            clicked => { root.open-repository(); }
+        }
         Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text; wrap: word-wrap; }
     }
     Rectangle { height: 1px; background: Theme.border; }

@@ -117,6 +117,14 @@ fn wire_menu(ui: &Rc<Ui>, help: &Rc<Help>, window: &MainWindow) {
             w.set_show_licence(false);
         });
     });
+    let this = ui.clone();
+    window.on_open_repository(move || {
+        let opened = this
+            .app
+            .borrow()
+            .open_address(this.environment.help.repository);
+        this.report(opened);
+    });
 }
 
 fn wire_prompt(ui: &Rc<Ui>, help: &Rc<Help>, window: &MainWindow) {

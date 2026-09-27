@@ -147,12 +147,6 @@ impl RunState {
         Ok(Self::Running(Running::default()))
     }
 
-    /// No process could be started (LCH-007 to LCH-009).
-    pub fn launch_failed(&self, error: LaunchError) -> Result<Self, TransitionError> {
-        self.refuse_if_running()?;
-        Ok(Self::Failed(Failure::FailedToStart(error)))
-    }
-
     /// The operator asked for the run to stop. Asking again is allowed and changes nothing, so
     /// Stop stays usable after a stop that did not finish (STOP-003).
     pub fn stop_requested(&self) -> Result<Self, TransitionError> {

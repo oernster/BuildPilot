@@ -91,7 +91,7 @@ keeps your operations and settings unless you untick that. Neither executable is
 ## Testing
 
 The gate checks formatting, runs clippy with warnings as errors, then runs every test under
-coverage with a floor of 100% of lines over the domain and application layers.
+coverage with a floor of 100% of lines and of regions over the domain and application layers.
 
 ```powershell
 ./test.ps1

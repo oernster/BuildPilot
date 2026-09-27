@@ -1,5 +1,5 @@
 # The gate. Checks formatting, runs clippy with warnings as errors, then runs every test under
-# coverage and fails below 100% line coverage of the correctness core: src/domain, plus
+# coverage and fails below 100% line or region coverage of the correctness core: src/domain, plus
 # src/application once it exists. Infrastructure and UI are measured but sit outside the floor: they
 # need a real desktop, processes and files, so a number over them would mean little.
 #
@@ -16,7 +16,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-# Line floor over the correctness core (NFR-MAINT-001).
+# Line and region floor over the correctness core (NFR-MAINT-001).
 $coverageFloor = 100
 # Files outside the floor: everything that is not domain or application code.
 $outsideFloor = '(src[\\/](infrastructure|ui|bin)[\\/]|src[\\/]main\.rs|tests[\\/])'
@@ -34,7 +34,8 @@ function Invoke-Step([string]$name, [scriptblock]$step) {
 Invoke-Step 'Checking formatting' { cargo fmt --check }
 Invoke-Step 'Running clippy' { cargo clippy --all-targets -- -D warnings }
 Invoke-Step 'Running tests with coverage' {
-    cargo llvm-cov --ignore-filename-regex $outsideFloor --fail-under-lines $coverageFloor
+    cargo llvm-cov --ignore-filename-regex $outsideFloor --fail-under-lines $coverageFloor `
+        --fail-under-regions $coverageFloor
 }
 
 if ($Html) {

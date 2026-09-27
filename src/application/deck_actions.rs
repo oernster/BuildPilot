@@ -45,17 +45,17 @@ impl App {
     /// Replaces operation `id`'s configuration and saves. A running process is never touched
     /// (EDIT-002).
     pub fn edit(&mut self, id: &OperationId, spec: OperationSpec) -> Result<EditOutcome, AppError> {
-        let current = self
+        // Found once: nothing between here and the replacement can move the deck.
+        let index = self
             .deck
-            .get(id)
-            .ok_or_else(|| DeckError::NotFound(id.clone()))?
-            .config()
-            .clone();
+            .position(id)
+            .ok_or_else(|| DeckError::NotFound(id.clone()))?;
+        let current = self.deck.operations()[index].config().clone();
         let config = OperationConfig::try_from(spec)?;
         let config = self.settle_icon(id, config, Some(current.icon()))?;
         let applies_next_run = self.is_running(id) && current.differs_in_execution(&config);
         self.record_icon_status(id, config.icon());
-        self.deck.replace_config(id, config)?;
+        self.deck.replace_config_at(index, config);
         self.persist();
         Ok(EditOutcome { applies_next_run })
     }

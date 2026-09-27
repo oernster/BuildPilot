@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::domain::deck::DeckError;
 use crate::domain::launch_plan::{LaunchPlan, plan};
-use crate::domain::lifecycle::{LaunchError, RunState, TransitionError};
+use crate::domain::lifecycle::{Failure, LaunchError, RunState, TransitionError};
 use crate::domain::operation::OperationId;
 use crate::domain::output::OutputBuffer;
 
@@ -39,7 +39,9 @@ impl App {
             .ok_or_else(|| DeckError::NotFound(id.clone()))?
             .config()
             .clone();
-        self.run_state(id).launched()?;
+        // LCH-005, settled once: the run's state from here on is this transition or a failure to
+        // start, both allowed exactly when this one is.
+        let started = self.run_state(id).launched()?;
 
         self.runs_started += 1;
         let run = self.runs_started;
@@ -81,9 +83,9 @@ impl App {
             Ok(process) => {
                 runtime.process = Some(process);
                 runtime.started_at = Some(now);
-                runtime.state.launched()?
+                started
             }
-            Err(error) => runtime.state.launch_failed(error)?,
+            Err(error) => RunState::Failed(Failure::FailedToStart(error)),
         };
         Ok(())
     }
@@ -196,14 +198,18 @@ impl App {
             .runtimes
             .iter()
             .filter(|(_, runtime)| runtime.state.is_running())
-            .filter_map(|(id, runtime)| {
-                let asked = runtime.stop_requested_at?;
-                let process = runtime.process.as_ref()?;
-                (now.saturating_duration_since(asked) >= STOP_TIMEOUT).then(|| OverdueStop {
-                    id: id.clone(),
-                    pid: process.pid(),
-                })
-            })
+            // A running run always holds its process; only the Stop may be missing.
+            .filter_map(
+                |(id, runtime)| match (runtime.stop_requested_at, &runtime.process) {
+                    (Some(asked), Some(process)) => (now.saturating_duration_since(asked)
+                        >= STOP_TIMEOUT)
+                        .then(|| OverdueStop {
+                            id: id.clone(),
+                            pid: process.pid(),
+                        }),
+                    _ => None,
+                },
+            )
             .collect();
         overdue.sort_by(|a, b| a.id.cmp(&b.id));
         overdue

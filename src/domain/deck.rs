@@ -55,15 +55,12 @@ impl FlightDeck {
         Ok(())
     }
 
-    /// Replaces the configuration of `id`, keeping its identity and position.
-    pub fn replace_config(
-        &mut self,
-        id: &OperationId,
-        config: OperationConfig,
-    ) -> Result<(), DeckError> {
-        let index = self.index_of(id)?;
-        self.operations[index].set_config(config);
-        Ok(())
+    /// Replaces the configuration of the operation at `index` (as `position` answered it), keeping
+    /// its identity and position. An index with no operation changes nothing.
+    pub fn replace_config_at(&mut self, index: usize, config: OperationConfig) {
+        if let Some(operation) = self.operations.get_mut(index) {
+            operation.set_config(config);
+        }
     }
 
     /// Removes `id` and returns it.

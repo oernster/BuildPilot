@@ -31,21 +31,6 @@ fn every_idle_or_finished_state_can_launch() {
 #[test]
 fn second_launch_is_refused() {
     assert_eq!(running().launched(), Err(TransitionError::AlreadyRunning));
-    let error = LaunchError::ScriptNotFound(PathBuf::from("x"));
-    assert_eq!(
-        running().launch_failed(error),
-        Err(TransitionError::AlreadyRunning)
-    );
-}
-
-// LCH-007
-#[test]
-fn launch_failure_is_a_failed_state() {
-    let error = LaunchError::ScriptNotFound(PathBuf::from(r"C:\gone\build.ps1"));
-    assert_eq!(
-        RunState::Idle.launch_failed(error.clone()),
-        Ok(RunState::Failed(Failure::FailedToStart(error)))
-    );
 }
 
 // LIFE-002

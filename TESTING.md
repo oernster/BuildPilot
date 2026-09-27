@@ -20,7 +20,7 @@ that fails:
 
 1. `cargo fmt --check`: the formatting.
 2. `cargo clippy --all-targets -- -D warnings`: every lint, with warnings as errors.
-3. `cargo llvm-cov` over every test, failing below 100% of lines in the floor below.
+3. `cargo llvm-cov` over every test, failing below 100% of lines or of regions in the floor below.
 
 ```powershell
 ./test.ps1
@@ -37,20 +37,23 @@ Read the exit code rather than the last line of output: `0` means every step pas
 
 | Scope | Floor | Why |
 |---|---|---|
-| `src/domain`, `src/application` and `src/setup` | 100% of lines | The correctness core and the setup program's policy: no files, no processes, no clock, no window, so every line is reachable from a test. |
+| `src/domain`, `src/application` and `src/setup` | 100% of lines and of regions | The correctness core and the setup program's policy: no files, no processes, no clock, no window, so every line and every branch is reachable from a test. |
 | `src/infrastructure`, `src/ui`, `src/main.rs`, `src/bin` | measured, not floored | They need real processes, files, Explorer, the registry or a window; a number over them would mean little. Their behaviour is covered by the suites below and the checks by hand. |
 
-Every line in the floor is covered. The floor is on lines, not regions: 10 of 1,930 regions in
-the floor are not reached, all in `deck_actions.rs` and `run_actions.rs`.
+Every line and every region in the floor is covered: 1,915 regions. A region is a branch as
+well as a line, so an untaken `?` fails the gate even when its line ran. Where a branch could
+not be taken in production it was deleted rather than tested (an operation looked up twice, a
+refusal repeated after it had already been made). The region floor was proved by planting a
+one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-234 tests, counted from the source.
+236 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
-| `tests/domain` | 90 | The rules: validation, deck order, the run state machine, launch plans per kind of script, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
-| `tests/application` | 57 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running, stopping, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
+| `tests/domain` | 89 | The rules: validation, deck order, the run state machine, launch plans per kind of script, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
+| `tests/application` | 60 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running, stopping, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
 | `tests/infrastructure` | 48 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders and finding and ending a process by name; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
 | `tests/setup.rs` | 5 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
 | `tests/keyboard.rs` | 11 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down. |

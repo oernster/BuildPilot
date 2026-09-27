@@ -15,6 +15,8 @@ fn run_launches_and_is_running() {
     let world = world();
     let mut app = world.app();
     let a = add(&mut app, SCRIPT_A);
+    // Never run: nothing has started, so there is no time to tell.
+    assert_eq!(app.elapsed(&a), None);
     app.run(&a).unwrap();
     assert!(app.is_running(&a));
     let (key, plan) = world.state.borrow().launches[0].clone();
@@ -264,6 +266,9 @@ fn failed_or_slow_stop_is_reported() {
     let mut app = world.app();
     let a = add(&mut app, SCRIPT_A);
     app.run(&a).unwrap();
+    // Running with no Stop asked for is never overdue.
+    world.advance(STOP_TIMEOUT);
+    assert!(app.overdue_stops().is_empty());
     world.state.borrow_mut().stop_error = Some("Access is denied.".to_owned());
     app.stop(&a).unwrap();
     assert_eq!(

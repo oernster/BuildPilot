@@ -87,6 +87,7 @@ export component MainWindow inherits Window {
     // A Help menu entry was chosen: guide, about, licence or updates.
     callback help(string);
     callback close-help();
+    callback open-repository();
     callback download-update();
     callback skip-update();
     callback close-update();
@@ -341,6 +342,7 @@ export component MainWindow inherits Window {
             repository: root.repository;
             credits: root.credits;
             reading-active: root.reading-active;
+            open-repository => { root.open-repository(); }
             close => { root.close-help(); }
         }
         if root.show-licence: LicenceDialog {

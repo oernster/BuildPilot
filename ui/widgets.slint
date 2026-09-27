@@ -225,6 +225,48 @@ export component TextButton inherits Rectangle {
     }
 }
 
+// An address to open: its words in the accent, underlined, a stop wearing the house ring.
+export component LinkText inherits Rectangle {
+    in property <string> text;
+    // The accessible name and tooltip; says where it goes.
+    in property <string> label: root.text;
+    in property <bool> in-dialog;
+    callback clicked();
+
+    width: words.preferred-width + 2 * RingMetrics.width + 4px;
+    height: words.preferred-height + 2 * RingMetrics.width + 2px;
+    border-radius: 3px;
+    border-width: RingMetrics.width;
+    border-color: RingColour.of(true, touch.has-hover, stop.has-focus);
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-action-default => { root.clicked(); }
+
+    words := Text {
+        text: root.text;
+        color: Theme.accent;
+    }
+    // The underline that says it is a link.
+    Rectangle {
+        x: words.x;
+        y: words.y + words.preferred-height - 1px;
+        width: words.preferred-width;
+        height: 1px;
+        background: Theme.accent;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+
+    stop := Stop {
+        label: root.label;
+        in-dialog: root.in-dialog;
+        activated => { root.clicked(); }
+    }
+}
+
 // One entry of a menu: its words at the left, the whole width to click, the house ring.
 export component MenuItem inherits Rectangle {
     in property <string> text;
