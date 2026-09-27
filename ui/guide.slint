@@ -54,13 +54,15 @@ export component GuideDialog inherits Modal {
 
     property <[GuideEntry]> toolbar: [
         { icon: @image-url("../assets/ui/add.png"), name: "Add a build script",
-          text: "choose a script (.ps1, .bat, .cmd, .exe, .com, .py or a type in your host table) or a folder to recognise; BuildPilot remembers it from then on, with its working directory and arguments." },
+          text: "choose a script (.ps1, .bat, .cmd, .exe, .com, .py or a type in your host table) or a folder. A folder holding build.ps1 (or buildexe.py then buildinstaller.py) is proposed as a build; a folder of projects lists each one to tick. Nothing is added until you confirm." },
         { icon: @image-url("../assets/ui/run.png"), name: "Run the ticked builds",
           text: "runs every ticked row at once, top first. One that cannot start (already running; another build using its folder) is named in a notice; the rest still run." },
         { icon: @image-url("../assets/ui/donate.png"), name: "Buy the author a drink (opens your browser)",
           text: "opens the donation page in your browser. BuildPilot is free and stays free: nothing is held back for a donation and BuildPilot sends nothing itself." },
         { icon: @image-url("../assets/ui/dark-mode.png"), name: "Switch to dark theme",
-          text: "the toggle shows the theme it switches INTO, so the moon appears while BuildPilot is light and the sun while it is dark." },
+          text: "shown while BuildPilot is light; it turns BuildPilot dark. The toggle always shows the theme it switches into." },
+        { icon: @image-url("../assets/ui/light-mode.png"), name: "Switch to light theme",
+          text: "shown while BuildPilot is dark; it turns BuildPilot light. Settings holds the same choice." },
         { icon: @image-url("../assets/ui/settings.png"), name: "Settings",
           text: "the theme (Light or Dark), the folder BuildPilot keeps its settings and log in, then hosts: the program that runs each other script type, such as ruby.exe for .rb." },
         { icon: @image-url("../assets/ui/help-about.png"), name: "Help",
@@ -72,23 +74,31 @@ export component GuideDialog inherits Modal {
         { icon: @image-url("../assets/ui/application-icon.png"), name: "Select",
           text: "the checkbox ticks a row for Run the ticked builds; click the row itself to show its output." },
         { icon: @image-url("../assets/ui/run.png"), name: "Run",
-          text: "starts the script with its working directory and arguments and no console window. Greyed out while it is running and while another build is running in the same folder." },
+          text: "starts the row's steps in order, in its working directory with no console window; a .py or .ps1 step runs inside the project's Python environment when it has one. Greyed out while it is running and while another build is running in the same folder." },
         { icon: @image-url("../assets/ui/stop.png"), name: "Stop",
-          text: "ends the script and every process it started, leaving every other run alone." },
+          text: "ends the running step and every process it started; no later step starts. Every other run is left alone." },
         { icon: @image-url("../assets/ui/edit-script.png"), name: "Edit",
-          text: "change the name, script, working directory, arguments or icon. BuildPilot never changes the script itself." },
+          text: "change the name, the steps (add, remove or reorder them, each with its arguments), the working directory, the environment or the icon. BuildPilot never changes a script itself." },
         { icon: @image-url("../assets/ui/open-script.png"), name: "Open script",
-          text: "opens the script in whatever Windows opens that type of file with." },
+          text: "opens the first step's script in whatever Windows opens that type of file with." },
         { icon: @image-url("../assets/ui/browse-locate-script.png"), name: "Show script in Explorer",
-          text: "opens its folder with the script selected." },
+          text: "opens the first step's folder with its script selected." },
         { icon: @image-url("../assets/ui/negative.png"), name: "Remove",
-          text: "takes the row out of BuildPilot after asking; the script stays where it is. Stop it first if it is running." },
+          text: "takes the row out of BuildPilot after asking; its scripts stay where they are. Stop it first if it is running." },
     ];
     property <[GuideRule]> rules: [
         { title: "Output belongs to its row.",
           text: "The output tray at the foot shows the selected row's latest run, live while it runs and kept until it runs again or BuildPilot closes. It follows the newest line until you scroll up; Jump to latest takes you back. Beyond 100,000 lines the oldest go; the tray says so." },
-        { title: "Several runs at once.",
-          text: "Each row runs on its own; starting or stopping one never touches another." },
+        { title: "A run ends in its outcome.",
+          text: "Output lines are plain whichever stream they came on, since many build tools report progress on stderr. When the run ends, one closing line gives the result: green for success, red for failure, grey when stopped. The exit code decides it." },
+        { title: "Steps run in order.",
+          text: "A row's steps run one after another. A step that fails stops the rest; every step's script is checked before the first one starts." },
+        { title: "Several runs at once, one per folder.",
+          text: "Each row runs on its own; starting or stopping one never touches another. Two builds never run in the same folder at once, since they would overwrite each other's output." },
+        { title: "Python environments are used, never built.",
+          text: "A .py or .ps1 step runs inside the virtual environment in its working directory; with several, Edit asks which. Any environment BuildPilot was started inside is undone first. BuildPilot never creates, installs into or repairs one." },
+        { title: "New rows slot in by name.",
+          text: "An added row goes in alphabetical order; a row you have moved stays where you put it. When rows are out of sight, the list says how many above and below." },
         { title: "Stop means the whole tree.",
           text: "Everything a script started ends with it. If anything is still alive five seconds later the row names its process ID." },
         { title: "Closing asks first.",
@@ -121,7 +131,7 @@ export component GuideDialog inherits Modal {
             SectionHeading { text: "Keyboard"; }
             Paragraph { text: "Tab and Shift+Tab move round every control, wrapping at both ends; Right and Left do the same. Space or Enter presses the focused control. A green ring marks it."; }
             Paragraph { text: "The rows are one stop: Up and Down choose a row, Space ticks its checkbox, Enter edits it and Alt+Up or Alt+Down moves it. The chosen row's own controls follow it round the ring."; }
-            Paragraph { text: "In the output and in any text like this that reads itself, Up, Down, Page Up, Page Down, Home and End scroll. Escape closes any dialog."; }
+            Paragraph { text: "In the output and in any text like this that reads itself, Up, Down, Page Up, Page Down, Home and End scroll. Close a dialog with its own buttons."; }
         }
     }
     HorizontalLayout {
