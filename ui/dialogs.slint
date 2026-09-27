@@ -1,31 +1,48 @@
-// The modal dialogs, drawn over the main window.
+// The modal dialogs, drawn over the main window. Each opens focused on its first control,
+// keeps the keyboard ring to its own controls while open and closes on Escape.
 
-import { Button, LineEdit, TextEdit } from "std-widgets.slint";
+import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { TextButton, Field } from "widgets.slint";
 
 component Modal inherits Rectangle {
     in property <length> panel-width: 560px;
     in property <string> heading;
+    // Escape was pressed: the dialog closes as its Cancel or Close would.
+    callback dismissed();
     background: Theme.scrim;
     // Swallows clicks so nothing behind the dialog can be used while it is open.
     TouchArea { }
-    Rectangle {
-        width: root.panel-width;
-        height: content.preferred-height;
-        background: Theme.surface;
-        border-radius: 8px;
-        border-width: 1px;
-        border-color: Theme.border;
-        content := VerticalLayout {
-            padding: 20px;
-            spacing: 12px;
-            Text {
-                text: root.heading;
-                font-size: Theme.title-size;
-                font-weight: 600;
-                color: Theme.text;
+    // Wraps the panel, so Escape from any control in it passes through here.
+    FocusScope {
+        enabled: false;
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.dismissed();
+                return accept;
             }
-            @children
+            return reject;
+        }
+        Rectangle {
+            width: root.panel-width;
+            height: content.preferred-height;
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border;
+            content := VerticalLayout {
+                padding: 20px;
+                spacing: 12px;
+                Text {
+                    text: root.heading;
+                    font-size: Theme.title-size;
+                    font-weight: 600;
+                    color: Theme.text;
+                }
+                @children
+            }
         }
     }
 }
@@ -54,25 +71,57 @@ export component OperationDialog inherits Modal {
     callback save();
     callback cancel();
 
-    FieldLabel { text: "Name"; }
-    LineEdit { text <=> root.name; accessible-label: "Name"; }
-    FieldLabel { text: "Script"; }
+    dismissed => { root.cancel(); }
+    init => { name-edit.focus(); }
+
+    FieldLabel { text: name-field.label; }
+    name-field := Field {
+        focused: name-edit.has-focus;
+        label: "Name";
+        name-edit := LineEdit { text <=> root.name; accessible-label: name-field.label; }
+    }
+    FieldLabel { text: script-field.label; }
     HorizontalLayout {
         spacing: Theme.gap;
-        LineEdit { text <=> root.script; accessible-label: "Script"; }
-        Button { text: "Browse"; clicked => { root.browse-script(); } }
+        script-field := Field {
+            focused: script-edit.has-focus;
+            label: "Script";
+            script-edit := LineEdit { text <=> root.script; accessible-label: script-field.label; }
+        }
+        TextButton {
+            text: "Browse";
+            label: "Browse for the script";
+            in-dialog: true;
+            clicked => { root.browse-script(); }
+        }
     }
-    FieldLabel { text: "Working directory"; }
+    FieldLabel { text: folder-field.label; }
     HorizontalLayout {
         spacing: Theme.gap;
-        LineEdit { text <=> root.working-dir; accessible-label: "Working directory"; }
-        Button { text: "Browse"; clicked => { root.browse-folder(); } }
+        folder-field := Field {
+            focused: folder-edit.has-focus;
+            label: "Working directory";
+            folder-edit := LineEdit {
+                text <=> root.working-dir;
+                accessible-label: folder-field.label;
+            }
+        }
+        TextButton {
+            text: "Browse";
+            label: "Browse for the working directory";
+            in-dialog: true;
+            clicked => { root.browse-folder(); }
+        }
     }
-    FieldLabel { text: "Arguments, one per line"; }
-    TextEdit {
-        text <=> root.arguments;
-        height: 76px;
-        accessible-label: "Arguments, one per line";
+    FieldLabel { text: arguments-field.label; }
+    arguments-field := Field {
+        focused: arguments-edit.has-focus;
+        label: "Arguments, one per line";
+        arguments-edit := TextEdit {
+            text <=> root.arguments;
+            height: 76px;
+            accessible-label: arguments-field.label;
+        }
     }
     FieldLabel { text: "Icon"; }
     HorizontalLayout {
@@ -85,12 +134,17 @@ export component OperationDialog inherits Modal {
             height: 40px;
             image-fit: contain;
         }
-        Button {
+        TextButton {
             text: "Choose image";
             icon: @image-url("../assets/choose-change-application-icon.png");
+            in-dialog: true;
             clicked => { root.choose-icon(); }
         }
-        Button { text: "Use placeholder"; clicked => { root.use-placeholder-icon(); } }
+        TextButton {
+            text: "Use placeholder";
+            in-dialog: true;
+            clicked => { root.use-placeholder-icon(); }
+        }
         Text {
             text: root.icon-note;
             color: Theme.text-muted;
@@ -104,8 +158,13 @@ export component OperationDialog inherits Modal {
     HorizontalLayout {
         alignment: end;
         spacing: Theme.gap;
-        Button { text: "Cancel"; clicked => { root.cancel(); } }
-        Button { text: root.save-label; primary: true; clicked => { root.save(); } }
+        TextButton { text: "Cancel"; in-dialog: true; clicked => { root.cancel(); } }
+        TextButton {
+            text: root.save-label;
+            primary: true;
+            in-dialog: true;
+            clicked => { root.save(); }
+        }
     }
 }
 
@@ -116,13 +175,24 @@ export component ConfirmDialog inherits Modal {
     callback confirm();
     callback cancel();
     panel-width: 460px;
+    dismissed => { root.cancel(); }
+    init => { cancel-button.focus-me(); }
 
     Text { text: root.message; color: Theme.text; wrap: word-wrap; }
     HorizontalLayout {
         alignment: end;
         spacing: Theme.gap;
-        Button { text: "Cancel"; clicked => { root.cancel(); } }
-        Button { text: root.confirm-label; primary: true; clicked => { root.confirm(); } }
+        cancel-button := TextButton {
+            text: "Cancel";
+            in-dialog: true;
+            clicked => { root.cancel(); }
+        }
+        TextButton {
+            text: root.confirm-label;
+            primary: true;
+            in-dialog: true;
+            clicked => { root.confirm(); }
+        }
     }
 }
 
@@ -136,27 +206,32 @@ export component SettingsDialog inherits Modal {
     callback close();
     heading: "Settings";
     panel-width: 480px;
+    dismissed => { root.close(); }
+    init => { light-button.focus-me(); }
 
     FieldLabel { text: "Theme"; }
     HorizontalLayout {
         spacing: Theme.gap;
-        Button {
+        light-button := TextButton {
             text: "Light";
-            checkable: true;
+            label: "Light theme";
+            in-dialog: true;
             checked: root.theme-choice == 0;
             icon: @image-url("../assets/light-mode.png");
             clicked => { root.choose-theme(0); }
         }
-        Button {
+        TextButton {
             text: "Dark";
-            checkable: true;
+            label: "Dark theme";
+            in-dialog: true;
             checked: root.theme-choice == 1;
             icon: @image-url("../assets/dark-mode.png");
             clicked => { root.choose-theme(1); }
         }
-        Button {
+        TextButton {
             text: "Follow Windows";
-            checkable: true;
+            label: "Follow the Windows theme";
+            in-dialog: true;
             checked: root.theme-choice == 2;
             clicked => { root.choose-theme(2); }
         }
@@ -171,11 +246,16 @@ export component SettingsDialog inherits Modal {
             overflow: elide;
             horizontal-stretch: 1;
         }
-        Button { text: "Open folder"; clicked => { root.open-data-folder(); } }
+        TextButton {
+            text: "Open folder";
+            label: "Open the data folder";
+            in-dialog: true;
+            clicked => { root.open-data-folder(); }
+        }
     }
     HorizontalLayout {
         alignment: end;
-        Button { text: "Close"; primary: true; clicked => { root.close(); } }
+        TextButton { text: "Close"; primary: true; in-dialog: true; clicked => { root.close(); } }
     }
 }
 
@@ -185,6 +265,8 @@ export component AboutDialog inherits Modal {
     callback close();
     heading: "About BuildPilot";
     panel-width: 460px;
+    dismissed => { root.close(); }
+    init => { close-button.focus-me(); }
 
     HorizontalLayout {
         spacing: 16px;
@@ -209,6 +291,11 @@ export component AboutDialog inherits Modal {
     Text { text: "Built with Slint (slint.dev), used under its GPLv3 licence."; color: Theme.text-muted; }
     HorizontalLayout {
         alignment: end;
-        Button { text: "Close"; primary: true; clicked => { root.close(); } }
+        close-button := TextButton {
+            text: "Close";
+            primary: true;
+            in-dialog: true;
+            clicked => { root.close(); }
+        }
     }
 }

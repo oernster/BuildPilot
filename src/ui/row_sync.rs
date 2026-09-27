@@ -12,6 +12,9 @@ use crate::domain::operation::{Operation, OperationId};
 use super::rows::{self, RowFacts, StatusClass};
 use super::{RowData, StatusKind, Ui};
 
+/// What `selected-index` holds when no row is selected; the window reads it that way.
+const NONE_SELECTED: i32 = -1;
+
 impl Ui {
     /// Updates rows in place, so a drag in progress is never torn down by a refresh.
     pub(super) fn sync_rows(&self) {
@@ -30,6 +33,12 @@ impl Ui {
                 })
                 .collect::<Vec<_>>()
         };
+        let selected = fresh
+            .iter()
+            .position(|row| row.selected)
+            .and_then(|index| i32::try_from(index).ok())
+            .unwrap_or(NONE_SELECTED);
+        self.with_window(|window| window.set_selected_index(selected));
         let same_rows = fresh.len() == self.rows.row_count()
             && fresh.iter().enumerate().all(|(index, row)| {
                 self.rows

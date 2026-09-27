@@ -1,5 +1,6 @@
-//! UI-002: every text colour reaches WCAG 2.2 AA contrast (4.5:1) against the background it is
-//! drawn on, in both themes. The colours are read from ui/theme.slint, their one home.
+//! UI-002 and A11Y-002: every text colour reaches WCAG 2.2 AA contrast (4.5:1) against the
+//! background it is drawn on, in both themes; the rings reach the non-text minimum (3:1). The
+//! colours are read from ui/theme.slint, their one home.
 
 use std::collections::HashMap;
 use std::fs;
@@ -25,14 +26,30 @@ const PAIRS: &[(&str, &str)] = &[
     ("tooltip-text", "tooltip-background"),
 ];
 
+/// WCAG 2.2 AA minimum for the parts of a control that mark its state (1.4.11), such as a
+/// focus ring.
+const MINIMUM_NON_TEXT_RATIO: f64 = 3.0;
+
+/// State marks drawn on the surfaces controls sit on (A11Y-002).
+const NON_TEXT_PAIRS: &[(&str, &str)] = &[
+    ("ring", "background"),
+    ("ring", "surface"),
+    ("ring", "surface-hover"),
+    ("ring", "surface-selected"),
+    ("danger", "background"),
+    ("danger", "surface"),
+    ("danger", "surface-selected"),
+];
+
 /// token -> (light colour, dark colour), from lines of the form
-/// `out property <color> name: dark ? #dark : #light;`.
+/// `out property <color> name: dark ? #dark : #light;`; a line `name: other;` names another token.
 fn theme_colours() -> HashMap<String, ([u8; 3], [u8; 3])> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("ui")
         .join("theme.slint");
     let source = fs::read_to_string(path).expect("theme.slint is readable");
     let mut colours = HashMap::new();
+    let mut aliases = Vec::new();
     for line in source.lines() {
         let Some(rest) = line.trim().strip_prefix("out property <color> ") else {
             continue;
@@ -47,9 +64,38 @@ fn theme_colours() -> HashMap<String, ([u8; 3], [u8; 3])> {
             .collect();
         if let [dark, light] = hexes[..] {
             colours.insert(name.trim().to_owned(), (light, dark));
+        } else if hexes.is_empty() {
+            let target = value.trim().trim_end_matches(';').trim().to_owned();
+            aliases.push((name.trim().to_owned(), target));
         }
     }
+    for (name, target) in aliases {
+        let colour = colours
+            .get(&target)
+            .unwrap_or_else(|| panic!("{name} names {target}, which is not a colour token"));
+        colours.insert(name, *colour);
+    }
     colours
+}
+
+/// Every pair in `pairs` below `minimum` in either theme, in words.
+fn failing_pairs(pairs: &[(&str, &str)], minimum: f64) -> Vec<String> {
+    let colours = theme_colours();
+    let mut failures = Vec::new();
+    for (front, back) in pairs {
+        let (front_light, front_dark) = colours[*front];
+        let (back_light, back_dark) = colours[*back];
+        for (theme, a, b) in [
+            ("light", front_light, back_light),
+            ("dark", front_dark, back_dark),
+        ] {
+            let ratio = contrast(a, b);
+            if ratio < minimum {
+                failures.push(format!("{theme}: {front} on {back} is {ratio:.2}:1"));
+            }
+        }
+    }
+    failures
 }
 
 fn parse_hex(hex: &str) -> [u8; 3] {
@@ -87,24 +133,21 @@ fn contrast_formula_matches_known_values() {
 
 #[test]
 fn every_text_pair_reaches_aa_in_both_themes() {
-    let colours = theme_colours();
-    let mut failures = Vec::new();
-    for (text, background) in PAIRS {
-        let (text_light, text_dark) = colours[*text];
-        let (back_light, back_dark) = colours[*background];
-        for (theme, fore, back) in [
-            ("light", text_light, back_light),
-            ("dark", text_dark, back_dark),
-        ] {
-            let ratio = contrast(fore, back);
-            if ratio < MINIMUM_RATIO {
-                failures.push(format!("{theme}: {text} on {background} is {ratio:.2}:1"));
-            }
-        }
-    }
+    let failures = failing_pairs(PAIRS, MINIMUM_RATIO);
     assert!(
         failures.is_empty(),
         "below {MINIMUM_RATIO}:1:\n{}",
+        failures.join("\n")
+    );
+}
+
+// A11Y-002: the focus ring and the disabled ring stand out from every surface a control sits on.
+#[test]
+fn every_state_mark_reaches_aa_in_both_themes() {
+    let failures = failing_pairs(NON_TEXT_PAIRS, MINIMUM_NON_TEXT_RATIO);
+    assert!(
+        failures.is_empty(),
+        "below {MINIMUM_NON_TEXT_RATIO}:1:\n{}",
         failures.join("\n")
     );
 }

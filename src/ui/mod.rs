@@ -35,6 +35,7 @@ use crate::application::{App, AppError, RunEvent};
 use crate::domain::follow::Follow;
 use crate::domain::operation::OperationId;
 
+pub use actions::step_ring;
 use events::Hook;
 pub use events::Waker;
 use output_model::OutputModel;

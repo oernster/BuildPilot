@@ -1,7 +1,79 @@
-// The one button BuildPilot uses: product artwork, a tooltip, an accessible name, keyboard
-// activation, a visible focus ring and a disabled look that says why (A11Y-001 to A11Y-004).
+// The controls BuildPilot draws itself, so every one follows the house keyboard model
+// (A11Y-001 to A11Y-004): a tooltip and an accessible name, Space and Enter activate, no ring at
+// rest, a green ring while hovered or focused, a permanent red ring while disabled.
 
 import { Theme } from "theme.slint";
+
+// Keyboard state the whole window shares.
+export global Ring {
+    // True while a dialog is open: only the dialog's own controls are stops then.
+    in-out property <bool> modal-open;
+    // The label of the stop holding keyboard focus, for the tests; empty when none does.
+    in-out property <string> focused;
+}
+
+// The ring's width, the same in every state so nothing moves when it appears.
+export global RingMetrics {
+    out property <length> width: 2px;
+}
+
+// The ring colour for a control in `enabled`, `hovered` and `focused`.
+export global RingColour {
+    pure public function of(enabled: bool, hovered: bool, focused: bool) -> color {
+        if (!enabled) {
+            return Theme.danger;
+        }
+        return hovered || focused ? Theme.ring : transparent;
+    }
+}
+
+// Shown above or below a control while the pointer is on it.
+component Tooltip inherits Rectangle {
+    in property <string> text;
+    in property <length> host-width;
+    in property <length> host-height;
+    in property <bool> below;
+    y: root.below ? root.host-height + 4px : -self.height - 4px;
+    x: (root.host-width - self.width) / 2;
+    width: tip.preferred-width + 16px;
+    height: tip.preferred-height + 10px;
+    border-radius: 4px;
+    background: Theme.tooltip-background;
+    tip := Text {
+        text: root.text;
+        color: Theme.tooltip-text;
+        font-size: 12px;
+    }
+}
+
+// What every stop shares: focus, activation by Space or Enter, reporting itself to `Ring`.
+component Stop inherits FocusScope {
+    // The name `Ring.focused` reports.
+    in property <string> label;
+    // False takes the stop off the ring without disabling it (a row that is not selected).
+    in property <bool> on-ring: true;
+    // True for a control inside a dialog, which stays a stop while the dialog is open.
+    in property <bool> in-dialog;
+    in property <bool> active: true;
+    callback activated();
+
+    enabled: root.active && root.on-ring && (root.in-dialog || !Ring.modal-open);
+    focus-on-click: false;
+    focus-changed-event => {
+        if (self.has-focus) {
+            Ring.focused = root.label;
+        } else if (Ring.focused == root.label) {
+            Ring.focused = "";
+        }
+    }
+    key-pressed(event) => {
+        if (event.text == " " || event.text == Key.Return) {
+            root.activated();
+            return accept;
+        }
+        return reject;
+    }
+}
 
 export component IconButton inherits Rectangle {
     in property <image> icon;
@@ -11,16 +83,24 @@ export component IconButton inherits Rectangle {
     // Shown after the label in the tooltip while disabled.
     in property <string> disabled-reason;
     in property <bool> tooltip-below: false;
+    in property <bool> on-ring: true;
+    in property <bool> in-dialog;
     callback activated();
+
+    public function focus-me() {
+        stop.focus();
+    }
 
     width: Theme.icon-button-size;
     height: Theme.icon-button-size;
     border-radius: Theme.radius;
     background: touch.has-hover && root.enabled ? Theme.surface-hover : transparent;
-    border-width: focus.has-focus ? 2px : 0px;
-    border-color: Theme.accent;
+    border-width: RingMetrics.width;
+    border-color: RingColour.of(root.enabled, touch.has-hover, stop.has-focus);
     accessible-role: button;
     accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-action-default => { root.activated(); }
 
     Image {
         source: root.icon;
@@ -34,34 +114,163 @@ export component IconButton inherits Rectangle {
         mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.not-allowed;
         clicked => {
             if (root.enabled) {
-                focus.focus();
                 root.activated();
             }
         }
     }
 
-    focus := FocusScope {
-        key-pressed(event) => {
-            if (root.enabled && (event.text == " " || event.text == Key.Return)) {
-                root.activated();
-                return accept;
-            }
-            return reject;
+    stop := Stop {
+        label: root.label;
+        active: root.enabled;
+        on-ring: root.on-ring;
+        in-dialog: root.in-dialog;
+        activated => { root.activated(); }
+    }
+
+    if touch.has-hover: Tooltip {
+        text: root.enabled || root.disabled-reason == ""
+            ? root.label : root.label + ": " + root.disabled-reason;
+        host-width: root.width;
+        host-height: root.height;
+        below: root.tooltip-below;
+    }
+}
+
+export component TextButton inherits Rectangle {
+    in property <string> text;
+    // The accessible name when it should say more than the text.
+    in property <string> label: root.text;
+    in property <image> icon;
+    in property <bool> primary;
+    // For a set of choices: this one is the current choice.
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    in property <bool> on-ring: true;
+    in property <bool> in-dialog;
+    callback clicked();
+
+    public function focus-me() {
+        stop.focus();
+    }
+
+    min-width: row.preferred-width + 24px;
+    height: max(32px, row.preferred-height + 12px);
+    border-radius: Theme.radius;
+    background: root.primary && root.enabled ? Theme.accent
+        : root.checked ? Theme.surface-selected
+        : touch.has-hover && root.enabled ? Theme.surface-hover : Theme.background;
+    border-width: RingMetrics.width;
+    border-color: RingColour.of(root.enabled, touch.has-hover, stop.has-focus);
+    accessible-role: button;
+    accessible-label: root.label;
+    accessible-enabled: root.enabled;
+    accessible-checkable: root.checked;
+    accessible-checked: root.checked;
+    accessible-action-default => { root.clicked(); }
+
+    row := HorizontalLayout {
+        alignment: center;
+        spacing: 6px;
+        padding-left: 12px;
+        padding-right: 12px;
+        if root.icon.width > 0: Image {
+            source: root.icon;
+            width: 20px;
+            height: 20px;
+            image-fit: contain;
+        }
+        Text {
+            text: root.text;
+            vertical-alignment: center;
+            font-size: Theme.body-size;
+            color: root.primary && root.enabled ? Theme.surface
+                : root.enabled ? Theme.text : Theme.text-muted;
         }
     }
 
-    if touch.has-hover: Rectangle {
-        y: root.tooltip-below ? root.height + 4px : -self.height - 4px;
-        x: (root.width - self.width) / 2;
-        width: tip.preferred-width + 16px;
-        height: tip.preferred-height + 10px;
-        border-radius: 4px;
-        background: Theme.tooltip-background;
-        tip := Text {
-            text: root.enabled || root.disabled-reason == ""
-                ? root.label : root.label + ": " + root.disabled-reason;
-            color: Theme.tooltip-text;
-            font-size: 12px;
+    touch := TouchArea {
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.not-allowed;
+        clicked => {
+            if (root.enabled) {
+                root.clicked();
+            }
         }
+    }
+
+    stop := Stop {
+        label: root.label;
+        active: root.enabled;
+        on-ring: root.on-ring;
+        in-dialog: root.in-dialog;
+        activated => { root.clicked(); }
+    }
+}
+
+// A checkbox: a box that shows a tick when checked.
+export component Toggle inherits Rectangle {
+    in property <bool> checked;
+    in property <string> label;
+    in property <bool> on-ring: true;
+    callback toggled();
+
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: root.checked ? Theme.accent : Theme.surface;
+    border-width: RingMetrics.width;
+    border-color: touch.has-hover || stop.has-focus ? Theme.ring : Theme.text-muted;
+    accessible-role: checkbox;
+    accessible-label: root.label;
+    accessible-checkable: true;
+    accessible-checked: root.checked;
+    accessible-action-default => { root.toggled(); }
+
+    if root.checked: Text {
+        text: "\u{2713}";
+        color: Theme.surface;
+        font-size: 18px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.toggled(); }
+    }
+
+    stop := Stop {
+        label: root.label;
+        on-ring: root.on-ring;
+        activated => { root.toggled(); }
+    }
+}
+
+// A frame round a text input that rings it while hovered or focused; the input keeps its arrow
+// keys for the caret and is left with Tab.
+export component Field inherits Rectangle {
+    in property <bool> focused;
+    // The name `Ring.focused` reports while the input holds focus.
+    in property <string> label;
+    // A change handler only sees later changes, so an input focused as its dialog opens is
+    // reported here instead.
+    init => {
+        if (root.focused) {
+            Ring.focused = root.label;
+        }
+    }
+    changed focused => {
+        if (self.focused) {
+            Ring.focused = root.label;
+        } else if (Ring.focused == root.label) {
+            Ring.focused = "";
+        }
+    }
+    border-radius: Theme.radius;
+    border-width: RingMetrics.width;
+    border-color: RingColour.of(true, touch.has-hover, root.focused);
+    touch := TouchArea { }
+    HorizontalLayout {
+        padding: RingMetrics.width;
+        @children
     }
 }

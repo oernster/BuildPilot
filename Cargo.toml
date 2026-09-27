@@ -38,6 +38,8 @@ windows-sys = { version = "0.61", features = [
 slint-build = "1"
 
 [dev-dependencies]
+# Slint's headless backend, pinned to the Slint in use, for driving the keyboard ring in tests.
+i-slint-backend-testing = "=1.18.1"
 tempfile = "3"
 
 [lints.rust]

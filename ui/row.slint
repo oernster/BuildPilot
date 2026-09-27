@@ -1,9 +1,9 @@
 // One operation row (ROW-001). Every control keeps its place in every state; controls that do
-// not apply are disabled, never hidden (ROW-002).
+// not apply are disabled, never hidden (ROW-002). A row's controls are keyboard stops only while
+// it is the selected row.
 
-import { CheckBox } from "std-widgets.slint";
 import { Theme } from "theme.slint";
-import { IconButton } from "widgets.slint";
+import { IconButton, Toggle, RingMetrics } from "widgets.slint";
 
 export enum StatusKind { idle, running, succeeded, failed, stopped }
 
@@ -30,6 +30,8 @@ export component OperationRow inherits Rectangle {
     in property <bool> being-dragged;
     // Where a dragged row would land relative to this one: -1 above, 1 below, 0 neither.
     in property <int> drop-marker;
+    // True while the rows list holds keyboard focus.
+    in property <bool> list-focused;
     callback select();
     callback toggle-checked();
     callback run();
@@ -49,28 +51,13 @@ export component OperationRow inherits Rectangle {
     background: root.being-dragged ? Theme.surface-hover
         : root.data.selected ? Theme.surface-selected : Theme.surface;
     border-radius: Theme.radius;
-    border-width: row-focus.has-focus ? 2px : 1px;
-    border-color: row-focus.has-focus ? Theme.accent : Theme.border;
-
-    row-focus := FocusScope {
-        key-pressed(event) => {
-            if (event.modifiers.alt && event.text == Key.UpArrow) {
-                root.move-up();
-                return accept;
-            }
-            if (event.modifiers.alt && event.text == Key.DownArrow) {
-                root.move-down();
-                return accept;
-            }
-            return reject;
-        }
-    }
+    // The selected row is the rows list's current item, so it wears the ring while the list
+    // holds focus; the list itself never does.
+    border-width: RingMetrics.width;
+    border-color: root.data.selected && root.list-focused ? Theme.ring : Theme.border;
 
     TouchArea {
-        clicked => {
-            row-focus.focus();
-            root.select();
-        }
+        clicked => { root.select(); }
     }
 
     if root.drop-marker != 0: Rectangle {
@@ -100,7 +87,6 @@ export component OperationRow inherits Rectangle {
                 mouse-cursor: root.being-dragged ? MouseCursor.grabbing : MouseCursor.grab;
                 pointer-event(event) => {
                     if (event.kind == PointerEventKind.down) {
-                        row-focus.focus();
                         root.select();
                         root.drag-start();
                     }
@@ -116,9 +102,10 @@ export component OperationRow inherits Rectangle {
 
         VerticalLayout {
             alignment: center;
-            CheckBox {
+            Toggle {
                 checked: root.data.checked;
-                accessible-label: "Select " + root.data.name;
+                label: "Select " + root.data.name;
+                on-ring: root.data.selected;
                 toggled => { root.toggle-checked(); }
             }
         }
@@ -193,6 +180,7 @@ export component OperationRow inherits Rectangle {
                     label: "Run " + root.data.name;
                     enabled: root.data.can-run;
                     disabled-reason: "already running";
+                    on-ring: root.data.selected;
                     activated => { root.run(); }
                 }
             }
@@ -203,6 +191,7 @@ export component OperationRow inherits Rectangle {
                     label: "Stop " + root.data.name;
                     enabled: root.data.can-stop;
                     disabled-reason: "not running";
+                    on-ring: root.data.selected;
                     activated => { root.stop(); }
                 }
             }
@@ -211,6 +200,7 @@ export component OperationRow inherits Rectangle {
                 IconButton {
                     icon: @image-url("../assets/edit-script.png");
                     label: "Edit " + root.data.name;
+                    on-ring: root.data.selected;
                     activated => { root.edit(); }
                 }
             }
@@ -219,6 +209,7 @@ export component OperationRow inherits Rectangle {
                 IconButton {
                     icon: @image-url("../assets/open-script.png");
                     label: "Open script";
+                    on-ring: root.data.selected;
                     activated => { root.open-script(); }
                 }
             }
@@ -227,6 +218,7 @@ export component OperationRow inherits Rectangle {
                 IconButton {
                     icon: @image-url("../assets/browse-locate-script.png");
                     label: "Show script in Explorer";
+                    on-ring: root.data.selected;
                     activated => { root.locate-script(); }
                 }
             }
@@ -237,6 +229,7 @@ export component OperationRow inherits Rectangle {
                     label: "Remove " + root.data.name + " from BuildPilot";
                     enabled: root.data.can-remove;
                     disabled-reason: "stop it first";
+                    on-ring: root.data.selected;
                     activated => { root.remove(); }
                 }
             }

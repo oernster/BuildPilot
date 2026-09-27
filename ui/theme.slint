@@ -15,6 +15,10 @@ export global Theme {
     out property <color> success: dark ? #6fd08f : #1c7039;
     out property <color> failure: dark ? #ff8a80 : #b3261e;
     out property <color> caution: dark ? #e8bb4a : #7d5300;
+    // The keyboard model's two rings (A11Y-002): green on a control that is hovered or focused,
+    // permanent red on one that is disabled. The accent is never a ring.
+    out property <color> ring: success;
+    out property <color> danger: failure;
     out property <color> tooltip-background: dark ? #f0f1f3 : #24262a;
     out property <color> tooltip-text: dark ? #1b1d21 : #f0f1f3;
     out property <color> scrim: dark ? #000000b0 : #00000070;

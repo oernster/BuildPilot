@@ -1,13 +1,22 @@
 // The main window (SRS 4 of the spec): toolbar, operation rows, output tray and the dialogs.
+//
+// Keyboard (A11Y-002, A11Y-003; the house model): the window opens with nothing focused. Tab and
+// Right step forward round the ring, Shift+Tab and Left step back, both wrapping. The rows are one
+// stop walked with Up and Down; the selected row's own controls follow it. While a dialog is open
+// only its controls are stops.
 
-import { Button, ScrollView, Palette } from "std-widgets.slint";
+import { Palette } from "std-widgets.slint";
 import { Theme } from "theme.slint";
-import { IconButton } from "widgets.slint";
-import { OperationRow, RowData, StatusKind } from "row.slint";
+import { IconButton, TextButton, Ring } from "widgets.slint";
+import { RowData, StatusKind } from "row.slint";
+import { RowsList } from "rows_list.slint";
 import { OutputTray, OutputLineData } from "tray.slint";
 import { OperationDialog, ConfirmDialog, SettingsDialog, AboutDialog } from "dialogs.slint";
 
-export { Theme, RowData, StatusKind, OutputLineData }
+export { Theme, RowData, StatusKind, OutputLineData, Ring }
+
+// Which control opened the dialog that is showing, so focus can go back to it.
+enum Opener { rows, add, settings, about }
 
 export component MainWindow inherits Window {
     title: "BuildPilot";
@@ -19,6 +28,8 @@ export component MainWindow inherits Window {
     background: Theme.background;
 
     in property <[RowData]> rows;
+    // The selected row's position in `rows`; -1 when none is selected.
+    in property <int> selected-index: -1;
     in property <[OutputLineData]> lines;
     in property <[string]> notices;
     in property <string> version;
@@ -88,6 +99,9 @@ export component MainWindow inherits Window {
     callback close-settings();
     callback close-about();
 
+    // Moves keyboard focus one stop round the ring: forward when true, back when false.
+    callback step-ring(bool);
+
     public function scroll-output-to-end() {
         tray.scroll-to-end();
     }
@@ -97,181 +111,192 @@ export component MainWindow inherits Window {
         Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light;
     }
 
-    // Drag state: the row being dragged, how far the pointer has moved, where it would land.
-    property <int> dragging: -1;
-    property <length> drag-offset;
-    property <length> row-pitch: Theme.row-height + 6px;
-    // The target changes only once the pointer passes the middle of the next row (R-1).
-    property <int> drop-target: root.dragging < 0 ? -1
-        : max(0, min(root.rows.length - 1,
-            floor((root.dragging * root.row-pitch + root.drag-offset + root.row-pitch / 2)
-                / root.row-pitch)));
+    out property <bool> modal-open: root.show-operation-dialog || root.show-confirm
+        || root.show-settings || root.show-about;
+    changed modal-open => {
+        Ring.modal-open = self.modal-open;
+        if (!self.modal-open) {
+            root.return-focus();
+        }
+    }
+    // The control a closing dialog hands focus back to.
+    property <Opener> opener: Opener.add;
 
-    VerticalLayout {
-        HorizontalLayout {
-            padding: 10px;
-            spacing: Theme.gap;
-            IconButton {
-                icon: @image-url("../assets/add.png");
-                label: "Add a build script";
-                tooltip-below: true;
-                activated => { root.add(); }
+    function return-focus() {
+        if (root.opener == Opener.settings) {
+            settings-button.focus-me();
+        } else if (root.opener == Opener.about) {
+            about-button.focus-me();
+        } else if (root.opener == Opener.rows && root.rows.length > 0) {
+            rows-list.focus-list();
+        } else {
+            add-button.focus-me();
+        }
+    }
+
+    // Left and Right step the ring wherever a control has not used them (Tab is Slint's own).
+    FocusScope {
+        enabled: false;
+        width: parent.width;
+        height: parent.height;
+        key-pressed(event) => {
+            if (event.modifiers.alt || event.modifiers.control) {
+                return reject;
             }
-            Text {
-                text: "BuildPilot";
-                font-size: Theme.title-size;
-                font-weight: 600;
-                color: Theme.text;
-                vertical-alignment: center;
-                horizontal-stretch: 1;
+            if (event.text == Key.RightArrow) {
+                root.step-ring(true);
+                return accept;
             }
-            IconButton {
-                icon: Theme.dark ? @image-url("../assets/light-mode.png")
-                    : @image-url("../assets/dark-mode.png");
-                label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
-                tooltip-below: true;
-                activated => { root.toggle-theme(); }
+            if (event.text == Key.LeftArrow) {
+                root.step-ring(false);
+                return accept;
             }
-            IconButton {
-                icon: @image-url("../assets/settings.png");
-                label: "Settings";
-                tooltip-below: true;
-                activated => { root.open-settings(); }
-            }
-            IconButton {
-                icon: @image-url("../assets/help-about.png");
-                label: "Help and About";
-                tooltip-below: true;
-                activated => { root.open-about(); }
-            }
+            return reject;
         }
 
-        for notice[n] in root.notices: Rectangle {
-            height: notice-text.preferred-height + 16px;
-            background: Theme.surface;
-            border-width: 1px;
-            border-color: Theme.caution;
+        // The neutral start: holds focus when no control does, so the first Tab, Right, Shift+Tab
+        // or Left enters the ring from here. Never a stop and never drawn.
+        sink := FocusScope {
+            width: 0;
+            height: 0;
+            focus-on-click: false;
+            focus-on-tab-navigation: false;
+            init => { self.focus(); }
+        }
+
+        VerticalLayout {
             HorizontalLayout {
-                padding-left: 12px;
-                padding-right: 6px;
+                padding: 10px;
                 spacing: Theme.gap;
-                notice-text := Text {
-                    text: notice;
+                add-button := IconButton {
+                    icon: @image-url("../assets/add.png");
+                    label: "Add a build script";
+                    tooltip-below: true;
+                    activated => { root.opener = Opener.add; root.add(); }
+                }
+                Text {
+                    text: "BuildPilot";
+                    font-size: Theme.title-size;
+                    font-weight: 600;
                     color: Theme.text;
-                    wrap: word-wrap;
                     vertical-alignment: center;
                     horizontal-stretch: 1;
                 }
-                Button { text: "Dismiss"; clicked => { root.dismiss-notice(n); } }
+                IconButton {
+                    icon: Theme.dark ? @image-url("../assets/light-mode.png")
+                        : @image-url("../assets/dark-mode.png");
+                    label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
+                    tooltip-below: true;
+                    activated => { root.toggle-theme(); }
+                }
+                settings-button := IconButton {
+                    icon: @image-url("../assets/settings.png");
+                    label: "Settings";
+                    tooltip-below: true;
+                    activated => { root.opener = Opener.settings; root.open-settings(); }
+                }
+                about-button := IconButton {
+                    icon: @image-url("../assets/help-about.png");
+                    label: "Help and About";
+                    tooltip-below: true;
+                    activated => { root.opener = Opener.about; root.open-about(); }
+                }
             }
-        }
 
-        Rectangle {
-            vertical-stretch: 1;
-            if root.rows.length == 0: VerticalLayout {
-                alignment: center;
-                spacing: 12px;
-                Text {
-                    text: "No build scripts yet.";
-                    horizontal-alignment: center;
-                    font-size: Theme.title-size;
-                    color: Theme.text;
-                }
-                Text {
-                    text: "Add one with the + button: BuildPilot remembers it from then on.";
-                    horizontal-alignment: center;
-                    color: Theme.text-muted;
-                }
+            for notice[n] in root.notices: Rectangle {
+                height: max(notice-text.preferred-height + 16px, 44px);
+                background: Theme.surface;
+                border-width: 1px;
+                border-color: Theme.caution;
                 HorizontalLayout {
-                    alignment: center;
-                    Button { text: "Add a build script"; primary: true; clicked => { root.add(); } }
-                }
-            }
-            ScrollView {
-                visible: root.rows.length > 0;
-                content-height: root.rows.length * root.row-pitch + 20px;
-                for row[i] in root.rows: OperationRow {
-                    x: 10px;
-                    y: 10px + i * root.row-pitch;
-                    width: parent.width - 20px;
-                    data: row;
-                    being-dragged: root.dragging == i;
-                    drop-marker: root.dragging < 0 || root.drop-target != i || root.drop-target == root.dragging ? 0
-                        : root.drop-target > root.dragging ? 1 : -1;
-                    select => { root.select(row.id); }
-                    toggle-checked => { root.toggle-checked(row.id); }
-                    run => { root.run(row.id); }
-                    stop => { root.stop(row.id); }
-                    edit => { root.edit(row.id); }
-                    open-script => { root.open-script(row.id); }
-                    locate-script => { root.locate-script(row.id); }
-                    remove => { root.remove(row.id); }
-                    move-up => { root.move-up(row.id); }
-                    move-down => { root.move-down(row.id); }
-                    drag-start => {
-                        root.dragging = i;
-                        root.drag-offset = 0;
+                    padding-left: 12px;
+                    padding-right: 6px;
+                    padding-top: 4px;
+                    padding-bottom: 4px;
+                    spacing: Theme.gap;
+                    notice-text := Text {
+                        text: notice;
+                        color: Theme.text;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
                     }
-                    drag-move(offset) => { root.drag-offset = offset; }
-                    drag-end => {
-                        if (root.dragging >= 0 && root.drop-target != root.dragging) {
-                            root.move-to(row.id, root.drop-target);
-                        }
-                        root.dragging = -1;
+                    TextButton {
+                        text: "Dismiss";
+                        label: "Dismiss notice " + (n + 1);
+                        clicked => { root.dismiss-notice(n); }
                     }
                 }
             }
+
+            rows-list := RowsList {
+                vertical-stretch: 1;
+                rows: root.rows;
+                selected-index: root.selected-index;
+                add => { root.opener = Opener.add; root.add(); }
+                select(id) => { root.select(id); }
+                toggle-checked(id) => { root.toggle-checked(id); }
+                run(id) => { root.run(id); }
+                stop(id) => { root.stop(id); }
+                edit(id) => { root.opener = Opener.rows; root.edit(id); }
+                open-script(id) => { root.open-script(id); }
+                locate-script(id) => { root.locate-script(id); }
+                remove(id) => { root.opener = Opener.rows; root.remove(id); }
+                move-up(id) => { root.move-up(id); }
+                move-down(id) => { root.move-down(id); }
+                move-to(id, to) => { root.move-to(id, to); }
+            }
+
+            tray := OutputTray {
+                height: root.tray-expanded ? root.tray-height : Theme.tray-header-height;
+                lines: root.lines;
+                heading: root.tray-heading;
+                dropped-note: root.dropped-note;
+                expanded: root.tray-expanded;
+                following: root.following;
+                toggle => { root.toggle-tray(); }
+                jump-to-latest => { root.jump-to-latest(); }
+                scrolled(at-end) => { root.tray-scrolled(at-end); }
+                resize-by(delta) => { root.resize-tray(delta); }
+            }
         }
 
-        tray := OutputTray {
-            height: root.tray-expanded ? root.tray-height : Theme.tray-header-height;
-            lines: root.lines;
-            heading: root.tray-heading;
-            dropped-note: root.dropped-note;
-            expanded: root.tray-expanded;
-            following: root.following;
-            toggle => { root.toggle-tray(); }
-            jump-to-latest => { root.jump-to-latest(); }
-            scrolled(at-end) => { root.tray-scrolled(at-end); }
-            resize-by(delta) => { root.resize-tray(delta); }
+        if root.show-operation-dialog: OperationDialog {
+            heading: root.operation-heading;
+            save-label: root.operation-save-label;
+            name <=> root.field-name;
+            script <=> root.field-script;
+            working-dir <=> root.field-working-dir;
+            arguments <=> root.field-arguments;
+            icon: root.field-icon;
+            icon-is-placeholder: root.field-icon-is-placeholder;
+            icon-note: root.field-icon-note;
+            note: root.operation-note;
+            error: root.operation-error;
+            browse-script => { root.browse-script(); }
+            browse-folder => { root.browse-folder(); }
+            choose-icon => { root.choose-icon(); }
+            use-placeholder-icon => { root.use-placeholder-icon(); }
+            save => { root.save-operation(); }
+            cancel => { root.cancel-operation(); }
         }
-    }
-
-    if root.show-operation-dialog: OperationDialog {
-        heading: root.operation-heading;
-        save-label: root.operation-save-label;
-        name <=> root.field-name;
-        script <=> root.field-script;
-        working-dir <=> root.field-working-dir;
-        arguments <=> root.field-arguments;
-        icon: root.field-icon;
-        icon-is-placeholder: root.field-icon-is-placeholder;
-        icon-note: root.field-icon-note;
-        note: root.operation-note;
-        error: root.operation-error;
-        browse-script => { root.browse-script(); }
-        browse-folder => { root.browse-folder(); }
-        choose-icon => { root.choose-icon(); }
-        use-placeholder-icon => { root.use-placeholder-icon(); }
-        save => { root.save-operation(); }
-        cancel => { root.cancel-operation(); }
-    }
-    if root.show-confirm: ConfirmDialog {
-        heading: root.confirm-heading;
-        message: root.confirm-message;
-        confirm-label: root.confirm-label;
-        confirm => { root.confirm(); }
-        cancel => { root.cancel-confirm(); }
-    }
-    if root.show-settings: SettingsDialog {
-        theme-choice: root.theme-choice;
-        data-folder: root.data-folder;
-        choose-theme(choice) => { root.choose-theme(choice); }
-        open-data-folder => { root.open-data-folder(); }
-        close => { root.close-settings(); }
-    }
-    if root.show-about: AboutDialog {
-        version: root.version;
-        close => { root.close-about(); }
+        if root.show-confirm: ConfirmDialog {
+            heading: root.confirm-heading;
+            message: root.confirm-message;
+            confirm-label: root.confirm-label;
+            confirm => { root.confirm(); }
+            cancel => { root.cancel-confirm(); }
+        }
+        if root.show-settings: SettingsDialog {
+            theme-choice: root.theme-choice;
+            data-folder: root.data-folder;
+            choose-theme(choice) => { root.choose-theme(choice); }
+            open-data-folder => { root.open-data-folder(); }
+            close => { root.close-settings(); }
+        }
+        if root.show-about: AboutDialog {
+            version: root.version;
+            close => { root.close-about(); }
+        }
     }
 }

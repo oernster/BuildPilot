@@ -57,6 +57,10 @@ const FORBIDDEN_DEPENDENCIES: &[(&str, &[&str])] = &[
 ];
 
 fn rust_files(dir: &Path) -> Vec<PathBuf> {
+    files_with_extension(dir, "rs")
+}
+
+fn files_with_extension(dir: &Path, wanted: &str) -> Vec<PathBuf> {
     let mut files = Vec::new();
     let Ok(entries) = fs::read_dir(dir) else {
         return files;
@@ -64,8 +68,11 @@ fn rust_files(dir: &Path) -> Vec<PathBuf> {
     for entry in entries {
         let path = entry.expect("directory entry is readable").path();
         if path.is_dir() {
-            files.extend(rust_files(&path));
-        } else if path.extension().is_some_and(|extension| extension == "rs") {
+            files.extend(files_with_extension(&path, wanted));
+        } else if path
+            .extension()
+            .is_some_and(|extension| extension == wanted)
+        {
             files.push(path);
         }
     }
@@ -251,4 +258,38 @@ fn cargo_version_matches_the_version_file() {
         .and_then(|rest| rest.strip_suffix('"'))
         .expect("Cargo.toml declares a package version");
     assert_eq!(declared, version, "Cargo.toml version differs from VERSION");
+}
+
+/// Where the Slint UI lives.
+const UI_DIR: &str = "ui";
+/// Standard widgets that draw focus in their own style rather than the house ring; the UI uses
+/// the controls in ui/widgets.slint instead.
+const OWN_FOCUS_WIDGETS: &[&str] = &["Button", "CheckBox"];
+
+// A11Y-002: every control wears the house ring (green on hover or focus, red when disabled) and
+// the accent is never a ring.
+#[test]
+fn every_control_follows_the_ring_model() {
+    let mut violations = Vec::new();
+    for path in files_with_extension(&Path::new(ROOT).join(UI_DIR), "slint") {
+        let source = read(&path);
+        for (number, line) in source.lines().enumerate() {
+            let place = format!("{}:{}", relative(&path), number + 1);
+            if line.contains("std-widgets.slint") {
+                let imported = line
+                    .split(['{', '}'])
+                    .nth(1)
+                    .unwrap_or_default()
+                    .split(',')
+                    .map(str::trim);
+                for widget in imported.filter(|name| OWN_FOCUS_WIDGETS.contains(name)) {
+                    violations.push(format!("{place}: imports the standard {widget}"));
+                }
+            }
+            if line.contains("border-color") && line.contains("Theme.accent") {
+                violations.push(format!("{place}: draws a border in the accent"));
+            }
+        }
+    }
+    assert!(violations.is_empty(), "{}", violations.join("\n"));
 }

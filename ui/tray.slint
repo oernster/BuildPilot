@@ -1,7 +1,12 @@
 // The live output tray at the foot of the window (SRS 3.10).
+//
+// The output is read from the keyboard by tabbing to it: a stop only while it has more lines
+// than fit, reached by Tab alone (a click never focuses it) and never ringed, since it is text.
+// Up, Down, Page Up, Page Down, Home and End scroll it.
 
-import { ListView, Button } from "std-widgets.slint";
+import { ListView } from "std-widgets.slint";
 import { Theme } from "theme.slint";
+import { TextButton, Ring } from "widgets.slint";
 
 export struct OutputLineData { text: string, err: bool }
 
@@ -22,8 +27,17 @@ export component OutputTray inherits Rectangle {
     border-width: 1px;
     border-color: Theme.border;
 
+    // The height of one line of output, for scrolling by line.
+    property <length> line-step: Theme.mono-size * 1.5;
+    property <length> lowest: min(0px, list.visible-height - list.content-height);
+
     public function scroll-to-end() {
-        list.content-y = min(0px, list.visible-height - list.content-height);
+        list.content-y = root.lowest;
+    }
+
+    function scroll-to(y: length) {
+        list.content-y = max(root.lowest, min(0px, y));
+        root.scrolled(list.content-y <= root.lowest + 2px);
     }
 
     if root.expanded: TouchArea {
@@ -36,10 +50,11 @@ export component OutputTray inherits Rectangle {
     VerticalLayout {
         HorizontalLayout {
             height: Theme.tray-header-height;
+            padding: 2px;
             padding-left: 8px;
             padding-right: 8px;
             spacing: Theme.gap;
-            Button {
+            TextButton {
                 text: root.expanded ? "Hide output" : "Show output";
                 clicked => { root.toggle(); }
             }
@@ -55,32 +70,64 @@ export component OutputTray inherits Rectangle {
                 vertical-alignment: center;
                 color: Theme.caution;
             }
-            if root.expanded && !root.following: Button {
+            if root.expanded && !root.following: TextButton {
                 text: "Jump to latest";
                 clicked => { root.jump-to-latest(); }
             }
         }
-        list := ListView {
-            visible: root.expanded;
+        Rectangle {
             vertical-stretch: 1;
-            scrolled => {
-                root.scrolled(self.content-y <= self.visible-height - self.content-height + 2px);
-            }
-            for line in root.lines: HorizontalLayout {
-                padding-left: 6px;
-                spacing: 4px;
-                Text {
-                    width: 12px;
-                    text: line.err ? "!" : "";
-                    color: Theme.failure;
-                    font-family: "Consolas";
-                    font-size: Theme.mono-size;
+            visible: root.expanded;
+            output-stop := FocusScope {
+                enabled: root.expanded && list.content-height > list.visible-height
+                    && !Ring.modal-open;
+                focus-on-click: false;
+                focus-changed-event => {
+                    if (self.has-focus) {
+                        Ring.focused = "Output";
+                    } else if (Ring.focused == "Output") {
+                        Ring.focused = "";
+                    }
                 }
-                Text {
-                    text: line.text;
-                    color: line.err ? Theme.failure : Theme.text;
-                    font-family: "Consolas";
-                    font-size: Theme.mono-size;
+                key-pressed(event) => {
+                    if (event.text == Key.UpArrow) {
+                        root.scroll-to(list.content-y + root.line-step);
+                    } else if (event.text == Key.DownArrow) {
+                        root.scroll-to(list.content-y - root.line-step);
+                    } else if (event.text == Key.PageUp) {
+                        root.scroll-to(list.content-y + list.visible-height);
+                    } else if (event.text == Key.PageDown) {
+                        root.scroll-to(list.content-y - list.visible-height);
+                    } else if (event.text == Key.Home) {
+                        root.scroll-to(0px);
+                    } else if (event.text == Key.End) {
+                        root.scroll-to(root.lowest);
+                    } else {
+                        return reject;
+                    }
+                    return accept;
+                }
+            }
+            list := ListView {
+                scrolled => {
+                    root.scrolled(self.content-y <= root.lowest + 2px);
+                }
+                for line in root.lines: HorizontalLayout {
+                    padding-left: 6px;
+                    spacing: 4px;
+                    Text {
+                        width: 12px;
+                        text: line.err ? "!" : "";
+                        color: Theme.failure;
+                        font-family: "Consolas";
+                        font-size: Theme.mono-size;
+                    }
+                    Text {
+                        text: line.text;
+                        color: line.err ? Theme.failure : Theme.text;
+                        font-family: "Consolas";
+                        font-size: Theme.mono-size;
+                    }
                 }
             }
         }

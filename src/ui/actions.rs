@@ -3,6 +3,7 @@
 
 use std::rc::Rc;
 
+use slint::platform::{Key, WindowEvent};
 use slint::{ComponentHandle, Model, SharedString};
 
 use crate::application::LocateOutcome;
@@ -19,6 +20,20 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     wire_rows(ui, window);
     wire_tray(ui, window);
     wire_confirm(ui, window);
+    let weak = window.as_weak();
+    window.on_step_ring(move |forward| {
+        if let Some(window) = weak.upgrade() {
+            step_ring(window.window(), forward);
+        }
+    });
+}
+
+/// Moves keyboard focus one stop, exactly as Tab or Shift+Tab would, so Right and Left walk the
+/// same ring Slint walks (A11Y-003).
+pub fn step_ring(window: &slint::Window, forward: bool) {
+    let key = SharedString::from(if forward { Key::Tab } else { Key::Backtab });
+    window.dispatch_event(WindowEvent::KeyPressed { text: key.clone() });
+    window.dispatch_event(WindowEvent::KeyReleased { text: key });
 }
 
 /// An operation identity from a row; rows only ever carry valid ones.

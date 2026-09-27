@@ -1,0 +1,173 @@
+// The flight deck's rows (ROW-001); the empty state when there are none.
+//
+// Keyboard: the rows are ONE stop. Up and Down walk them (wrapping) and scroll the chosen row
+// into view; Space checks the selected row; Enter edits it; Alt+Up and Alt+Down move it. The
+// selected row's own controls follow this stop round the ring. The stop takes focus from Tab
+// and from a click on a row, never from a click on the empty space around them.
+
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { TextButton, Ring } from "widgets.slint";
+import { OperationRow, RowData } from "row.slint";
+
+export component RowsList inherits Rectangle {
+    in property <[RowData]> rows;
+    // The selected row's position in `rows`; -1 when none is selected.
+    in property <int> selected-index: -1;
+    // The name `Ring.focused` reports while the rows hold focus.
+    in property <string> label: "Build scripts";
+
+    callback add();
+    callback select(string);
+    callback toggle-checked(string);
+    callback run(string);
+    callback stop(string);
+    callback edit(string);
+    callback open-script(string);
+    callback locate-script(string);
+    callback remove(string);
+    callback move-up(string);
+    callback move-down(string);
+    callback move-to(string, int);
+
+    public function focus-list() {
+        rows-stop.focus();
+    }
+
+    // Drag state: the row being dragged, how far the pointer has moved, where it would land.
+    property <int> dragging: -1;
+    property <length> drag-offset;
+    property <length> row-pitch: Theme.row-height + 6px;
+    property <length> rows-padding: 10px;
+    // The target changes only once the pointer passes the middle of the next row (R-1).
+    property <int> drop-target: root.dragging < 0 ? -1
+        : max(0, min(root.rows.length - 1,
+            floor((root.dragging * root.row-pitch + root.drag-offset + root.row-pitch / 2)
+                / root.row-pitch)));
+
+    // Selects the row `delta` places from the selected one (wrapping) then scrolls it into view.
+    function select-step(delta: int) {
+        if (root.rows.length == 0) {
+            return;
+        }
+        let from = root.selected-index < 0 ? (delta > 0 ? -1 : 0) : root.selected-index;
+        let to = mod(from + delta + root.rows.length, root.rows.length);
+        root.select(root.rows[to].id);
+        let top = root.rows-padding + to * root.row-pitch;
+        let bottom = top + Theme.row-height + root.rows-padding;
+        if (top + rows-view.content-y < 0) {
+            rows-view.content-y = -top + root.rows-padding;
+        } else if (bottom + rows-view.content-y > rows-view.visible-height) {
+            rows-view.content-y = rows-view.visible-height - bottom;
+        }
+    }
+
+    if root.rows.length == 0: VerticalLayout {
+        alignment: center;
+        spacing: 12px;
+        Text {
+            text: "No build scripts yet.";
+            horizontal-alignment: center;
+            font-size: Theme.title-size;
+            color: Theme.text;
+        }
+        Text {
+            text: "Add one with the + button: BuildPilot remembers it from then on.";
+            horizontal-alignment: center;
+            color: Theme.text-muted;
+        }
+        HorizontalLayout {
+            alignment: center;
+            TextButton {
+                text: "Add a build script";
+                primary: true;
+                clicked => { root.add(); }
+            }
+        }
+    }
+
+    rows-stop := FocusScope {
+        enabled: root.rows.length > 0 && !Ring.modal-open;
+        focus-on-click: false;
+        width: 0;
+        height: 0;
+        focus-changed-event => {
+            if (self.has-focus) {
+                Ring.focused = root.label;
+                if (root.selected-index < 0) {
+                    root.select-step(1);
+                }
+            } else if (Ring.focused == root.label) {
+                Ring.focused = "";
+            }
+        }
+        key-pressed(event) => {
+            if (root.selected-index < 0) {
+                return reject;
+            }
+            let id = root.rows[root.selected-index].id;
+            if (event.modifiers.alt && event.text == Key.UpArrow) {
+                root.move-up(id);
+                return accept;
+            }
+            if (event.modifiers.alt && event.text == Key.DownArrow) {
+                root.move-down(id);
+                return accept;
+            }
+            if (event.text == Key.UpArrow) {
+                root.select-step(-1);
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                root.select-step(1);
+                return accept;
+            }
+            if (event.text == " ") {
+                root.toggle-checked(id);
+                return accept;
+            }
+            if (event.text == Key.Return) {
+                root.edit(id);
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    rows-view := ScrollView {
+        visible: root.rows.length > 0;
+        content-height: root.rows.length * root.row-pitch + 2 * root.rows-padding;
+        for row[i] in root.rows: OperationRow {
+            x: root.rows-padding;
+            y: root.rows-padding + i * root.row-pitch;
+            width: parent.width - 2 * root.rows-padding;
+            data: row;
+            list-focused: rows-stop.has-focus;
+            being-dragged: root.dragging == i;
+            drop-marker: root.dragging < 0 || root.drop-target != i
+                || root.drop-target == root.dragging ? 0
+                : root.drop-target > root.dragging ? 1 : -1;
+            select => { rows-stop.focus(); root.select(row.id); }
+            toggle-checked => { root.toggle-checked(row.id); }
+            run => { root.run(row.id); }
+            stop => { root.stop(row.id); }
+            edit => { root.edit(row.id); }
+            open-script => { root.open-script(row.id); }
+            locate-script => { root.locate-script(row.id); }
+            remove => { root.remove(row.id); }
+            move-up => { root.move-up(row.id); }
+            move-down => { root.move-down(row.id); }
+            drag-start => {
+                root.dragging = i;
+                root.drag-offset = 0;
+            }
+            drag-move(offset) => { root.drag-offset = offset; }
+            drag-end => {
+                if (root.dragging >= 0 && root.drop-target != root.dragging) {
+                    root.move-to(row.id, root.drop-target);
+                }
+                root.dragging = -1;
+            }
+        }
+    }
+}
