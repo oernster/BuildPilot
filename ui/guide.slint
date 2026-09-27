@@ -11,10 +11,17 @@ import { ReadingPane } from "reading.slint";
 struct GuideEntry { icon: image, name: string, text: string }
 struct GuideRule { title: string, text: string }
 
-component SectionHeading inherits Text {
-    font-size: Theme.body-size;
-    font-weight: 600;
-    color: Theme.text;
+// A heading stands clear of the section above it; the first has nothing above.
+component SectionHeading inherits VerticalLayout {
+    in property <string> text;
+    in property <bool> first;
+    padding-top: root.first ? 0 : Theme.gap * 2;
+    Text {
+        text: root.text;
+        font-size: Theme.body-size;
+        font-weight: 600;
+        color: Theme.text;
+    }
 }
 
 component Entries inherits VerticalLayout {
@@ -116,7 +123,7 @@ export component GuideDialog inherits Modal {
         VerticalLayout {
             spacing: 10px;
             padding-right: 16px;
-            SectionHeading { text: "The bar along the top"; }
+            SectionHeading { text: "The bar along the top"; first: true; }
             Paragraph { text: "Hover any control to see its name."; }
             Entries { entries: root.toolbar; }
             SectionHeading { text: "Each row"; }
