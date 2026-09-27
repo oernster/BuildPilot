@@ -34,6 +34,7 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     list.on_toggle(move |index| {
         if let Ok(index) = usize::try_from(index)
             && let Some(entry) = this.scanned.borrow_mut().get_mut(index)
+            && !entry.0.already_added
         {
             entry.1 = !entry.1;
         }
@@ -113,6 +114,7 @@ impl Ui {
                 ticked: *ticked,
                 warning: SharedString::from(folder.warning.clone().unwrap_or_default()),
                 note: SharedString::from(folder.unticked_because.clone().unwrap_or_default()),
+                locked: folder.already_added,
             })
             .collect();
         self.with_window(|w| {
@@ -127,7 +129,7 @@ impl Ui {
             .scanned
             .borrow()
             .iter()
-            .filter(|(_, ticked)| *ticked)
+            .filter(|(folder, ticked)| *ticked && !folder.already_added)
             .map(|(folder, _)| folder.clone())
             .collect();
         self.close_scan();

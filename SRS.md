@@ -783,9 +783,11 @@ Verified by: `application` test; Manual for the list.
 
 **SCAN-006 (S) Unticked where a choice is owed.** In the SCAN-005 list, a folder shall start unticked
 with a note saying why when its proposed steps and working directory match an operation already
-on the deck; likewise when ENV-002 cannot preselect its environment. Rationale: ADD-006 allows the
-duplicate; a bulk add should still not make one by default. An environment choice needs the
-single-folder dialog. Verified by: `application` test.
+on the deck; likewise when ENV-002 cannot preselect its environment. A folder already on the deck
+cannot be ticked at all: its tick box is shown dimmed and is no stop on the ring. Rationale:
+ADD-006 allows a duplicate through Add, one at a time; a bulk add never makes one (owner,
+2026-09-27). An environment choice needs the single-folder dialog. Verified by: `application`
+test; `keyboard` test for the ring; Manual for the dimmed box.
 
 **SCAN-007 (M) Nothing found.** If neither the folder nor any folder directly inside it has a
 proposal, then BuildPilot shall say which file names it looked for and open the script picker in

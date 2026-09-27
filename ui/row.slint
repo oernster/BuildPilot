@@ -118,7 +118,7 @@ export component OperationRow inherits Rectangle {
                 width: Theme.operation-icon-size;
                 height: Theme.operation-icon-size;
                 image-fit: contain;
-                opacity: root.data.icon-is-placeholder ? 0.45 : 1;
+                opacity: root.data.icon-is-placeholder ? Theme.dimmed : 1;
                 accessible-role: image;
                 accessible-label: root.data.icon-problem == "" ? "" : root.data.icon-problem;
             }

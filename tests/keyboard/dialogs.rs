@@ -131,7 +131,8 @@ fn the_add_choice_opens_on_script() {
     );
 }
 
-// SCAN-005: the list opens on Cancel; each project's tick box is a stop.
+// SCAN-005, SCAN-006: the list opens on Cancel; each project's tick box is a stop, except one
+// already on the flight deck, which cannot be ticked.
 #[test]
 fn the_project_list_rings_its_tick_boxes() {
     let window = window();
@@ -141,6 +142,7 @@ fn the_project_list_rings_its_tick_boxes() {
         ticked: true,
         warning: warning.into(),
         note: SharedString::default(),
+        locked: false,
     };
     let list = window.global::<ScanList>();
     list.set_rows(ModelRc::new(VecModel::from(vec![
@@ -148,6 +150,12 @@ fn the_project_list_rings_its_tick_boxes() {
             "edca",
             "buildexe.py was not found: only buildinstaller.py will run",
         ),
+        ScannedRow {
+            ticked: false,
+            note: "Already on the flight deck".into(),
+            locked: true,
+            ..row("stellody", "")
+        },
         row("pigeonpost", ""),
     ])));
     let opener = window.as_weak();

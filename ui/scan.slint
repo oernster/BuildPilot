@@ -16,6 +16,8 @@ export struct ScannedRow {
     warning: string,
     // SCAN-006's reason it starts unticked; empty when it starts ticked.
     note: string,
+    // Already on the flight deck: its tick box cannot be ticked (SCAN-006).
+    locked: bool,
 }
 
 export global ScanList {
@@ -103,6 +105,7 @@ export component ScanListDialog inherits Modal {
             spacing: Theme.gap;
             Toggle {
                 checked: row.ticked;
+                enabled: !row.locked;
                 label: "Add " + row.name;
                 in-dialog: true;
                 toggled => { ScanList.toggle(index); }

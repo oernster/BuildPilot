@@ -141,7 +141,7 @@ export component OperationDialog inherits Modal {
         Image {
             source: root.icon-is-placeholder
                 ? @image-url("../assets/application-icon.png") : root.icon;
-            opacity: root.icon-is-placeholder ? 0.45 : 1;
+            opacity: root.icon-is-placeholder ? Theme.dimmed : 1;
             width: 40px;
             height: 40px;
             image-fit: contain;

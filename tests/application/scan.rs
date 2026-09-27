@@ -93,7 +93,8 @@ fn a_parent_lists_its_projects() {
     assert!(found.iter().all(|folder| folder.unticked_because.is_none()));
 }
 
-// SCAN-006: a project already on the deck starts unticked; so does one owing an environment choice.
+// SCAN-006: a project already on the deck starts unticked and cannot be ticked; one owing an
+// environment choice starts unticked.
 #[test]
 fn a_choice_owed_starts_unticked() {
     let world = projects()
@@ -117,6 +118,8 @@ fn a_choice_owed_starts_unticked() {
             None
         ]
     );
+    let locked: Vec<bool> = found.iter().map(|folder| folder.already_added).collect();
+    assert_eq!(locked, [false, true, false]);
 }
 
 // ENV-002 through SCAN-004: a preferred name among several is chosen for the operator.

@@ -266,6 +266,8 @@ export component MenuItem inherits Rectangle {
 export component Toggle inherits Rectangle {
     in property <bool> checked;
     in property <string> label;
+    // False: shown dimmed, cannot be changed and is no stop on the ring.
+    in property <bool> enabled: true;
     in property <bool> on-ring: true;
     // A stop of an open dialog's ring rather than the main window's.
     in property <bool> in-dialog;
@@ -274,14 +276,20 @@ export component Toggle inherits Rectangle {
     width: 28px;
     height: 28px;
     border-radius: 4px;
+    opacity: root.enabled ? 1 : Theme.dimmed;
     background: root.checked ? Theme.accent : Theme.surface;
     border-width: RingMetrics.width;
-    border-color: touch.has-hover || stop.has-focus ? Theme.ring : Theme.text-muted;
+    border-color: root.enabled && (touch.has-hover || stop.has-focus) ? Theme.ring : Theme.text-muted;
     accessible-role: checkbox;
     accessible-label: root.label;
+    accessible-enabled: root.enabled;
     accessible-checkable: true;
     accessible-checked: root.checked;
-    accessible-action-default => { root.toggled(); }
+    accessible-action-default => {
+        if (root.enabled) {
+            root.toggled();
+        }
+    }
 
     if root.checked: Text {
         text: "\u{2713}";
@@ -292,12 +300,17 @@ export component Toggle inherits Rectangle {
     }
 
     touch := TouchArea {
-        mouse-cursor: MouseCursor.pointer;
-        clicked => { root.toggled(); }
+        mouse-cursor: root.enabled ? MouseCursor.pointer : MouseCursor.not-allowed;
+        clicked => {
+            if (root.enabled) {
+                root.toggled();
+            }
+        }
     }
 
     stop := Stop {
         label: root.label;
+        active: root.enabled;
         on-ring: root.on-ring;
         in-dialog: root.in-dialog;
         activated => { root.toggled(); }

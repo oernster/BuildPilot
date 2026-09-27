@@ -19,6 +19,8 @@ pub struct ScannedFolder {
     pub warning: Option<String>,
     /// Why the list starts it unticked; `None` when it starts ticked (SCAN-006).
     pub unticked_because: Option<String>,
+    /// An operation on the deck already runs it, so the list never lets it be ticked (SCAN-006).
+    pub already_added: bool,
 }
 
 /// What a scan of a chosen folder found.
@@ -88,7 +90,8 @@ impl App {
                 .discover(folder)
                 .map_or(IconRef::Placeholder, IconRef::Discovered),
         };
-        let unticked_because = if self.already_added(&spec) {
+        let already_added = self.already_added(&spec);
+        let unticked_because = if already_added {
             Some(ALREADY_ADDED.to_owned())
         } else if unchosen {
             Some(CHOOSE_ALONE.to_owned())
@@ -99,6 +102,7 @@ impl App {
             spec,
             warning: proposal.warning(),
             unticked_because,
+            already_added,
         })
     }
 
