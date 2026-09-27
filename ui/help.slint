@@ -1,0 +1,233 @@
+// The Help menu (UI-006) and what it opens: About (UI-003, UI-009), Licence (UI-008) and the
+// update check's answer (UI-010). The Guide is in guide.slint. Every surface of text to read is a
+// ReadingPane (UI-011), with the buttons held still beneath it.
+
+import { Theme } from "theme.slint";
+import { TextButton, MenuItem } from "widgets.slint";
+import { Modal } from "dialogs.slint";
+import { ReadingPane } from "reading.slint";
+
+export struct CreditData { name: string, version: string, licence: string }
+
+// A menu dropped from the Help button: a click anywhere else closes it; Up and Down walk it.
+export component HelpMenu inherits Rectangle {
+    // Where the menu hangs from: the Help button's right edge and its foot.
+    in property <length> anchor-right;
+    in property <length> anchor-bottom;
+    callback choose(string);
+    callback dismissed();
+    // Moves focus one item: forward when true.
+    callback step(bool);
+
+    TouchArea { clicked => { root.dismissed(); } }
+    FocusScope {
+        enabled: false;
+        key-pressed(event) => {
+            if (event.text == Key.Escape) {
+                root.dismissed();
+                return accept;
+            }
+            if (event.text == Key.DownArrow) {
+                root.step(true);
+                return accept;
+            }
+            if (event.text == Key.UpArrow) {
+                root.step(false);
+                return accept;
+            }
+            return reject;
+        }
+        Rectangle {
+            x: root.anchor-right - self.width;
+            y: root.anchor-bottom + 4px;
+            width: 220px;
+            height: items.preferred-height;
+            background: Theme.surface;
+            border-radius: 8px;
+            border-width: 1px;
+            border-color: Theme.border;
+            // Swallows clicks on the menu's own background.
+            TouchArea { }
+            items := VerticalLayout {
+                padding: 6px;
+                spacing: 2px;
+                guide := MenuItem { text: "Guide"; clicked => { root.choose("guide"); } }
+                Rectangle {
+                    height: 9px;
+                    Rectangle { height: 1px; background: Theme.border; }
+                }
+                MenuItem { text: "About BuildPilot"; clicked => { root.choose("about"); } }
+                MenuItem { text: "Licence"; clicked => { root.choose("licence"); } }
+                MenuItem { text: "Check for Updates"; clicked => { root.choose("updates"); } }
+            }
+        }
+    }
+    init => { guide.focus-me(); }
+}
+
+component CloseRow inherits HorizontalLayout {
+    callback close();
+    public function focus-me() {
+        close-button.focus-me();
+    }
+    alignment: end;
+    spacing: Theme.gap;
+    @children
+    close-button := TextButton {
+        text: "Close";
+        primary: true;
+        in-dialog: true;
+        clicked => { root.close(); }
+    }
+}
+
+// About (UI-003): who and what, then the open source credits (UI-009).
+export component AboutDialog inherits Modal {
+    in property <string> version;
+    in property <string> description;
+    in property <string> author;
+    in property <string> copyright;
+    in property <string> repository;
+    in property <[CreditData]> credits;
+    in property <bool> reading-active: true;
+    callback close();
+    heading: "About BuildPilot";
+    panel-width: 560px;
+    tall: true;
+    dismissed => { root.close(); }
+    init => { buttons.focus-me(); }
+
+    HorizontalLayout {
+        spacing: 16px;
+        Image {
+            source: @image-url("../assets/application-icon.png");
+            width: 96px;
+            height: 96px;
+            image-fit: contain;
+        }
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+            Text { text: "BuildPilot"; font-size: Theme.title-size; font-weight: 600; color: Theme.text; }
+            Text { text: root.description; color: Theme.text; wrap: word-wrap; }
+        }
+    }
+    credits-pane := ReadingPane {
+        vertical-stretch: 1;
+        label: "About BuildPilot";
+        active: root.reading-active;
+        VerticalLayout {
+            spacing: 6px;
+            padding-right: 16px;
+            Text { text: "Version " + root.version; color: Theme.text; }
+            Text { text: "By " + root.author; color: Theme.text; }
+            Text { text: root.copyright; color: Theme.text; }
+            Text { text: root.repository; color: Theme.accent; }
+            Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text; wrap: word-wrap; }
+            Rectangle { height: 1px; background: Theme.border; }
+            Text { text: "Open source credits"; font-weight: 600; color: Theme.text; }
+            Text {
+                text: "BuildPilot is built from these " + root.credits.length + " crates. Help > Licence opens their licence texts.";
+                color: Theme.text-muted;
+                wrap: word-wrap;
+            }
+            // Neither text may insist on its whole width: one long licence would otherwise widen
+            // every row past the pane. The name gives way first; the licence wraps.
+            for credit in root.credits: HorizontalLayout {
+                spacing: Theme.gap;
+                Text {
+                    text: credit.name + " " + credit.version;
+                    color: Theme.text;
+                    font-size: 12px;
+                    overflow: elide;
+                    horizontal-stretch: 1;
+                }
+                credit-licence := Text {
+                    text: credit.licence;
+                    color: Theme.text-muted;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    horizontal-alignment: right;
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+    }
+    buttons := CloseRow { close => { root.close(); } }
+}
+
+// Licence (UI-008): BuildPilot's own, then the way to every crate's.
+export component LicenceDialog inherits Modal {
+    in property <string> licence-text;
+    // Empty when the notices file is there to open; otherwise why it is not.
+    in property <string> notices-note;
+    in property <bool> reading-active: true;
+    callback open-notices();
+    callback close();
+    heading: "Licence: GPL-3.0";
+    panel-width: 720px;
+    tall: true;
+    dismissed => { root.close(); }
+    init => { buttons.focus-me(); }
+
+    ReadingPane {
+        vertical-stretch: 1;
+        label: "Licence text";
+        active: root.reading-active;
+        Text {
+            text: root.licence-text;
+            color: Theme.text;
+            font-family: "Consolas";
+            font-size: Theme.mono-size;
+            wrap: word-wrap;
+        }
+    }
+    if root.notices-note != "": Text { text: root.notices-note; color: Theme.caution; wrap: word-wrap; }
+    buttons := CloseRow {
+        close => { root.close(); }
+        TextButton {
+            text: "Third-party notices";
+            label: "Open the licence texts of every crate BuildPilot is built from";
+            in-dialog: true;
+            clicked => { root.open-notices(); }
+        }
+    }
+}
+
+// The update check's answer (UI-010).
+export component UpdateDialog inherits Modal {
+    in property <string> message;
+    // True when a newer release was found: Download, Skip This Version, Later.
+    in property <bool> offer;
+    callback download();
+    callback skip();
+    callback close();
+    heading: root.offer ? "Update available" : "Check for Updates";
+    panel-width: 460px;
+    dismissed => { root.close(); }
+
+    Text { text: root.message; color: Theme.text; wrap: word-wrap; }
+    if root.offer: HorizontalLayout {
+        alignment: end;
+        spacing: Theme.gap;
+        TextButton { text: "Skip This Version"; in-dialog: true; clicked => { root.skip(); } }
+        TextButton { text: "Later"; in-dialog: true; clicked => { root.close(); } }
+        TextButton {
+            text: "Download";
+            primary: true;
+            in-dialog: true;
+            init => { self.focus-me(); }
+            clicked => { root.download(); }
+        }
+    }
+    if !root.offer: HorizontalLayout {
+        alignment: end;
+        TextButton {
+            text: "Close";
+            primary: true;
+            in-dialog: true;
+            init => { self.focus-me(); }
+            clicked => { root.close(); }
+        }
+    }
+}

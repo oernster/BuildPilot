@@ -4,5 +4,4 @@
 
 pub mod plan;
 pub mod route;
-pub mod version;
 pub mod wording;

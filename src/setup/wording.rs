@@ -2,7 +2,7 @@
 
 use super::plan::Step;
 use super::route::Route;
-use super::version::Version;
+use crate::domain::version::Version;
 
 /// What the route screen says and offers.
 #[derive(Debug, Clone, PartialEq, Eq)]

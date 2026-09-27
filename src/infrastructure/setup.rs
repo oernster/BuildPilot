@@ -11,19 +11,18 @@ use std::process::Command;
 
 use windows_sys::Win32::System::Threading::CREATE_NO_WINDOW;
 
+use crate::domain::version::Version;
 use crate::setup::plan::Step;
 use crate::setup::route::Installed;
-use crate::setup::version::Version;
 
+use super::build_info::{NOTICES, NOTICES_FILE};
 use super::locations::{
-    APP_EXE, PRODUCT_NAME, SETUP_EXE, SHORTCUT, install_folder, installed_data_folder,
+    APP_EXE, AUTHOR, PRODUCT_NAME, SETUP_EXE, SHORTCUT, install_folder, installed_data_folder,
 };
 use super::win32::{known_folders, processes, registry};
 
 /// The Apps list entry.
 pub const UNINSTALL_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\BuildPilot";
-/// Who the Apps list says publishes BuildPilot.
-const PUBLISHER: &str = "Oliver Ernster";
 /// The argument Uninstall in the Apps list passes to setup.
 pub const UNINSTALL_ARGUMENT: &str = "--uninstall";
 /// How long to wait for a closed BuildPilot to go, in milliseconds.
@@ -98,6 +97,8 @@ fn copy_files(folder: &Path, payload: &[u8]) -> io::Result<()> {
     let fresh = folder.join(format!("{APP_EXE}.new"));
     fs::write(&fresh, payload)?;
     fs::rename(&fresh, &app)?;
+    // The licence text of every crate built in, offered from the program's Licence (UI-008).
+    fs::write(folder.join(NOTICES_FILE), NOTICES)?;
     let setup = folder.join(SETUP_EXE);
     let this = env::current_exe()?;
     if !same_file(&this, &setup) {
@@ -138,7 +139,7 @@ fn register(folder: &Path, payload: &[u8], version: Version) -> io::Result<()> {
     let strings = [
         ("DisplayName", PRODUCT_NAME.to_owned()),
         ("DisplayVersion", version.to_string()),
-        ("Publisher", PUBLISHER.to_owned()),
+        ("Publisher", AUTHOR.to_owned()),
         ("DisplayIcon", format!("{app},0")),
         ("InstallLocation", folder.display().to_string()),
         (

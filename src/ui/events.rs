@@ -1,5 +1,6 @@
 //! Getting work from other threads onto the UI thread: run events from the launcher's threads
-//! (without flooding it) plus a later BuildPilot's summons (DATA-001).
+//! (without flooding it), a later BuildPilot's summons (DATA-001) and the update check's answer
+//! (UI-010).
 //!
 //! The first event after a drain schedules one drain on the event loop; events arriving before
 //! it runs ride along. Measured in spike R-2: 50,000 lines in about 0.75 s produced roughly 4,000
@@ -17,17 +18,19 @@ pub enum Hook {
     Drain,
     /// Bring the window forward.
     Summon,
+    /// Show what an update check found (UI-010).
+    Update,
 }
 
 /// How many hooks there are.
-const HOOK_COUNT: usize = 2;
+const HOOK_COUNT: usize = 3;
 
 /// What one hook does, once installed.
 type Act = Option<Rc<dyn Fn()>>;
 
 thread_local! {
     /// The UI thread's hooks, installed by `install`.
-    static HOOKS: RefCell<[Act; HOOK_COUNT]> = RefCell::new([None, None]);
+    static HOOKS: RefCell<[Act; HOOK_COUNT]> = RefCell::new([None, None, None]);
 }
 
 /// Wakes the UI thread when events are waiting.

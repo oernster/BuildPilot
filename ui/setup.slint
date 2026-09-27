@@ -3,7 +3,7 @@
 // that is showing. Work moves to the progress screen, which offers no actions at all; nothing is
 // ever greyed out in place. Every word comes from `src/setup/wording.rs`.
 
-import { ScrollView } from "std-widgets.slint";
+import { ReadingPane } from "reading.slint";
 import { Theme } from "theme.slint";
 import { IconButton, TextButton, Toggle, Ring } from "widgets.slint";
 
@@ -40,6 +40,8 @@ export component SetupWindow inherits Window {
     min-width: 640px;
     min-height: 480px;
     background: Theme.background;
+    init => { Ring.window-width = self.width; }
+    changed width => { Ring.window-width = self.width; }
 
     in property <SetupScreen> screen;
     in property <string> heading;
@@ -206,14 +208,14 @@ export component SetupWindow inherits Window {
                 VerticalLayout {
                     padding: 16px;
                     spacing: 12px;
-                    // Text to read: never a stop and never ringed.
-                    ScrollView {
+                    // Text to read, which reads itself (UI-011).
+                    ReadingPane {
                         vertical-stretch: 1;
+                        label: "Licence text";
                         Text {
                             text: root.licence-text;
                             color: Theme.text;
                             wrap: word-wrap;
-                            width: parent.width - 16px;
                         }
                     }
                     HorizontalLayout {

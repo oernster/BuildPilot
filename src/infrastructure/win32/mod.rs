@@ -3,6 +3,7 @@
 
 pub mod codepage;
 pub mod diagnostics;
+pub mod http;
 pub mod instance;
 pub mod job;
 pub mod known_folders;

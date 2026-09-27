@@ -1,7 +1,7 @@
 //! Which conversation this run of setup is having (INST-003), decided once from one reading of
 //! the machine, so the screen, its heading, its options and its buttons cannot disagree.
 
-use super::version::Version;
+use crate::domain::version::Version;
 
 /// What the machine holds, read once before anything is drawn.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

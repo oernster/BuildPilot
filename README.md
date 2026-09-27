@@ -49,8 +49,14 @@ Every script stays runnable without it.
 - **Follows your theme.** Light, dark or whatever Windows is set to.
 - **Keeps a log.** Launches, exits, stops and errors go to `buildpilot.log`. A crash is recorded
   there too and never ends the application silently.
-- **Leaves the network alone.** BuildPilot has no networking code of its own; no HTTP or TLS
-  library is among its dependencies.
+- **Explains itself.** Help holds a Guide to every control, About with the open source credits,
+  the licence and Check for Updates. Long text in them reads itself slowly and stops the moment
+  you scroll it.
+- **Makes one request, to ask about updates.** Shortly after it opens and once a day, BuildPilot
+  asks GitHub whether a newer release is published; Help > Check for Updates asks on demand. The
+  request carries nothing about you or your scripts, a release can be skipped and a failed check
+  says nothing. It goes through WinHTTP, which is part of Windows, so no HTTP or TLS library is
+  among BuildPilot's dependencies. Nothing else it does touches the network.
 
 ## Where it keeps things
 
@@ -107,4 +113,7 @@ program to `dist\BuildPilotSetup.exe`.
 ## Licence
 
 BuildPilot is distributed under the GNU General Public License v3.0; see [LICENSE](LICENSE).
-Slint is used under its GPLv3 licence, credited in Help and About.
+Slint is used under its GPLv3 licence. Every crate built into BuildPilot is credited in Help >
+About; the list is generated at build time, never written by hand. Their licence texts are
+written to `THIRD-PARTY-NOTICES.txt`, which setup installs beside the program and Help > Licence
+opens.

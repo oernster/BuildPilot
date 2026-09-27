@@ -53,7 +53,8 @@ const CLOCK_READS: &[&str] = &["Instant::now", "SystemTime"];
 const FORBIDDEN_DEPENDENCIES: &[(&str, &[&str])] = &[
     ("domain", &["application", "infrastructure", "ui"]),
     ("application", &["infrastructure", "ui"]),
-    ("setup", &["application", "domain", "infrastructure", "ui"]),
+    // Setup is pure in the way the domain is, so it may name the domain and nothing further out.
+    ("setup", &["application", "infrastructure", "ui"]),
     // Infrastructure implements the application's port traits, so it may name the application.
     ("infrastructure", &["ui"]),
 ];
@@ -294,4 +295,54 @@ fn every_control_follows_the_ring_model() {
         }
     }
     assert!(violations.is_empty(), "{}", violations.join("\n"));
+}
+
+/// The files holding the toolbar's and the rows' controls; then the Guide that explains them.
+const CONTROL_FILES: [&str; 2] = ["ui/main.slint", "ui/row.slint"];
+const GUIDE_FILE: &str = "ui/guide.slint";
+
+/// The string literals on `line`, trimmed.
+fn literals(line: &str) -> Vec<String> {
+    line.split('"')
+        .skip(1)
+        .step_by(2)
+        .map(|text| text.trim().to_owned())
+        .filter(|text| !text.is_empty())
+        .collect()
+}
+
+// UI-007: every toolbar and row control is named in the Guide, so a new control cannot ship
+// unexplained. A control passes when one of its label's words is a Guide entry's name.
+#[test]
+fn the_guide_names_every_control() {
+    let guide = read(&Path::new(ROOT).join(GUIDE_FILE));
+    let names: Vec<String> = guide
+        .lines()
+        .filter_map(|line| line.split("name: \"").nth(1))
+        .filter_map(|rest| rest.split('"').next())
+        .map(str::to_owned)
+        .collect();
+    let mut missing = Vec::new();
+    for file in CONTROL_FILES {
+        let source = read(&Path::new(ROOT).join(file));
+        let mut in_button = false;
+        for line in source.lines() {
+            if line.contains("IconButton {") {
+                in_button = true;
+            }
+            if in_button && line.trim_start().starts_with("label:") {
+                in_button = false;
+                let labels = literals(line);
+                if !labels.iter().any(|label| names.contains(label)) {
+                    missing.push(format!("{file}: {}", line.trim()));
+                }
+            }
+        }
+    }
+    assert!(!names.is_empty(), "no Guide entries found in {GUIDE_FILE}");
+    assert!(
+        missing.is_empty(),
+        "not in the Guide:\n{}",
+        missing.join("\n")
+    );
 }

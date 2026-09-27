@@ -7,21 +7,24 @@ use std::env;
 use std::panic::{self, AssertUnwindSafe};
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 
 use buildpilot::application::{App, Ports};
+use buildpilot::domain::credits;
+use buildpilot::infrastructure::build_info::{CREDITS, LICENCE, NOTICES_FILE};
 use buildpilot::infrastructure::config_store::JsonConfigStore;
 use buildpilot::infrastructure::icons::FsIconLibrary;
 use buildpilot::infrastructure::launcher::{EventSink, WindowsLauncher};
-use buildpilot::infrastructure::locations::{PRODUCT_NAME, data_folder};
+use buildpilot::infrastructure::locations::{AUTHOR, COPYRIGHT, PRODUCT_NAME, data_folder};
 use buildpilot::infrastructure::log_file::LogFile;
 use buildpilot::infrastructure::powershell::detect_powershell;
+use buildpilot::infrastructure::releases::{GitHubReleases, REPOSITORY};
 use buildpilot::infrastructure::shell::ExplorerShell;
 use buildpilot::infrastructure::system::{FsPaths, SystemClock, UuidIds};
 use buildpilot::infrastructure::win32::diagnostics::show_error;
 use buildpilot::infrastructure::win32::instance::{self, Claim};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
-use buildpilot::ui::{self, Environment, Waker};
+use buildpilot::ui::{self, Environment, HelpFacts, Waker};
 
 /// The folder under the data folder where chosen icons are copied.
 const ICONS_FOLDER_NAME: &str = "icons";
@@ -85,10 +88,27 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
         log: Box::new(log),
     };
     let app = App::start(ports, detect_powershell(env::var_os("PATH").as_deref()));
+    let version = env!("BUILDPILOT_VERSION");
+    // Setup installs the notices beside the program (UI-008).
+    let notices = env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|folder| folder.join(NOTICES_FILE)))
+        .unwrap_or_else(|| PathBuf::from(NOTICES_FILE));
+    let help = HelpFacts {
+        description: env!("CARGO_PKG_DESCRIPTION"),
+        author: AUTHOR,
+        copyright: COPYRIGHT,
+        repository: REPOSITORY,
+        credits: credits::parse(CREDITS),
+        licence: LICENCE,
+        notices,
+        releases: Arc::new(GitHubReleases::new(PRODUCT_NAME, version)),
+    };
     let environment = Environment {
-        version: env!("BUILDPILOT_VERSION"),
+        version,
         windows_uses_dark: windows_uses_dark(),
         bring_forward: instance::bring_forward,
+        help,
     };
     ui::run(app, events, waker, environment)
 }

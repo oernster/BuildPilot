@@ -14,6 +14,7 @@ mod navigation;
 pub mod ports;
 mod run_actions;
 mod runtime;
+pub mod updates;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -29,7 +30,8 @@ pub use errors::AppError;
 pub use navigation::LocateOutcome;
 pub use ports::{
     Clock, ConfigStore, IconLibrary, IdSource, Launcher, LoadProblem, Log, PathProbe,
-    ProcessHandle, RunEvent, RunEventKind, RunKey, Shell, StoreError,
+    ProcessHandle, Release, ReleaseAsset, ReleaseSource, RunEvent, RunEventKind, RunKey, Shell,
+    StoreError,
 };
 pub use run_actions::{OverdueStop, STOP_TIMEOUT};
 

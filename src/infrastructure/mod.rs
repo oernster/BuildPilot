@@ -3,6 +3,7 @@
 //!
 //! Process, shell and Win32 code is Windows-only (SRS 2.3); the rest is portable.
 
+pub mod build_info;
 pub mod config_format;
 pub mod config_store;
 pub mod icons;
@@ -12,6 +13,8 @@ pub mod locations;
 #[cfg(windows)]
 pub mod log_file;
 pub mod powershell;
+#[cfg(windows)]
+pub mod releases;
 #[cfg(windows)]
 pub mod setup;
 #[cfg(windows)]

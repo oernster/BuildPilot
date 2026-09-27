@@ -2,6 +2,8 @@
 //! requirement it verifies.
 
 mod domain {
+    mod auto_scroll;
+    mod credits;
     mod deck;
     mod elapsed;
     mod follow;

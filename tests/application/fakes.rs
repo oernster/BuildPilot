@@ -249,4 +249,7 @@ impl Shell for FakeShell {
     fn open_folder(&self, folder: &Path) -> Result<(), String> {
         self.record("open_folder", folder)
     }
+    fn open_address(&self, address: &str) -> Result<(), String> {
+        self.record("open_address", Path::new(address))
+    }
 }

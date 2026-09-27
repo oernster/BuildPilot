@@ -1,9 +1,9 @@
 //! The setup program's policy (INST-001 to INST-006): routes, plans and words, without a
 //! window or a machine.
 
+use buildpilot::domain::version::Version;
 use buildpilot::setup::plan::{self, Choices, Step};
 use buildpilot::setup::route::{Installed, Route, route};
-use buildpilot::setup::version::Version;
 use buildpilot::setup::wording::{self, FLOW_ARROW};
 
 fn v(text: &str) -> Version {

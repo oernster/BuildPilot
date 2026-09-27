@@ -11,13 +11,16 @@ import { IconButton, TextButton, Ring } from "widgets.slint";
 import { RowData, StatusKind } from "row.slint";
 import { RowsList } from "rows_list.slint";
 import { OutputTray, OutputLineData } from "tray.slint";
-import { OperationDialog, ConfirmDialog, SettingsDialog, AboutDialog } from "dialogs.slint";
+import { OperationDialog, ConfirmDialog, SettingsDialog } from "dialogs.slint";
+import { HelpMenu, AboutDialog, LicenceDialog, UpdateDialog, CreditData } from "help.slint";
+import { GuideDialog } from "guide.slint";
 
-export { Theme, RowData, StatusKind, OutputLineData, Ring }
+export { Theme, RowData, StatusKind, OutputLineData, Ring, CreditData }
 export { SetupWindow, SetupScreen, FooterAction } from "setup.slint";
+export { Reading } from "reading.slint";
 
 // Which control opened the dialog that is showing, so focus can go back to it.
-enum Opener { rows, add, settings, about }
+enum Opener { rows, add, settings, help }
 
 export component MainWindow inherits Window {
     title: "BuildPilot";
@@ -62,12 +65,33 @@ export component MainWindow inherits Window {
     in property <bool> show-settings;
     in property <int> theme-choice;
     in property <string> data-folder;
+
+    // Help (UI-006 to UI-010): the menu, then whichever surface it opened.
+    in-out property <bool> show-help-menu;
+    in property <bool> show-guide;
     in property <bool> show-about;
+    in property <bool> show-licence;
+    in property <bool> show-update;
+    in property <string> description;
+    in property <string> author;
+    in property <string> copyright;
+    in property <string> repository;
+    in property <[CreditData]> credits;
+    in property <string> licence-text;
+    in property <string> notices-note;
+    in property <string> update-message;
+    in property <bool> update-offer;
 
     callback add();
     callback toggle-theme();
     callback open-settings();
-    callback open-about();
+    // A Help menu entry was chosen: guide, about, licence or updates.
+    callback help(string);
+    callback close-help();
+    callback open-notices();
+    callback download-update();
+    callback skip-update();
+    callback close-update();
     callback dismiss-notice(int);
 
     callback select(string);
@@ -98,7 +122,6 @@ export component MainWindow inherits Window {
     callback choose-theme(int);
     callback open-data-folder();
     callback close-settings();
-    callback close-about();
 
     // Moves keyboard focus one stop round the ring: forward when true, back when false.
     callback step-ring(bool);
@@ -112,8 +135,14 @@ export component MainWindow inherits Window {
         Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light;
     }
 
+    init => { Ring.window-width = self.width; }
+    changed width => { Ring.window-width = self.width; }
+
     out property <bool> modal-open: root.show-operation-dialog || root.show-confirm
-        || root.show-settings || root.show-about;
+        || root.show-settings || root.show-help-menu || root.show-guide || root.show-about
+        || root.show-licence || root.show-update;
+    // Only the topmost surface reads itself: the update prompt can arrive over a Help surface.
+    property <bool> reading-active: !root.show-update;
     changed modal-open => {
         Ring.modal-open = self.modal-open;
         if (!self.modal-open) {
@@ -126,8 +155,8 @@ export component MainWindow inherits Window {
     function return-focus() {
         if (root.opener == Opener.settings) {
             settings-button.focus-me();
-        } else if (root.opener == Opener.about) {
-            about-button.focus-me();
+        } else if (root.opener == Opener.help) {
+            help-button.focus-me();
         } else if (root.opener == Opener.rows && root.rows.length > 0) {
             rows-list.focus-list();
         } else {
@@ -196,11 +225,11 @@ export component MainWindow inherits Window {
                     tooltip-below: true;
                     activated => { root.opener = Opener.settings; root.open-settings(); }
                 }
-                about-button := IconButton {
+                help-button := IconButton {
                     icon: @image-url("../assets/help-about.png");
-                    label: "Help and About";
+                    label: "Help";
                     tooltip-below: true;
-                    activated => { root.opener = Opener.about; root.open-about(); }
+                    activated => { root.opener = Opener.help; root.show-help-menu = true; }
                 }
             }
 
@@ -295,9 +324,40 @@ export component MainWindow inherits Window {
             open-data-folder => { root.open-data-folder(); }
             close => { root.close-settings(); }
         }
+        if root.show-help-menu: HelpMenu {
+            anchor-right: help-button.absolute-position.x + help-button.width;
+            anchor-bottom: help-button.absolute-position.y + help-button.height;
+            choose(entry) => { root.show-help-menu = false; root.help(entry); }
+            dismissed => { root.show-help-menu = false; }
+            step(forward) => { root.step-ring(forward); }
+        }
+        if root.show-guide: GuideDialog {
+            reading-active: root.reading-active;
+            close => { root.close-help(); }
+        }
         if root.show-about: AboutDialog {
             version: root.version;
-            close => { root.close-about(); }
+            description: root.description;
+            author: root.author;
+            copyright: root.copyright;
+            repository: root.repository;
+            credits: root.credits;
+            reading-active: root.reading-active;
+            close => { root.close-help(); }
+        }
+        if root.show-licence: LicenceDialog {
+            licence-text: root.licence-text;
+            notices-note: root.notices-note;
+            reading-active: root.reading-active;
+            open-notices => { root.open-notices(); }
+            close => { root.close-help(); }
+        }
+        if root.show-update: UpdateDialog {
+            message: root.update-message;
+            offer: root.update-offer;
+            download => { root.download-update(); }
+            skip => { root.skip-update(); }
+            close => { root.close-update(); }
         }
     }
 }

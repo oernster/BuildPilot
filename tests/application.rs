@@ -9,4 +9,5 @@ mod application {
     mod run;
     mod startup;
     mod support;
+    mod updates;
 }

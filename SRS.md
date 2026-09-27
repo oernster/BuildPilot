@@ -75,10 +75,11 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 
 ### 2.1 Product perspective
 
-A new, standalone, local-only desktop application. It depends on nothing networked. It
-interacts with the operating system in five ways only: launching processes, terminating process
-trees, opening a file with its associated application, revealing a file in Explorer, reading
-and writing its own data folder.
+A new, standalone, local-only desktop application. It depends on nothing networked: its one
+network request is the update check (UI-010), whose failure changes nothing. It interacts with
+the operating system in five ways only: launching processes, terminating process trees, opening
+a file with its associated application, revealing a file in Explorer, reading and writing its
+own data folder.
 
 ### 2.2 User classes
 
@@ -456,8 +457,51 @@ On first run the theme follows the Windows app theme. Source: spec §14.
 **UI-002 (M) Contrast.** Every text colour in both themes shall reach a contrast ratio of at
 least 4.5:1 against its background (WCAG 2.2 AA). Verified by: a unit test over the theme tokens.
 
-**UI-003 (M) Help/About.** The About surface shall show the name, the version read from
-`VERSION`, a one-sentence purpose, the repository URL, the GPL-3.0 licence and a Slint credit.
+**UI-003 (M) Help/About.** The About surface shall show the icon, the name, the version read
+from `VERSION`, a one-sentence purpose, the author, the copyright, the repository URL, the
+GPL-3.0 licence and the open source credits of UI-009. Amended by Amendment 3.
+
+**UI-006 (M) Help menu.** The toolbar's Help button shall open a menu holding, in order: Guide, a
+separator, About BuildPilot, Licence, Check for Updates. Up and Down walk it, Enter or Space
+chooses, Escape closes it and returns focus to the Help button. Source: house model (PigeonPost).
+
+**UI-007 (M) Guide.** Guide shall explain every toolbar control and every row control, each as
+its own icon with its name and one line on what it does; then the rules behind BuildPilot's
+behaviour; then keyboard use at the foot. Verified by: a structural test that every toolbar and
+row control's label is named in the Guide.
+
+**UI-008 (M) Licence.** Licence shall show the text of `LICENSE` (GPL-3.0) and offer to open
+`THIRD-PARTY-NOTICES.txt`, which holds the licence text of every crate built into BuildPilot.
+When the file is not beside the program (a build run from source), it shall say so and name
+`build.ps1` as what writes it.
+
+**UI-009 (M) Open source credits.** The credits shall list every crate built into BuildPilot
+with its version and licence, generated at build time; none is written by hand. The set is what
+`cargo tree` says a release build compiles in for the Windows target (normal dependencies,
+procedural macros left out); the licence of each comes from `cargo metadata`. Verified by: a
+test that the list holds `slint` and `windows-sys` and holds no dev-only, build-only or
+procedural-macro crate such as `tempfile`, `slint-build` or `syn`.
+
+**UI-010 (M) Update check.** BuildPilot shall ask
+`https://api.github.com/repos/oernster/BuildPilot/releases/latest` whether a newer release is
+published: 3 seconds after the window opens, then every 24 hours while it runs; also whenever
+Help > Check for Updates is chosen. The endpoint returns only a published release, never a draft or
+a pre-release. A release is newer when its tag (an optional leading `v` removed) is a version
+greater than `VERSION`; a tag that is not a version is never newer. When newer, BuildPilot shall
+say "BuildPilot {latest} is available. You are running {current}." with Download, Skip This
+Version and Later. Download opens the release's `.exe` asset, else the release page. Skip This
+Version records the tag in the config file and that release never prompts unbidden again. An
+automatic check that fails or finds nothing newer says nothing. A chosen check ignores the skip
+and reports every outcome: the prompt, "You are running the latest version." or "The update
+check could not reach GitHub. Please try again later." Each stage of the request (resolving, connecting, sending, receiving) waits at most 5 seconds;
+the request is never retried. Source: house model; Amendment 3.
+
+**UI-011 (M) Reading surfaces read themselves.** Guide, About, Licence and the installer's licence
+page shall scroll their text when it overflows: still for 5 seconds on opening, then down 1 pixel
+every 80 ms, still for 5 seconds at the end, back to the top at 15 pixels every 40 ms, still for 2
+seconds, then again. Any scroll by the operator suspends the cycle for 2.5 seconds, after which it
+carries on from where they left it; it is never switched off. The dialog's buttons stay in place
+below the text. Source: house `/scroll` model.
 
 **UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark, Follow Windows)
 plus the data folder path with an Open Folder button. Source: OQ-9.
@@ -503,7 +547,7 @@ Verified by (all): Manual build-and-launch; install policy logic unit-tested.
 | NFR-REL-001 | A panic on any thread BuildPilot owns shall be logged and shown to the operator, never end the application silently. | Test that panics a reader thread. |
 | NFR-REL-002 | Every error shown shall name what failed and what the operator can do. | Review of each error string against spec §18. |
 | NFR-OBS-001 | BuildPilot shall write a log file in the data folder, recording launches, exits, stops and errors, rotated at 1 MB with one previous file kept. | Inspection. |
-| NFR-SEC-001 | BuildPilot shall make no network connection. | Inspection of dependencies; Manual with a network monitor. |
+| NFR-SEC-001 | BuildPilot shall make no network connection except the update check of UI-010, a single HTTPS GET to api.github.com carrying nothing about the operator or their operations. It shall use the HTTP client built into Windows (WinHTTP), adding no HTTP or TLS crate. Amended by Amendment 3. | Inspection of dependencies; Manual with a network monitor. |
 | NFR-SEC-002 | BuildPilot shall never write to, rename or delete a script. | Inspection: the shell and process adapters expose no write operation on scripts. |
 | NFR-MAINT-001 | Domain and application code shall hold 100% line coverage (`cargo llvm-cov`), with the gate failing the build below it. | `test.ps1`. |
 | NFR-MAINT-002 | `cargo fmt --check` and `cargo clippy -- -D warnings` shall pass. | `test.ps1`. |
@@ -530,8 +574,10 @@ Source: OQ-10. Verified by: Manual.
 
 ### 4.1 Legal
 
-GPL-3.0 for BuildPilot. Slint is used under GPLv3, credited in About. Third-party crate licences
-are listed in the installer's licence page.
+GPL-3.0 for BuildPilot. Slint is used under GPLv3. Every crate built in is credited in About with
+its licence (UI-009); their licence texts are in `THIRD-PARTY-NOTICES.txt`, generated by
+`build.ps1`, installed beside the program and offered from Licence (UI-008) and from the
+installer's licence page.
 
 ### 4.2 Internationalisation
 
@@ -626,3 +672,14 @@ byte 0x82, which is `é` in code page 850 and invalid as UTF-8. Decoding it as U
 in place of every accented character, including in paths. Tools such as Cargo write UTF-8, so no
 single encoding fits every script. Each line is therefore decoded as UTF-8 when it is valid UTF-8
 and in the OEM code page otherwise; a pure ASCII line reads the same either way.
+
+**Amendment 3 (2026-09-27): Help becomes a menu; an update check is added.** Changes UI-003 and
+NFR-SEC-001; adds UI-006 to UI-011. Baseline 1.0 had a Help and About button opening About
+directly, credited Slint alone and made no network connection at all.
+
+Reason: the owner's review of the first installed build asked for the house Help menu (Guide,
+About, Licence, Check for Updates) and for reading surfaces that scroll themselves. The owner also ruled
+that the house update check (automatic at launch and daily, plus on demand) is wanted even though
+it means one request to GitHub. The About credit list was measured against the shipped graph:
+292 crates under 25 licence expressions, where About named one. The update check uses WinHTTP,
+built into Windows, so BuildPilot still carries no HTTP or TLS crate.

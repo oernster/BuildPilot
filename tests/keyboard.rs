@@ -14,7 +14,7 @@ const TOOLBAR: [&str; 4] = [
     "Add a build script",
     "Switch to dark theme",
     "Settings",
-    "Help and About",
+    "Help",
 ];
 const SHOW_OUTPUT: &str = "Show output";
 
@@ -273,11 +273,41 @@ fn dialogs_open_on_their_first_control() {
     assert_eq!(focused(&window), "Build scripts");
 
     let opener = window.as_weak();
-    window.on_open_about(move || opener.upgrade().unwrap().set_show_about(true));
+    window.on_help(move |entry| {
+        if entry == "about" {
+            opener.upgrade().unwrap().set_show_about(true);
+        }
+    });
     press(&window, Key::Backtab);
-    assert_eq!(focused(&window), "Help and About");
+    assert_eq!(focused(&window), "Help");
+    press(&window, Key::Return);
+    assert_eq!(focused(&window), "Guide");
+    press(&window, Key::DownArrow);
+    assert_eq!(focused(&window), "About BuildPilot");
     press(&window, Key::Return);
     assert_eq!(focused(&window), "Close");
+    window.set_show_about(false);
+    settle();
+    assert_eq!(focused(&window), "Help");
+}
+
+// UI-006: the Help menu opens on its first entry, Up and Down walk it and wrap, Escape closes it
+// and hands focus back to the Help button.
+#[test]
+fn the_help_menu_walks_with_up_and_down() {
+    let window = window();
+    walk(&window, Key::Tab, TOOLBAR.len());
+    assert_eq!(focused(&window), "Help");
+    press(&window, Key::Return);
+    assert_eq!(focused(&window), "Guide");
+    assert_eq!(
+        walk(&window, Key::DownArrow, 4),
+        ["About BuildPilot", "Licence", "Check for Updates", "Guide"]
+    );
+    assert_eq!(walk(&window, Key::UpArrow, 1), ["Check for Updates"]);
+    press(&window, Key::Escape);
+    assert!(!window.get_show_help_menu());
+    assert_eq!(focused(&window), "Help");
 }
 
 /// The window's preferred size, from ui/main.slint.

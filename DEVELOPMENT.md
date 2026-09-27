@@ -79,7 +79,11 @@ For the application alone, skipping steps 5 and 6:
 ```
 
 `build.rs` hands `VERSION` to the code, compiles the Slint interface and puts the icon plus the
-name and version Windows shows on every executable. A setup program built without a payload
+name and version Windows shows on every executable. Through `build_credits.rs` it also asks
+`cargo tree` and `cargo metadata` (offline, against `Cargo.lock`) which crates a release build
+compiles in, then writes the open source credits About lists and `THIRD-PARTY-NOTICES.txt`, the
+licence texts setup installs beside the program. Outside a release build it keeps the Slint
+element names, so the geometry tests can find elements and measure where they landed. A setup program built without a payload
 (by `cargo build` alone) refuses to run and says why. Neither executable is signed.
 
 ## Installing what you built
@@ -139,7 +143,8 @@ The version lives in `VERSION` and nowhere else. `Cargo.toml` must carry the sam
 | `src/main.rs` | The application's composition root |
 | `src/setup` | The setup program's policy: routes, plans and words, with no I/O |
 | `src/bin/buildpilotsetup.rs` | The setup program's composition root |
-| `src/infrastructure/locations.rs` | Every name and folder the application and setup share |
+| `src/infrastructure/locations.rs` | Every name and folder the application and setup share, plus the author and copyright |
+| `build_credits.rs` | Part of the build script: generates the credits and the third-party notices |
 | `tools/genicons.py` | Makes the `.ico` from the PNG master |
 | `ui/` | The Slint interface: `theme.slint` holds every colour and size |
 | `assets/` | The application icon and every button image |

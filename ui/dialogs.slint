@@ -5,9 +5,14 @@ import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Field } from "widgets.slint";
 
-component Modal inherits Rectangle {
+export component Modal inherits Rectangle {
     in property <length> panel-width: 560px;
     in property <string> heading;
+    // A dialog of text to read: a fixed height, so its reading pane scrolls while the heading and
+    // the buttons stay where they are (UI-011).
+    in property <bool> tall;
+    // The tall panel's height, kept clear of the window's edges.
+    property <length> tall-height: min(root.height - 60px, 640px);
     // Escape was pressed: the dialog closes as its Cancel or Close would.
     callback dismissed();
     background: Theme.scrim;
@@ -26,8 +31,8 @@ component Modal inherits Rectangle {
             return reject;
         }
         Rectangle {
-            width: root.panel-width;
-            height: content.preferred-height;
+            width: min(root.panel-width, root.width - 40px);
+            height: root.tall ? root.tall-height : content.preferred-height;
             background: Theme.surface;
             border-radius: 8px;
             border-width: 1px;
@@ -47,7 +52,7 @@ component Modal inherits Rectangle {
     }
 }
 
-component FieldLabel inherits Text {
+export component FieldLabel inherits Text {
     color: Theme.text-muted;
     font-size: 12px;
 }
@@ -256,46 +261,5 @@ export component SettingsDialog inherits Modal {
     HorizontalLayout {
         alignment: end;
         TextButton { text: "Close"; primary: true; in-dialog: true; clicked => { root.close(); } }
-    }
-}
-
-// Help and About (UI-003).
-export component AboutDialog inherits Modal {
-    in property <string> version;
-    callback close();
-    heading: "About BuildPilot";
-    panel-width: 460px;
-    dismissed => { root.close(); }
-    init => { close-button.focus-me(); }
-
-    HorizontalLayout {
-        spacing: 16px;
-        Image {
-            source: @image-url("../assets/application-icon.png");
-            width: 72px;
-            height: 72px;
-            image-fit: contain;
-        }
-        VerticalLayout {
-            spacing: 4px;
-            Text { text: "BuildPilot " + root.version; font-size: Theme.body-size; font-weight: 600; color: Theme.text; }
-            Text {
-                text: "A build flight deck: remembers your build scripts, runs several at once, shows their output live and stops them cleanly.";
-                color: Theme.text;
-                wrap: word-wrap;
-            }
-        }
-    }
-    Text { text: "https://github.com/oernster/BuildPilot"; color: Theme.accent; }
-    Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text-muted; }
-    Text { text: "Built with Slint (slint.dev), used under its GPLv3 licence."; color: Theme.text-muted; }
-    HorizontalLayout {
-        alignment: end;
-        close-button := TextButton {
-            text: "Close";
-            primary: true;
-            in-dialog: true;
-            clicked => { root.close(); }
-        }
     }
 }

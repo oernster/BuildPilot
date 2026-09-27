@@ -3,6 +3,7 @@
 BuildPilot is a Windows desktop application that remembers build scripts, starts them as child
 processes, shows their output and stops their process trees. It keeps everything on the local
 machine: one settings file, one icons folder and one log, all in the operator's own data folder.
+Its one network request asks GitHub whether a newer release is published (UI-010).
 The requirements it answers to are in [SRS.md](SRS.md); requirement IDs below point there.
 
 ## Invariants
@@ -16,7 +17,7 @@ violation and watching the test fail.
 |---|---|
 | The domain names only `std::collections`, `error`, `fmt`, `ops`, `path`, `str` and `time::Duration`: no files, processes, threads, environment or clock. | `pure_layers_use_only_allowed_std` in `tests/structural.rs` |
 | The application adds `iter`, `mem` and `time::Instant`; it gets every instant from its `Clock` port. | `pure_layers_use_only_allowed_std` |
-| The setup program's policy (`src/setup`) names only `std::fmt` and no other layer. | `pure_layers_use_only_allowed_std`, `layers_depend_inwards_only` |
+| The setup program's policy (`src/setup`) names only `std::fmt` plus one layer: the domain (for `Version`). | `pure_layers_use_only_allowed_std`, `layers_depend_inwards_only` |
 | No pure layer names an external crate. | `pure_layers_use_no_external_crates` |
 | Layers depend inwards only: the domain names no other layer, the application names neither infrastructure nor UI, infrastructure never names the UI. | `layers_depend_inwards_only` |
 | No source file exceeds 400 lines; none sits in the danger band of 381 to 399. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
@@ -24,24 +25,29 @@ violation and watching the test fail.
 | `Cargo.toml` carries the version in `VERSION` and no other. | `cargo_version_matches_the_version_file` |
 | Every control wears the house ring: no standard Slint `Button` or `CheckBox`, no border in the accent colour. | `every_control_follows_the_ring_model` |
 | Every text colour reaches 4.5:1 and every ring 3:1 against the surfaces it is drawn on, in both themes. | `tests/contrast.rs` |
+| Every toolbar and row control is named in the Guide. | `the_guide_names_every_control` |
+| The open source credits are the crates a release build compiles in: nothing dev-only, build-only or procedural. | `the_credits_are_the_shipped_graph` in `tests/infrastructure/build_info.rs` |
 
 ## Layers
 
 - **Domain** (`src/domain`). BuildPilot's nouns and rules: an operation and its validation, the
   flight deck and its order, the run state machine, the launch plan for each kind of script,
   cutting output bytes into lines and decoding them, the output buffer and its caps, the tray's
-  follow state, selection and preferences. No I/O, no clock, no framework.
+  follow state, selection and preferences, release versions, the open source credits and the
+  self-reading cycle of a surface of text. No I/O, no clock, no framework.
 - **Application** (`src/application`). `App` owns all state and is driven from one thread. It
   offers one method per thing the operator can do and never waits on a process: a launch
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
   from the machine is stated as traits in `ports.rs`: `ConfigStore`, `IdSource`, `Clock`,
-  `PathProbe`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell` and `Log`. Every refusal
+  `PathProbe`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and `ReleaseSource`.
+  `updates.rs` decides what an update check found and what to say about it. Every refusal
   is an `AppError` whose message names the thing and what the operator can do; everything else
   worth saying is a `Notice`, worded once and shown and logged in the same words.
 - **Infrastructure** (`src/infrastructure`). The ports implemented against the real machine: the
   JSON settings file, icons on disk, process launch, Explorer, the system clock, UUIDs and the
-  log file. Every direct Windows call lives in `win32/`: job objects, the OEM code page, the
-  shell, the theme, the single-instance event and the error box.
+  log file, plus the release source on GitHub and the credits the build script generated
+  (`build_info.rs`). Every direct Windows call lives in `win32/`: job objects, the OEM code page,
+  the shell, the theme, the single-instance event, the error box and the one HTTPS GET.
 - **UI** (`src/ui` and `ui/*.slint`). The Slint window over `App` and nothing below it. The
   wording rows and the tray show is worked out in `rows.rs`, which has no Slint types so it is
   tested without a window.
@@ -76,6 +82,35 @@ not valid UTF-8 is decoded in the OEM code page, which hidden console programs w
 Terminal escape sequences are removed rather than interpreted (OUT-008). A run keeps its latest
 100,000 lines and splits a longer line into pieces of 16,384 characters (OUT-004). The tray
 reads the buffer directly rather than a copy.
+
+## Help, the credits and the update check
+
+- **The menu** (UI-006) is `HelpMenu` in `ui/help.slint`, dropped from the Help button. It is a
+  dialog as far as the keyboard ring is concerned: while it is open only its entries are stops;
+  Up and Down step the ring through them.
+- **The Guide** (UI-007) is data in `ui/guide.slint`: one entry per control with its own icon,
+  then the rules, then keyboard use. `the_guide_names_every_control` reads every `IconButton`
+  label in `ui/main.slint` and `ui/row.slint` and fails when the Guide has no entry for one.
+- **The credits** (UI-009) are generated by `build_credits.rs`, part of the build script. It
+  takes the set from `cargo tree --edges normal,no-proc-macro`, which resolves features the way
+  a release build does (`cargo metadata` merges in what dev-dependencies ask for and so names
+  crates that never ship), then each crate's licence and folder from `cargo metadata`. It writes
+  one line per crate for About and `THIRD-PARTY-NOTICES.txt` with every licence file those
+  crates ship, each distinct text once. Both reach the program through `build_info.rs`; setup
+  writes the notices beside the program as part of copying the files.
+- **Reading surfaces** (UI-011). The cycle is the pure machine in `domain/auto_scroll.rs`, ported
+  from PigeonPost. `ReadingPane` in `ui/reading.slint` drives it on a Slint timer through the
+  `Reading` global, which `ui/reading.rs` answers. A hand is found by one watch: the position
+  the pane last placed. Any other position means the wheel, the scroll bar or the keys moved it.
+  While the update prompt is open, the surface beneath is frozen rather than read.
+- **The update check** (UI-010). `application/updates.rs` decides: the tag read as a version, the
+  skip honoured only when the window asked by itself, the setup program preferred to the release
+  page. `GitHubReleases` in `infrastructure/releases.rs` asks `releases/latest`, which answers only
+  a published release, through `win32/http.rs` (WinHTTP, so no HTTP or TLS crate). It treats
+  the answer as foreign input: every field checked, the size capped. `ui/help.rs` asks from a
+  worker thread 3 seconds after the window opens, then every 24 hours; also on demand. The answer
+  returns through the `Update` hook in `ui/events.rs`; a panic on the worker still answers, as
+  unreachable, so the operator's own check always gets a reply.
 
 ## Keyboard
 

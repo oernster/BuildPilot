@@ -138,6 +138,34 @@ pub trait Shell {
     fn reveal(&self, file: &Path) -> Result<(), String>;
     /// Opens `folder` in Explorer.
     fn open_folder(&self, folder: &Path) -> Result<(), String>;
+    /// Opens `address` (a web page or a download) in the operator's browser (UI-010).
+    fn open_address(&self, address: &str) -> Result<(), String>;
+}
+
+/// The newest published release, as the release source describes it (UI-010).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Release {
+    /// The release's tag, such as `v1.2.0`.
+    pub tag: String,
+    /// The release's page.
+    pub page_url: String,
+    /// The files attached to it.
+    pub assets: Vec<ReleaseAsset>,
+}
+
+/// A file attached to a release.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReleaseAsset {
+    /// Its file name.
+    pub name: String,
+    /// Where it downloads from.
+    pub download_url: String,
+}
+
+/// Where the newest published release is learned (UI-010). Asked from a worker thread.
+pub trait ReleaseSource: Send + Sync {
+    /// The newest published release; `None` when it could not be learned, for whatever reason.
+    fn latest_release(&self) -> Option<Release>;
 }
 
 /// Which run of which operation an event belongs to. The run number keeps a late event from an

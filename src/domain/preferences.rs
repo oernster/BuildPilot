@@ -1,4 +1,6 @@
-//! Global preferences (CFG-003, CFG-010, UI-001, UI-004).
+//! Global preferences (CFG-003, CFG-010, UI-001, UI-004, UI-010).
+
+use super::version::Version;
 
 /// The theme the operator chose.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -64,4 +66,6 @@ pub struct Preferences {
     pub window: Option<WindowGeometry>,
     /// The tray's layout.
     pub tray: TrayLayout,
+    /// The release the operator chose not to hear about unbidden (UI-010); `None` until one is.
+    pub skipped_update: Option<Version>,
 }

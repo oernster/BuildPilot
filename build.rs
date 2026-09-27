@@ -4,6 +4,14 @@
 
 use std::env;
 use std::fs;
+use std::path::PathBuf;
+
+#[path = "build_credits.rs"]
+mod credits;
+// The credits line format has one home, in the domain, which reads what this script writes.
+#[path = "src/domain/credits.rs"]
+#[allow(dead_code)]
+mod credits_format;
 
 /// What Windows shows as the executables' name and description.
 const PRODUCT_NAME: &str = "BuildPilot";
@@ -13,13 +21,23 @@ const ICON: &str = "assets/application-icon.ico";
 const PAYLOAD_VARIABLE: &str = "BUILDPILOT_PAYLOAD";
 /// Set when the setup program is built with a payload.
 const PAYLOAD_CFG: &str = "buildpilot_payload";
+/// The profile Cargo names in PROFILE for a release build.
+const RELEASE_PROFILE: &str = "release";
 
 fn main() {
     println!("cargo:rerun-if-changed=VERSION");
     println!("cargo:rerun-if-changed={ICON}");
     let version = fs::read_to_string("VERSION").unwrap_or_else(|_| "0.0.0-dev".to_owned());
     println!("cargo:rustc-env=BUILDPILOT_VERSION={}", version.trim());
-    slint_build::compile("ui/main.slint").expect("the Slint UI compiles");
+    // Outside a release build the element tree carries its names, so tests can find elements
+    // and measure where they landed (tests/geometry.rs); the shipped program goes without.
+    let debug_info = env::var("PROFILE").as_deref() != Ok(RELEASE_PROFILE);
+    let config = slint_build::CompilerConfiguration::new().with_debug_info(debug_info);
+    slint_build::compile_with_config("ui/main.slint", config).expect("the Slint UI compiles");
+
+    credits::generate(&PathBuf::from(
+        env::var("OUT_DIR").expect("Cargo sets OUT_DIR"),
+    ));
 
     println!("cargo:rerun-if-env-changed={PAYLOAD_VARIABLE}");
     println!("cargo::rustc-check-cfg=cfg({PAYLOAD_CFG})");

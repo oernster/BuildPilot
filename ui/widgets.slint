@@ -10,6 +10,8 @@ export global Ring {
     in-out property <bool> modal-open;
     // The label of the stop holding keyboard focus, for the tests; empty when none does.
     in-out property <string> focused;
+    // The window's width, kept by the window, so a tooltip can stay inside it.
+    in-out property <length> window-width;
 }
 
 // The ring's width, the same in every state so nothing moves when it appears.
@@ -27,14 +29,22 @@ export global RingColour {
     }
 }
 
-// Shown above or below a control while the pointer is on it.
+// Shown above or below a control while the pointer is on it: centred on the control, then moved
+// along as far as it takes to stay inside the window at either end.
 component Tooltip inherits Rectangle {
     in property <string> text;
+    // Where the control starts across the window.
+    in property <length> host-x;
     in property <length> host-width;
     in property <length> host-height;
     in property <bool> below;
-    y: root.below ? root.host-height + 4px : -self.height - 4px;
-    x: (root.host-width - self.width) / 2;
+    // The space kept between the tooltip and the control; the same between it and the window's edge.
+    property <length> gap: 4px;
+    y: root.below ? root.host-height + root.gap : -self.height - root.gap;
+    x: max(
+        root.gap - root.host-x,
+        min((root.host-width - self.width) / 2,
+            Ring.window-width - root.gap - self.width - root.host-x));
     width: tip.preferred-width + 16px;
     height: tip.preferred-height + 10px;
     border-radius: 4px;
@@ -130,6 +140,7 @@ export component IconButton inherits Rectangle {
     if touch.has-hover: Tooltip {
         text: root.enabled || root.disabled-reason == ""
             ? root.label : root.label + ": " + root.disabled-reason;
+        host-x: root.absolute-position.x;
         host-width: root.width;
         host-height: root.height;
         below: root.tooltip-below;
@@ -175,13 +186,18 @@ export component TextButton inherits Rectangle {
         spacing: 6px;
         padding-left: 12px;
         padding-right: 12px;
-        if root.icon.width > 0: Image {
-            source: root.icon;
-            width: 20px;
-            height: 20px;
-            image-fit: contain;
+        // A layout of its own holds the icon level with the words; left to the row, it sits at
+        // the top of the button.
+        if root.icon.width > 0: VerticalLayout {
+            alignment: center;
+            icon-image := Image {
+                source: root.icon;
+                width: 20px;
+                height: 20px;
+                image-fit: contain;
+            }
         }
-        Text {
+        words := Text {
             text: root.text;
             vertical-alignment: center;
             font-size: Theme.body-size;
@@ -205,6 +221,44 @@ export component TextButton inherits Rectangle {
         active: root.enabled;
         on-ring: root.on-ring;
         in-dialog: root.in-dialog;
+        activated => { root.clicked(); }
+    }
+}
+
+// One entry of a menu: its words at the left, the whole width to click, the house ring.
+export component MenuItem inherits Rectangle {
+    in property <string> text;
+    callback clicked();
+
+    public function focus-me() {
+        stop.focus();
+    }
+
+    height: max(32px, words.preferred-height + 12px);
+    border-radius: Theme.radius;
+    background: touch.has-hover ? Theme.surface-hover : transparent;
+    border-width: RingMetrics.width;
+    border-color: RingColour.of(true, touch.has-hover, stop.has-focus);
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-action-default => { root.clicked(); }
+
+    words := Text {
+        x: 12px;
+        text: root.text;
+        vertical-alignment: center;
+        font-size: Theme.body-size;
+        color: Theme.text;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: MouseCursor.pointer;
+        clicked => { root.clicked(); }
+    }
+
+    stop := Stop {
+        label: root.text;
+        in-dialog: true;
         activated => { root.clicked(); }
     }
 }

@@ -6,6 +6,8 @@
 
 #![forbid(unsafe_code)]
 
+pub mod auto_scroll;
+pub mod credits;
 pub mod deck;
 pub mod elapsed;
 pub mod follow;
@@ -17,3 +19,4 @@ pub mod output;
 pub mod preferences;
 pub mod selection;
 pub mod text;
+pub mod version;

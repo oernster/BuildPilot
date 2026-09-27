@@ -1,0 +1,98 @@
+// A surface of text that reads itself (UI-011): the cycle is the pure machine in
+// src/domain/auto_scroll.rs, reached through the Reading global; this pane only drives it on a
+// timer and follows its answers.
+//
+// A hand on the surface is found by one watch: the position the pane last placed. Whatever else
+// moved it (the wheel, the scroll bar, the keys) suspends the cycle, which then carries on from
+// wherever it was left.
+//
+// Keyboard: a stop only while its text overflows, reached by Tab alone and never ringed, since it
+// is text. Up, Down, Page Up, Page Down, Home and End scroll it.
+
+import { ScrollView } from "std-widgets.slint";
+import { Ring } from "widgets.slint";
+
+export struct ReadingState { phase: int, wait-ms: int, ticks-to-step: int, opening: bool }
+export struct ReadingStep { state: ReadingState, delta: length }
+
+// Answered by the program with the machine in src/domain/auto_scroll.rs.
+export global Reading {
+    // The tick, in milliseconds, set by the program from the machine's own constant; nothing
+    // reads itself until it is.
+    in property <int> tick-ms;
+    pure callback start() -> ReadingState;
+    // One tick: the state, how far down the surface sits and how far it can go.
+    pure callback tick(ReadingState, length, length) -> ReadingStep;
+    // The reader moved the surface by hand.
+    pure callback suspend(ReadingState) -> ReadingState;
+    // Keyboard focus arrived in the surface.
+    pure callback focus(ReadingState) -> ReadingState;
+}
+
+export component ReadingPane inherits Rectangle {
+    // The name `Ring.focused` reports while the pane holds focus.
+    in property <string> label;
+    // False freezes the cycle where it is: time does not pass for it and input does not count.
+    in property <bool> active: true;
+
+    property <ReadingState> state;
+    // Where the pane last put the view; any other position is a hand.
+    property <length> placed;
+    property <length> max-top: max(0px, view.content-height - view.visible-height);
+    property <length> line-step: 20px;
+
+    init => { root.state = Reading.start(); }
+
+    function scroll-to(top: length) {
+        view.content-y = -max(0px, min(root.max-top, top));
+    }
+
+    stop := FocusScope {
+        enabled: root.max-top > 0px && root.active;
+        focus-on-click: false;
+        focus-changed-event => {
+            if (self.has-focus) {
+                Ring.focused = root.label;
+                root.state = Reading.focus(root.state);
+            } else if (Ring.focused == root.label) {
+                Ring.focused = "";
+            }
+        }
+        key-pressed(event) => {
+            if (event.text == Key.UpArrow) {
+                root.scroll-to(-view.content-y - root.line-step);
+            } else if (event.text == Key.DownArrow) {
+                root.scroll-to(-view.content-y + root.line-step);
+            } else if (event.text == Key.PageUp) {
+                root.scroll-to(-view.content-y - view.visible-height);
+            } else if (event.text == Key.PageDown) {
+                root.scroll-to(-view.content-y + view.visible-height);
+            } else if (event.text == Key.Home) {
+                root.scroll-to(0px);
+            } else if (event.text == Key.End) {
+                root.scroll-to(root.max-top);
+            } else {
+                return reject;
+            }
+            return accept;
+        }
+    }
+
+    view := ScrollView {
+        @children
+    }
+
+    Timer {
+        interval: Reading.tick-ms * 1ms;
+        running: root.active && Reading.tick-ms > 0;
+        triggered => {
+            if (view.content-y != root.placed) {
+                root.state = Reading.suspend(root.state);
+            }
+            let step = Reading.tick(root.state, -view.content-y, root.max-top);
+            root.state = step.state;
+            root.scroll-to(-view.content-y + step.delta);
+            root.placed = view.content-y;
+        }
+    }
+}

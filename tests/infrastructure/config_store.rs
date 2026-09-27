@@ -6,6 +6,7 @@ use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, draft_for_script,
 };
 use buildpilot::domain::preferences::{Preferences, ThemeChoice, TrayLayout, WindowGeometry};
+use buildpilot::domain::version::Version;
 use buildpilot::infrastructure::config_store::{CONFIG_FILE, JsonConfigStore, SET_ASIDE_SUFFIX};
 use serde_json::{Value, json};
 
@@ -32,6 +33,7 @@ fn preferences() -> Preferences {
             expanded: true,
             height: Some(260),
         },
+        skipped_update: Version::parse("1.2.0"),
     }
 }
 

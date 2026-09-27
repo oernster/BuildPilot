@@ -1,6 +1,6 @@
 //! Opening and revealing scripts; opening the data folder (SRS 3.11, UI-004).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::domain::deck::DeckError;
 use crate::domain::operation::OperationId;
@@ -69,6 +69,19 @@ impl App {
             .shell
             .open_folder(&self.data_folder())
             .map_err(AppError::Shell)
+    }
+
+    /// Opens `address` in the operator's browser: an update's download (UI-010).
+    pub fn open_address(&self, address: &str) -> Result<(), AppError> {
+        self.ports
+            .shell
+            .open_address(address)
+            .map_err(AppError::Shell)
+    }
+
+    /// Opens `file` with its associated application: the third-party notices (UI-008).
+    pub fn open_file(&self, file: &Path) -> Result<(), AppError> {
+        self.ports.shell.open(file).map_err(AppError::Shell)
     }
 
     fn script_of(&self, id: &OperationId) -> Result<PathBuf, AppError> {

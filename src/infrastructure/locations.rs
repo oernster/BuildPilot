@@ -6,6 +6,10 @@ use std::path::PathBuf;
 
 /// The product's name, as Windows shows it.
 pub const PRODUCT_NAME: &str = "BuildPilot";
+/// Who wrote it and publishes it: About says so and the Apps list shows it.
+pub const AUTHOR: &str = "Oliver Ernster";
+/// The copyright line About shows.
+pub const COPYRIGHT: &str = "Copyright \u{a9} 2026 Oliver Ernster";
 /// The application's executable.
 pub const APP_EXE: &str = "buildpilot.exe";
 /// The setup program's copy of itself in the install folder, run by Modify, Repair and Uninstall.

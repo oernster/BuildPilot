@@ -1,5 +1,6 @@
 //! Explorer and file associations (SRS 3.11).
 
+use std::ffi::OsStr;
 use std::os::windows::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
@@ -31,5 +32,10 @@ impl Shell for ExplorerShell {
 
     fn open_folder(&self, folder: &Path) -> Result<(), String> {
         shell_open(folder.as_os_str()).map_err(|error| error.to_string())
+    }
+
+    /// Windows hands an address to the operator's default browser.
+    fn open_address(&self, address: &str) -> Result<(), String> {
+        shell_open(OsStr::new(address)).map_err(|error| error.to_string())
     }
 }

@@ -12,8 +12,10 @@ slint::include_modules!();
 mod actions;
 mod dialog;
 mod events;
+mod help;
 mod layout;
 mod output_model;
+mod reading;
 mod row_sync;
 pub mod rows;
 
@@ -38,7 +40,9 @@ use crate::domain::operation::OperationId;
 pub use actions::step_ring;
 use events::Hook;
 pub use events::Waker;
+pub use help::HelpFacts;
 use output_model::OutputModel;
+pub use reading::wire_reading;
 
 /// How often elapsed times and the running indicator refresh.
 const TICK: Duration = Duration::from_millis(250);
@@ -53,6 +57,8 @@ pub struct Environment {
     pub windows_uses_dark: bool,
     /// Restores and raises a native window, given its handle (DATA-001).
     pub bring_forward: fn(NonZeroIsize),
+    /// What Help shows and where it asks about updates.
+    pub help: HelpFacts,
 }
 
 /// What a later BuildPilot's summons calls, from any thread: brings the window forward.
@@ -134,6 +140,8 @@ pub fn run(
     ui.apply_theme();
     actions::wire(&ui, &window);
     dialog::wire(&ui, &window);
+    reading::wire_reading(&window.global::<Reading>());
+    let _update_timers = help::wire(&ui, &window);
 
     let drain_ui = ui.clone();
     events::install(Hook::Drain, Rc::new(move || drain_ui.drain()));

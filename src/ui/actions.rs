@@ -73,10 +73,6 @@ fn wire_toolbar(ui: &Rc<Ui>, window: &MainWindow) {
         this.report(opened);
     });
     let this = ui.clone();
-    window.on_open_about(move || this.with_window(|window| window.set_show_about(true)));
-    let this = ui.clone();
-    window.on_close_about(move || this.with_window(|window| window.set_show_about(false)));
-    let this = ui.clone();
     window.on_dismiss_notice(move |index| {
         if let Ok(index) = usize::try_from(index)
             && index < this.notices.row_count()

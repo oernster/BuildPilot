@@ -8,6 +8,7 @@ use crate::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, OperationSpec, draft_for_script,
 };
 use crate::domain::preferences::{ThemeChoice, TrayLayout, WindowGeometry};
+use crate::domain::version::Version;
 
 use super::{App, AppError};
 
@@ -121,6 +122,12 @@ impl App {
     /// Sets and saves the theme (UI-001).
     pub fn set_theme(&mut self, theme: ThemeChoice) {
         self.preferences.theme = theme;
+        self.persist();
+    }
+
+    /// Records and saves the release the operator chose not to hear about unbidden (UI-010).
+    pub fn skip_update(&mut self, version: Version) {
+        self.preferences.skipped_update = Some(version);
         self.persist();
     }
 

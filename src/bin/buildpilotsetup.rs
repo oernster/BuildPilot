@@ -12,6 +12,9 @@ use std::process::{Command, ExitCode};
 use std::rc::Rc;
 use std::thread;
 
+use buildpilot::domain::credits;
+use buildpilot::domain::version::Version;
+use buildpilot::infrastructure::build_info::{CREDITS, LICENCE, NOTICES_FILE};
 use buildpilot::infrastructure::locations::{
     PRODUCT_NAME, SETUP_EXE, install_folder, setup_log_folder,
 };
@@ -21,9 +24,10 @@ use buildpilot::infrastructure::win32::diagnostics::show_error;
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::setup::plan::{self, Choices, Step};
 use buildpilot::setup::route::{Installed, Route, route};
-use buildpilot::setup::version::Version;
 use buildpilot::setup::wording::{self, route_words, step_words, verdict};
-use buildpilot::ui::{FooterAction, Ring, SetupScreen, SetupWindow, step_ring};
+use buildpilot::ui::{
+    FooterAction, Reading, Ring, SetupScreen, SetupWindow, step_ring, wire_reading,
+};
 use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 /// The application this setup program installs, built into it by build.ps1.
@@ -32,8 +36,6 @@ static PAYLOAD: &[u8] = include_bytes!(env!("BUILDPILOT_PAYLOAD"));
 #[cfg(not(buildpilot_payload))]
 static PAYLOAD: &[u8] = &[];
 
-/// The licence setup and BuildPilot are distributed under.
-const LICENCE: &str = include_str!("../../LICENSE");
 /// How long to wait for a started BuildPilot's window before setup closes, in milliseconds.
 const LAUNCH_WAIT_MS: u32 = 5000;
 
@@ -248,6 +250,24 @@ impl Setup {
     }
 }
 
+/// The licence page: BuildPilot's licence, then every crate it is built from (UI-009), whose
+/// licence texts setup installs beside it.
+fn licence_page() -> String {
+    let credits = credits::parse(CREDITS);
+    let mut page = format!(
+        "{LICENCE}\n\nThird-party crates\n\nBuildPilot is built from these {} crates. Their \
+         licence texts are installed beside it as {NOTICES_FILE}.\n\n",
+        credits.len()
+    );
+    for credit in credits {
+        page.push_str(&format!(
+            "{} {}: {}\n",
+            credit.name, credit.version, credit.licence
+        ));
+    }
+    page
+}
+
 /// Setup cannot delete the folder it runs from, so a copy started from there moves to the
 /// temporary folder first and runs again from it. True when this process should now end.
 fn relocated() -> bool {
@@ -305,7 +325,8 @@ fn main() -> ExitCode {
     window.set_desktop_label(wording::DESKTOP_SHORTCUT.into());
     window.set_launch_label(wording::LAUNCH_AFTER.into());
     window.set_keep_label(wording::KEEP_DATA.into());
-    window.set_licence_text(LICENCE.into());
+    window.set_licence_text(licence_page().into());
+    wire_reading(&window.global::<Reading>());
     // Options open on what is already true.
     let has_desktop = work::desktop_shortcut().is_some_and(|link| link.exists());
     window.set_desktop_shortcut(has_desktop);

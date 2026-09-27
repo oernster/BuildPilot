@@ -2,6 +2,7 @@
 //! test names the SRS requirement it verifies.
 
 mod infrastructure {
+    mod build_info;
     mod config_store;
     mod icons;
     #[cfg(windows)]
@@ -12,6 +13,8 @@ mod infrastructure {
     mod process;
     #[cfg(windows)]
     mod reader_panic;
+    #[cfg(windows)]
+    mod releases;
     #[cfg(windows)]
     mod setup_machine;
     mod system;

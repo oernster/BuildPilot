@@ -11,6 +11,7 @@ use serde_json::{Map, Value};
 
 use crate::domain::operation::{IconRef, Operation, OperationConfig, OperationId, OperationSpec};
 use crate::domain::preferences::{Preferences, ThemeChoice, TrayLayout, WindowGeometry};
+use crate::domain::version::Version;
 
 /// The schema this build writes (CFG-009).
 pub const CURRENT_SCHEMA: u64 = 1;
@@ -52,6 +53,9 @@ struct PreferencesDto {
     window: Option<WindowDto>,
     #[serde(default)]
     tray: TrayDto,
+    // Written only once a release is skipped, so older files and newer ones read alike.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    skipped_update: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -193,6 +197,7 @@ fn preferences_from_dto(dto: PreferencesDto) -> Preferences {
             expanded: dto.tray.expanded,
             height: dto.tray.height,
         },
+        skipped_update: dto.skipped_update.as_deref().and_then(Version::parse),
     }
 }
 
@@ -213,5 +218,8 @@ fn preferences_to_dto(preferences: &Preferences) -> PreferencesDto {
             expanded: preferences.tray.expanded,
             height: preferences.tray.height,
         },
+        skipped_update: preferences
+            .skipped_update
+            .map(|version| version.to_string()),
     }
 }

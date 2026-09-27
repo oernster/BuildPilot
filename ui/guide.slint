@@ -1,0 +1,132 @@
+// The Guide (UI-007): every control as its own icon with its name and a line on what it does,
+// then the rules behind BuildPilot's behaviour, then keyboard use at the foot. The words are data
+// here; the dialog only lays them out. tests/structural.rs checks that every toolbar and row
+// control is named.
+
+import { Theme } from "theme.slint";
+import { TextButton } from "widgets.slint";
+import { Modal } from "dialogs.slint";
+import { ReadingPane } from "reading.slint";
+
+struct GuideEntry { icon: image, name: string, text: string }
+struct GuideRule { title: string, text: string }
+
+component SectionHeading inherits Text {
+    font-size: Theme.body-size;
+    font-weight: 600;
+    color: Theme.text;
+}
+
+component Entries inherits VerticalLayout {
+    in property <[GuideEntry]> entries;
+    spacing: 8px;
+    for entry in root.entries: HorizontalLayout {
+        spacing: 10px;
+        Image {
+            source: entry.icon;
+            width: 30px;
+            height: 30px;
+            image-fit: contain;
+        }
+        Text {
+            text: entry.name + ": " + entry.text;
+            color: Theme.text;
+            wrap: word-wrap;
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+component Paragraph inherits Text {
+    color: Theme.text-muted;
+    wrap: word-wrap;
+}
+
+export component GuideDialog inherits Modal {
+    in property <bool> reading-active: true;
+    callback close();
+    heading: "How BuildPilot works";
+    panel-width: 720px;
+    tall: true;
+    dismissed => { root.close(); }
+    init => { close-button.focus-me(); }
+
+    property <[GuideEntry]> toolbar: [
+        { icon: @image-url("../assets/add.png"), name: "Add a build script",
+          text: "choose a .ps1, .bat, .cmd, .exe or .com file; BuildPilot remembers it from then on, with its working directory and arguments." },
+        { icon: @image-url("../assets/dark-mode.png"), name: "Switch to dark theme",
+          text: "the toggle shows the theme it switches INTO, so the moon appears while BuildPilot is light and the sun while it is dark." },
+        { icon: @image-url("../assets/settings.png"), name: "Settings",
+          text: "the theme (Light, Dark or Follow Windows) and the folder BuildPilot keeps its settings and log in." },
+        { icon: @image-url("../assets/help-about.png"), name: "Help",
+          text: "this guide, About, the licence and Check for Updates." },
+    ];
+    property <[GuideEntry]> row-controls: [
+        { icon: @image-url("../assets/reorder-rows.png"), name: "Drag to reorder",
+          text: "drag a row by its handle to move it; the order is saved at once and never touches a run." },
+        { icon: @image-url("../assets/application-icon.png"), name: "Select",
+          text: "the checkbox marks a row. Nothing acts on marked rows yet; click the row itself to show its output." },
+        { icon: @image-url("../assets/run.png"), name: "Run",
+          text: "starts the script with its working directory and arguments and no console window. Greyed out while it is already running." },
+        { icon: @image-url("../assets/stop.png"), name: "Stop",
+          text: "ends the script and every process it started, leaving every other run alone." },
+        { icon: @image-url("../assets/edit-script.png"), name: "Edit",
+          text: "change the name, script, working directory, arguments or icon. BuildPilot never changes the script itself." },
+        { icon: @image-url("../assets/open-script.png"), name: "Open script",
+          text: "opens the script in whatever Windows opens that type of file with." },
+        { icon: @image-url("../assets/browse-locate-script.png"), name: "Show script in Explorer",
+          text: "opens its folder with the script selected." },
+        { icon: @image-url("../assets/negative.png"), name: "Remove",
+          text: "takes the row out of BuildPilot after asking; the script stays where it is. Stop it first if it is running." },
+    ];
+    property <[GuideRule]> rules: [
+        { title: "Output belongs to its row.",
+          text: "The output tray at the foot shows the selected row's latest run, live while it runs and kept until it runs again or BuildPilot closes. It follows the newest line until you scroll up; Jump to latest takes you back. Beyond 100,000 lines the oldest go; the tray says so." },
+        { title: "Several runs at once.",
+          text: "Each row runs on its own; starting or stopping one never touches another." },
+        { title: "Stop means the whole tree.",
+          text: "Everything a script started ends with it. If anything is still alive five seconds later the row names its process ID." },
+        { title: "Closing asks first.",
+          text: "Closing BuildPilot with runs going names them and stops them only if you agree." },
+        { title: "Your scripts are yours.",
+          text: "BuildPilot never writes to, renames or deletes a script. It keeps its own list in buildpilot.json in the data folder that Settings names." },
+        { title: "The only request it makes is the version check.",
+          text: "Shortly after it opens and once a day, BuildPilot asks GitHub whether a newer release is published; Help > Check for Updates asks on demand. The request carries nothing about you or your scripts. A version you would rather not hear about again can be skipped." },
+    ];
+
+    ReadingPane {
+        vertical-stretch: 1;
+        label: "Guide";
+        active: root.reading-active;
+        VerticalLayout {
+            spacing: 10px;
+            padding-right: 16px;
+            SectionHeading { text: "The bar along the top"; }
+            Paragraph { text: "Hover any control to see its name."; }
+            Entries { entries: root.toolbar; }
+            SectionHeading { text: "Each row"; }
+            Paragraph { text: "Left to right: the handle, the checkbox, the row's icon, its name and status, then its controls. A control that does not apply is greyed out, never hidden; its tooltip says why."; }
+            Entries { entries: root.row-controls; }
+            SectionHeading { text: "Rules behind the behaviour"; }
+            for rule in root.rules: Text {
+                text: rule.title + " " + rule.text;
+                color: Theme.text;
+                wrap: word-wrap;
+            }
+            SectionHeading { text: "Keyboard"; }
+            Paragraph { text: "Tab and Shift+Tab move round every control, wrapping at both ends; Right and Left do the same. Space or Enter presses the focused control. A green ring marks it."; }
+            Paragraph { text: "The rows are one stop: Up and Down choose a row, Space ticks its checkbox, Enter edits it and Alt+Up or Alt+Down moves it. The chosen row's own controls follow it round the ring."; }
+            Paragraph { text: "In the output and in any text like this that reads itself, Up, Down, Page Up, Page Down, Home and End scroll. Escape closes any dialog."; }
+        }
+    }
+    HorizontalLayout {
+        alignment: end;
+        close-button := TextButton {
+            text: "Close";
+            primary: true;
+            in-dialog: true;
+            clicked => { root.close(); }
+        }
+    }
+}
