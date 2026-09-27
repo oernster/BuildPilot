@@ -7,9 +7,43 @@ use std::path::{Path, PathBuf};
 use crate::application::ports::IconLibrary;
 use crate::domain::operation::OperationId;
 
-/// Where to look for an icon beside a script, relative to the script's folder, in order. A new
+/// One place an icon may sit, relative to the folder searched.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IconConvention {
+    /// A fixed path beneath the folder, one part each.
+    Beneath(&'static [&'static str]),
+    /// A file in the folder named after the folder, with this extension: `Stellody\Stellody.png`.
+    NamedForFolder(&'static str),
+}
+
+impl IconConvention {
+    /// Where this convention looks in `dir`; `None` when it cannot apply, as at a drive's root,
+    /// which has no name.
+    pub fn candidate(self, dir: &Path) -> Option<PathBuf> {
+        match self {
+            Self::Beneath(parts) => Some(
+                parts
+                    .iter()
+                    .fold(dir.to_path_buf(), |path, part| path.join(part)),
+            ),
+            Self::NamedForFolder(extension) => {
+                // Appended, not set: a folder named `my.app` looks for `my.app.png`.
+                let mut file = dir.file_name()?.to_os_string();
+                file.push(".");
+                file.push(extension);
+                Some(dir.join(file))
+            }
+        }
+    }
+}
+
+/// Where to look for an icon beside a script, in order; the first readable image wins. A new
 /// convention is one more entry here (ICON-003).
-pub const ICON_CONVENTIONS: &[&[&str]] = &[&["assets", "application-icon.png"]];
+pub const ICON_CONVENTIONS: &[IconConvention] = &[
+    IconConvention::Beneath(&["assets", "application-icon.png"]),
+    IconConvention::Beneath(&["assets", "application-icon.ico"]),
+    IconConvention::NamedForFolder("png"),
+];
 
 /// The file signatures of the image types an icon may be: PNG, JPEG, ICO.
 const IMAGE_SIGNATURES: &[&[u8]] = &[b"\x89PNG\r\n\x1a\n", b"\xff\xd8\xff", b"\x00\x00\x01\x00"];
@@ -48,11 +82,7 @@ impl IconLibrary for FsIconLibrary {
     fn discover(&self, script_dir: &Path) -> Option<PathBuf> {
         ICON_CONVENTIONS
             .iter()
-            .map(|parts| {
-                parts
-                    .iter()
-                    .fold(script_dir.to_path_buf(), |path, part| path.join(part))
-            })
+            .filter_map(|convention| convention.candidate(script_dir))
             .find(|candidate| self.is_readable(candidate))
     }
 

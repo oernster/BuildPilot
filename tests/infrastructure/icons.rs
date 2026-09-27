@@ -3,7 +3,7 @@ use std::path::Path;
 
 use buildpilot::application::ports::IconLibrary;
 use buildpilot::domain::operation::OperationId;
-use buildpilot::infrastructure::icons::FsIconLibrary;
+use buildpilot::infrastructure::icons::{FsIconLibrary, IconConvention};
 
 const PNG: &[u8] = b"\x89PNG\r\n\x1a\nrest of image";
 const JPEG: &[u8] = b"\xff\xd8\xff\xe0rest";
@@ -31,6 +31,48 @@ fn finds_conventional_icon() {
     assert_eq!(
         library(root.path()).discover(&root.path().join("app")),
         Some(icon)
+    );
+}
+
+// ICON-001, ICON-003: the conventions in order: assets\application-icon.png, then .ico, then a
+// PNG named after the folder in the folder itself. The first readable image wins.
+#[test]
+fn conventions_are_tried_in_order() {
+    let root = tempfile::tempdir().unwrap();
+    let app = root.path().join("Stellody");
+    let png = app.join("assets").join("application-icon.png");
+    let ico = app.join("assets").join("application-icon.ico");
+    let named = app.join("Stellody.png");
+    let library = library(root.path());
+    assert_eq!(library.discover(&app), None);
+    write(&named, PNG);
+    assert_eq!(library.discover(&app), Some(named.clone()));
+    write(&ico, ICO);
+    assert_eq!(library.discover(&app), Some(ico.clone()));
+    write(&png, PNG);
+    assert_eq!(library.discover(&app), Some(png));
+    // A convention whose file is not an image passes to the next.
+    write(&app.join("assets").join("application-icon.png"), b"hello");
+    assert_eq!(library.discover(&app), Some(ico));
+}
+
+// ICON-001: the folder-named PNG is the folder's own name in full, dots and all; another PNG in
+// the folder is not an icon, nor is one when the folder is a drive's root.
+#[test]
+fn only_the_folder_named_png_is_found() {
+    let root = tempfile::tempdir().unwrap();
+    let dotted = root.path().join("my.app");
+    write(&dotted.join("my.png"), PNG);
+    write(&dotted.join("logo.png"), PNG);
+    assert_eq!(library(root.path()).discover(&dotted), None);
+    write(&dotted.join("my.app.png"), PNG);
+    assert_eq!(
+        library(root.path()).discover(&dotted),
+        Some(dotted.join("my.app.png"))
+    );
+    assert_eq!(
+        IconConvention::NamedForFolder("png").candidate(Path::new(r"C:\")),
+        None
     );
 }
 

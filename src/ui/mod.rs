@@ -14,6 +14,7 @@ mod dialog;
 mod events;
 mod help;
 mod hosts;
+pub mod icon_image;
 mod layout;
 mod output_model;
 mod reading;

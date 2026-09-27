@@ -224,10 +224,13 @@ more than once, since two operations may differ only in arguments.
 
 ### 3.3 Icons (ICON)
 
-**ICON-001 (M) Discovery convention.** When a script is chosen, the icon resolver shall look for
-`assets\application-icon.png` beneath the script's directory. Where that file exists and decodes
-as an image, the resolver shall use it as the operation's icon. Source: spec §5.1.
-Verified by: `infrastructure::icon_discovery` tests `finds_conventional_icon`,
+**ICON-001 (M) Discovery convention.** When a script or a folder is chosen, the icon resolver
+shall look in the script's directory (or the folder) for, in order: `assets\application-icon.png`;
+`assets\application-icon.ico`; a PNG named after the directory itself, e.g.
+`Stellody\Stellody.png`. The first that exists and holds an image is the operation's icon.
+Source: spec §5.1; the ICO and folder-named entries, owner 2026-09-27.
+Verified by: `infrastructure::icons` tests `finds_conventional_icon`,
+`conventions_are_tried_in_order`, `only_the_folder_named_png_is_found`,
 `ignores_undecodable_file`, `absent_icon_gives_none`.
 
 **ICON-002 (M) Placeholder.** While an operation has no usable icon, its row shall show the

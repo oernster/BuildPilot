@@ -5,12 +5,34 @@ use std::time::Duration;
 
 use buildpilot::application::IconStatus;
 use buildpilot::domain::lifecycle::{Failure, LaunchError, RunState};
+use buildpilot::ui::icon_image::load_scaled;
 use buildpilot::ui::rows::{
     RowFacts, SPINNER, StatusClass, detail, dropped_note, icon_problem, row_text,
 };
 
 const SCRIPT: &str = r"C:\src\app\build.ps1";
 
+/// The pixels a test icon is shrunk to fit.
+const ICON_PIXELS: u32 = 144;
+
+/// A file in the repository's assets folder.
+fn asset(name: &str) -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("assets")
+        .join(name)
+}
+
+// ICON-004, UI-013: an ICO icon draws as well as a PNG, both shrunk to the pixels asked for. The
+// ICO is BuildPilot's own, holding 16 to 256 px images; the largest is the one drawn.
+#[test]
+fn ico_and_png_icons_load_shrunk() {
+    for name in ["application-icon.ico", "application-icon.png"] {
+        let image = load_scaled(&asset(name), ICON_PIXELS).unwrap_or_else(|| panic!("{name}"));
+        let size = image.size();
+        assert_eq!(size.width.max(size.height), ICON_PIXELS, "{name}: {size:?}");
+    }
+    assert!(load_scaled(&asset("..").join("Cargo.toml"), ICON_PIXELS).is_none());
+}
 fn text_for(
     state: &RunState,
     elapsed: Option<Duration>,

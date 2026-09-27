@@ -4,11 +4,12 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use slint::{ComponentHandle, Image, Model, Rgba8Pixel, SharedPixelBuffer, SharedString};
+use slint::{ComponentHandle, Image, Model, SharedString};
 
 use crate::application::{App, IconStatus};
 use crate::domain::operation::{Operation, OperationId};
 
+use super::icon_image::load_scaled;
 use super::rows::{self, RowFacts, StatusClass};
 use super::{RowData, StatusKind, Theme, Ui};
 
@@ -125,24 +126,6 @@ impl Ui {
             .or_insert_with(|| load_scaled(path, pixels))
             .clone()
     }
-}
-
-/// The image at `path`, shrunk to fit `pixels` square when it is larger; `None` when it cannot
-/// be read as an image.
-fn load_scaled(path: &Path, pixels: u32) -> Option<Image> {
-    let decoded = image::open(path).ok()?;
-    let fitted = if pixels > 0 && decoded.width().max(decoded.height()) > pixels {
-        decoded.thumbnail(pixels, pixels)
-    } else {
-        decoded
-    };
-    let rgba = fitted.into_rgba8();
-    let buffer = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(
-        rgba.as_raw(),
-        rgba.width(),
-        rgba.height(),
-    );
-    Some(Image::from_rgba8(buffer))
 }
 
 fn status_kind(class: StatusClass) -> StatusKind {
