@@ -54,11 +54,11 @@ export component GuideDialog inherits Modal {
 
     property <[GuideEntry]> toolbar: [
         { icon: @image-url("../assets/add.png"), name: "Add a build script",
-          text: "choose a .ps1, .bat, .cmd, .exe or .com file; BuildPilot remembers it from then on, with its working directory and arguments." },
+          text: "choose a script (.ps1, .bat, .cmd, .exe, .com, .py or a type in your host table) or a folder to recognise; BuildPilot remembers it from then on, with its working directory and arguments." },
         { icon: @image-url("../assets/dark-mode.png"), name: "Switch to dark theme",
           text: "the toggle shows the theme it switches INTO, so the moon appears while BuildPilot is light and the sun while it is dark." },
         { icon: @image-url("../assets/settings.png"), name: "Settings",
-          text: "the theme (Light or Dark) and the folder BuildPilot keeps its settings and log in." },
+          text: "the theme (Light or Dark), the folder BuildPilot keeps its settings and log in, then hosts: the program that runs each other script type, such as ruby.exe for .rb." },
         { icon: @image-url("../assets/help-about.png"), name: "Help",
           text: "this guide, About, the licence and Check for Updates." },
     ];

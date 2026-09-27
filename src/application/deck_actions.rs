@@ -4,6 +4,7 @@
 use std::path::Path;
 
 use crate::domain::deck::DeckError;
+use crate::domain::host::{HostRow, HostTable};
 use crate::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, OperationSpec, draft_for_script,
 };
@@ -24,7 +25,7 @@ impl App {
     /// The Add dialog's starting values for `script` (ADD-001 to ADD-004), with the
     /// conventional icon when one is found beside it (ICON-001).
     pub fn draft_for(&self, script: &Path) -> Result<OperationSpec, AppError> {
-        let mut spec = draft_for_script(script)?;
+        let mut spec = draft_for_script(script, &self.preferences.hosts)?;
         if let Some(icon) = self.ports.icons.discover(&spec.working_dir) {
             spec.icon = IconRef::Discovered(icon);
         }
@@ -34,7 +35,7 @@ impl App {
     /// Adds an operation as the bottom row and saves (CFG-001).
     pub fn add(&mut self, spec: OperationSpec) -> Result<OperationId, AppError> {
         let config = OperationConfig::try_from(spec)?;
-        self.check_environment(&config)?;
+        self.check_config(&config)?;
         let id = self.ports.ids.next_id();
         let config = self.settle_icon(&id, config, None)?;
         self.record_icon_status(&id, config.icon());
@@ -53,7 +54,7 @@ impl App {
             .ok_or_else(|| DeckError::NotFound(id.clone()))?;
         let current = self.deck.operations()[index].config().clone();
         let config = OperationConfig::try_from(spec)?;
-        self.check_environment(&config)?;
+        self.check_config(&config)?;
         let config = self.settle_icon(id, config, Some(current.icon()))?;
         let applies_next_run = self.is_running(id) && current.differs_in_execution(&config);
         self.record_icon_status(id, config.icon());
@@ -125,6 +126,19 @@ impl App {
     pub fn set_theme(&mut self, theme: ThemeChoice) {
         self.preferences.theme = theme;
         self.persist();
+    }
+
+    /// Replaces and saves the operator's host table (HOST-001); refuses two rows for one
+    /// extension, changing nothing.
+    pub fn set_hosts(&mut self, rows: Vec<HostRow>) -> Result<(), AppError> {
+        self.preferences.hosts = HostTable::new(rows)?;
+        self.persist();
+        Ok(())
+    }
+
+    /// Every extension the Add and step pickers offer, built-in then the operator's (HOST-003).
+    pub fn script_extensions(&self) -> Vec<String> {
+        self.preferences.hosts.extensions()
     }
 
     /// Records and saves the release the operator chose not to hear about unbidden (UI-010).

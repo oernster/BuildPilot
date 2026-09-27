@@ -1,33 +1,38 @@
 use std::path::{Path, PathBuf};
 
 use buildpilot::domain::environment::Need;
-use buildpilot::domain::launch_plan::ScriptKind;
+use buildpilot::domain::host::HostTable;
 use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationError, OperationId, OperationSpec,
     draft_for_script, format_argument_lines, parse_argument_lines,
 };
 use buildpilot::domain::step::StepSpec;
 
-use super::support::{config, id, spec, spec_with_steps};
+use super::support::{config, hosts, id, spec, spec_with_steps};
 
 // ADD-002
 #[test]
 fn working_dir_defaults_to_script_parent() {
-    let draft = draft_for_script(Path::new(r"C:\src\app\build.ps1")).unwrap();
+    let draft =
+        draft_for_script(Path::new(r"C:\src\app\build.ps1"), &HostTable::default()).unwrap();
     assert_eq!(draft.working_dir, PathBuf::from(r"C:\src\app"));
 }
 
 // ADD-003, OQ-5
 #[test]
 fn name_defaults_from_folder_and_stem() {
-    let draft = draft_for_script(Path::new(r"C:\src\pigeonpost\build.ps1")).unwrap();
+    let draft = draft_for_script(
+        Path::new(r"C:\src\pigeonpost\build.ps1"),
+        &HostTable::default(),
+    )
+    .unwrap();
     assert_eq!(draft.name, "pigeonpost build");
 }
 
 // ADD-003: a script at a drive root has no folder name to lead with.
 #[test]
 fn name_at_drive_root_is_the_stem() {
-    let draft = draft_for_script(Path::new(r"C:\build.cmd")).unwrap();
+    let draft = draft_for_script(Path::new(r"C:\build.cmd"), &HostTable::default()).unwrap();
     assert_eq!(draft.name, "build");
     assert_eq!(draft.working_dir, PathBuf::from(r"C:\"));
 }
@@ -35,7 +40,8 @@ fn name_at_drive_root_is_the_stem() {
 // ADD-004, ICON-002
 #[test]
 fn draft_has_no_arguments_and_the_placeholder_icon() {
-    let draft = draft_for_script(Path::new(r"C:\src\app\build.ps1")).unwrap();
+    let draft =
+        draft_for_script(Path::new(r"C:\src\app\build.ps1"), &HostTable::default()).unwrap();
     assert_eq!(
         draft.steps,
         [StepSpec::for_script(Path::new(r"C:\src\app\build.ps1"))]
@@ -48,10 +54,14 @@ fn draft_has_no_arguments_and_the_placeholder_icon() {
 // LCH-001: an unsupported type is refused at Add, naming the supported ones.
 #[test]
 fn draft_refuses_unsupported_type() {
-    let error = draft_for_script(Path::new(r"C:\src\app\build.sh")).unwrap_err();
+    let error =
+        draft_for_script(Path::new(r"C:\src\app\build.sh"), &HostTable::default()).unwrap_err();
     assert_eq!(
         error,
-        OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\build.sh"))
+        OperationError::UnsupportedScriptType {
+            path: PathBuf::from(r"C:\src\app\build.sh"),
+            supported: ".ps1, .bat, .cmd, .exe, .com, .py".to_owned(),
+        }
     );
     assert!(
         error
@@ -62,7 +72,7 @@ fn draft_refuses_unsupported_type() {
 
 #[test]
 fn draft_refuses_a_bare_file_name() {
-    let error = draft_for_script(Path::new("build.ps1")).unwrap_err();
+    let error = draft_for_script(Path::new("build.ps1"), &HostTable::default()).unwrap_err();
     assert_eq!(
         error,
         OperationError::NoParentDirectory(PathBuf::from("build.ps1"))
@@ -88,9 +98,15 @@ fn valid_spec_round_trips_through_config() {
     assert_eq!(validated.to_spec(), original);
     assert_eq!(validated.name(), "app build");
     assert_eq!(validated.steps().len(), 2);
-    assert_eq!(validated.first_step().kind(), ScriptKind::Python);
+    assert_eq!(
+        validated.first_step().script_path(),
+        Path::new(r"C:\src\app\buildexe.py")
+    );
     assert_eq!(validated.first_step().arguments(), ["--release"]);
-    assert_eq!(validated.steps()[1].kind(), ScriptKind::PowerShell);
+    assert_eq!(
+        validated.steps()[1].script_path(),
+        Path::new(r"C:\src\app\setup.ps1")
+    );
     assert_eq!(validated.environment(), Some("venv"));
 }
 
@@ -103,11 +119,32 @@ fn steps_are_required_and_each_validated() {
         OperationConfig::try_from(none).unwrap_err(),
         OperationError::EmptyScriptPath
     );
-    let bad_second = spec_with_steps(r"C:\src\app\build.ps1", &[r"C:\src\app\notes.txt"]);
+    let mut bad_second = spec_with_steps(r"C:\src\app\build.ps1", &[r"C:\src\app\x.ps1"]);
+    bad_second.steps[1].script_path = PathBuf::from("x.ps1");
     assert_eq!(
         OperationConfig::try_from(bad_second).unwrap_err(),
-        OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\notes.txt"))
+        OperationError::ScriptPathNotAbsolute(PathBuf::from("x.ps1"))
     );
+}
+
+// LCH-001, HOST-001: a type nothing runs still loads, so removing a host never loses an
+// operation; Add and Edit refuse it through `check_hosts`, naming the first such step.
+#[test]
+fn unsupported_type_loads_but_is_refused_by_check_hosts() {
+    let config = OperationConfig::try_from(spec_with_steps(
+        r"C:\src\app\build.ps1",
+        &[r"C:\src\app\notes.txt", r"C:\src\app\run.rb"],
+    ))
+    .unwrap();
+    assert_eq!(
+        config.check_hosts(&HostTable::default()).unwrap_err(),
+        OperationError::UnsupportedScriptType {
+            path: PathBuf::from(r"C:\src\app\notes.txt"),
+            supported: ".ps1, .bat, .cmd, .exe, .com, .py".to_owned(),
+        }
+    );
+    let supported = hosts(&[("txt", "notepad.exe"), ("rb", "ruby.exe")]);
+    assert_eq!(config.check_hosts(&supported), Ok(()));
 }
 
 // ENV-002: a blank environment name is no choice at all.
@@ -127,7 +164,7 @@ fn environment_need_is_the_greatest_step_need() {
     let need = |first: &str, later: &[&str]| {
         OperationConfig::try_from(spec_with_steps(first, later))
             .unwrap()
-            .environment_need()
+            .environment_need(&HostTable::default())
     };
     assert_eq!(need(r"C:\a\build.cmd", &[r"C:\a\x.exe"]), Need::None);
     assert_eq!(need(r"C:\a\build.cmd", &[r"C:\a\x.ps1"]), Need::Optional);
@@ -158,7 +195,7 @@ type BrokenSpecCase = (fn(&mut OperationSpec), OperationError, &'static str);
 // ADD-005: each refusal names its field.
 #[test]
 fn each_invalid_field_is_named() {
-    let cases: [BrokenSpecCase; 5] = [
+    let cases: [BrokenSpecCase; 4] = [
         (
             |s| s.steps[0].script_path = PathBuf::new(),
             OperationError::EmptyScriptPath,
@@ -168,11 +205,6 @@ fn each_invalid_field_is_named() {
             |s| s.steps[0].script_path = PathBuf::from("build.ps1"),
             OperationError::ScriptPathNotAbsolute(PathBuf::from("build.ps1")),
             "relative",
-        ),
-        (
-            |s| s.steps[0].script_path = PathBuf::from(r"C:\src\app\notes.txt"),
-            OperationError::UnsupportedScriptType(PathBuf::from(r"C:\src\app\notes.txt")),
-            "Supported types",
         ),
         (
             |s| s.working_dir = PathBuf::new(),

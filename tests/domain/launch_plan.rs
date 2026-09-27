@@ -1,8 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use buildpilot::domain::environment::{Need, VariableEdits};
-use buildpilot::domain::launch_plan::{LaunchPlan, PowerShellHost, ScriptKind, plan};
+use buildpilot::domain::host::{Host, HostRow, HostTable};
+use buildpilot::domain::launch_plan::{LaunchPlan, PowerShellHost, ScriptKind, command_line, plan};
 use buildpilot::domain::step::{Step, StepSpec};
+
+use super::support::hosts;
 
 // LCH-001: the table, one row per extension, regardless of case.
 #[test]
@@ -38,14 +41,6 @@ fn non_unicode_extension_is_unsupported() {
     assert_eq!(ScriptKind::of(&path), None);
 }
 
-#[test]
-fn supported_list_reads_naturally() {
-    assert_eq!(
-        ScriptKind::supported_list(),
-        ".ps1, .bat, .cmd, .exe, .com, .py"
-    );
-}
-
 // ENV-004, OQ-18: .py needs an environment, .ps1 uses one when there is one, the rest never.
 #[test]
 fn each_kind_states_its_environment_need() {
@@ -63,10 +58,64 @@ fn step_with_arguments(script: &str) -> Step {
     .unwrap()
 }
 
-fn plan_of(script: &str, host: PowerShellHost, environment: Option<&Path>) -> LaunchPlan {
+fn plan_with(
+    script: &str,
+    table: &HostTable,
+    powershell: PowerShellHost,
+    environment: Option<&Path>,
+) -> LaunchPlan {
     let step = step_with_arguments(script);
     let folder = Path::new(script).parent().unwrap();
-    plan(&step, folder, host, environment, VariableEdits::default())
+    let host = table.host_for(step.script_path()).unwrap();
+    plan(
+        &step,
+        host,
+        folder,
+        powershell,
+        environment,
+        VariableEdits::default(),
+    )
+}
+
+fn plan_of(script: &str, powershell: PowerShellHost, environment: Option<&Path>) -> LaunchPlan {
+    plan_with(script, &HostTable::default(), powershell, environment)
+}
+
+// HOST-002: the row's program, its own arguments, the script, then the step's arguments.
+#[test]
+fn operator_row_runs_its_program_ahead_of_the_script() {
+    let row = HostRow::new(
+        ".rb",
+        PathBuf::from(r"C:\Ruby33\bin\ruby.exe"),
+        vec!["-W0".to_owned()],
+    )
+    .unwrap();
+    let table = HostTable::new(vec![row]).unwrap();
+    let launch = plan_with(r"C:\src\app\build.rb", &table, PowerShellHost::Pwsh, None);
+    assert_eq!(launch.program, PathBuf::from(r"C:\Ruby33\bin\ruby.exe"));
+    assert_eq!(
+        launch.arguments,
+        ["-W0", r"C:\src\app\build.rb", "--release", "two words"]
+    );
+    assert_eq!(launch.working_dir, PathBuf::from(r"C:\src\app"));
+}
+
+// HOST-002: a .py row replaces the environment's interpreter, even when one was resolved.
+#[test]
+fn python_row_replaces_the_environment_interpreter() {
+    let table = hosts(&[("py", r"C:\Python313\python.exe")]);
+    let venv = Path::new(r"C:\src\app\venv");
+    let launch = plan_with(
+        r"C:\src\app\buildexe.py",
+        &table,
+        PowerShellHost::Pwsh,
+        Some(venv),
+    );
+    assert_eq!(launch.program, PathBuf::from(r"C:\Python313\python.exe"));
+    assert_eq!(
+        launch.arguments,
+        [r"C:\src\app\buildexe.py", "--release", "two words"]
+    );
 }
 
 // LCH-001: pwsh when found, PowerShell 5.1 otherwise; -File so the exit code passes through.
@@ -123,6 +172,16 @@ fn python_runs_under_the_environment_interpreter() {
     assert_eq!(bare.program, PathBuf::from("python.exe"));
 }
 
+// LCH-009, STEP-006, HOST-001: a command as the operator would type it, spaced parts quoted.
+#[test]
+fn command_line_quotes_spaced_and_empty_parts() {
+    let arguments = ["-W0".to_owned(), "two words".to_owned(), String::new()];
+    assert_eq!(
+        command_line(Path::new(r"C:\Program Files\Ruby\ruby.exe"), &arguments),
+        r#""C:\Program Files\Ruby\ruby.exe" -W0 "two words" """#
+    );
+}
+
 // ENV-006: the variable edits handed in are the plan's.
 #[test]
 fn plan_carries_the_variable_edits() {
@@ -133,6 +192,7 @@ fn plan_carries_the_variable_edits() {
     let step = step_with_arguments(r"C:\src\app\build.cmd");
     let launch = plan(
         &step,
+        Host::BuiltIn(ScriptKind::Batch),
         Path::new(r"C:\src\app"),
         PowerShellHost::Pwsh,
         None,

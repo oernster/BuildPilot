@@ -142,7 +142,7 @@ impl ConfigStore for FakeStore {
                 message,
             });
         }
-        state.saves.push((operations.to_vec(), *preferences));
+        state.saves.push((operations.to_vec(), preferences.clone()));
         Ok(())
     }
     fn data_folder(&self) -> PathBuf {

@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 
 use super::environment::{Need, PYTHON_PROGRAM, VariableEdits, python_in};
+use super::host::Host;
 use super::step::Step;
 
 /// The kinds of file BuildPilot can launch.
@@ -41,17 +42,9 @@ impl ScriptKind {
             .map(|(_, kind)| *kind)
     }
 
-    /// Every supported extension, lower case, without the dot.
+    /// Every built-in extension, lower case, without the dot.
     pub fn supported_extensions() -> impl Iterator<Item = &'static str> {
         EXTENSIONS.iter().map(|(extension, _)| *extension)
-    }
-
-    /// The supported extensions as the operator reads them, e.g. `.ps1, .bat, .cmd`.
-    pub fn supported_list() -> String {
-        Self::supported_extensions()
-            .map(|extension| format!(".{extension}"))
-            .collect::<Vec<_>>()
-            .join(", ")
     }
 
     /// How much a step of this kind depends on an environment (ENV-004, OQ-18).
@@ -64,11 +57,11 @@ impl ScriptKind {
     }
 }
 
-/// How much steps of `kinds` depend on an environment: the most any one needs.
-pub fn need_of(kinds: impl IntoIterator<Item = ScriptKind>) -> Need {
-    kinds
+/// How much steps run by `hosts` depend on an environment: the most any one needs.
+pub fn need_of<'a>(hosts: impl IntoIterator<Item = Host<'a>>) -> Need {
+    hosts
         .into_iter()
-        .map(ScriptKind::environment_need)
+        .map(Host::environment_need)
         .max()
         .unwrap_or(Need::None)
 }
@@ -103,6 +96,24 @@ pub const POWERSHELL_ARGUMENTS: &[&str] = &[
     "-File",
 ];
 
+/// `program` and `arguments` as the operator would type them: a part that is empty or holds
+/// white space is quoted. For display only; infrastructure quotes the real command line.
+pub fn command_line(program: &Path, arguments: &[String]) -> String {
+    let mut parts = vec![program.to_string_lossy().into_owned()];
+    parts.extend(arguments.iter().cloned());
+    parts
+        .into_iter()
+        .map(|part| {
+            if part.is_empty() || part.contains(char::is_whitespace) {
+                format!("\"{part}\"")
+            } else {
+                part
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Everything infrastructure needs to start one step.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchPlan {
@@ -116,16 +127,18 @@ pub struct LaunchPlan {
     pub variables: VariableEdits,
 }
 
-/// Builds the launch plan for `step`, run in `working_dir`. `environment` is the folder of the
-/// environment the run resolved, if any; `variables` are the step's edits from
-/// `environment::step_variables`.
+/// Builds the launch plan for `step`, run by `host` (from `HostTable::host_for`) in
+/// `working_dir`. `environment` is the folder of the environment the run resolved, if any;
+/// `variables` are the step's edits from `environment::step_variables`.
 ///
-/// A batch file is handed to the standard library as the program itself. Rust then runs it
-/// through `cmd.exe` with `cmd.exe` escaping and refuses an argument it cannot escape safely.
-/// Starting `cmd.exe /c` by hand would quote the arguments by the wrong rules (SRS
-/// Amendment 1).
+/// An operator's row runs its program with its own arguments, then the script, then the step's
+/// arguments (HOST-002). A batch file is handed to the standard library as the program itself.
+/// Rust then runs it through `cmd.exe` with `cmd.exe` escaping and refuses an argument it cannot
+/// escape safely. Starting `cmd.exe /c` by hand would quote the arguments by the wrong rules
+/// (SRS Amendment 1).
 pub fn plan(
     step: &Step,
+    host: Host<'_>,
     working_dir: &Path,
     powershell: PowerShellHost,
     environment: Option<&Path>,
@@ -133,7 +146,21 @@ pub fn plan(
 ) -> LaunchPlan {
     let script = step.script_path().to_path_buf();
     let script_argument = script.to_string_lossy().into_owned();
-    let (program, mut arguments) = match step.kind() {
+    let kind = match host {
+        Host::BuiltIn(kind) => kind,
+        Host::Operator(row) => {
+            let mut arguments = row.arguments().to_vec();
+            arguments.push(script_argument);
+            arguments.extend(step.arguments().iter().cloned());
+            return LaunchPlan {
+                program: row.program().to_path_buf(),
+                arguments,
+                working_dir: working_dir.to_path_buf(),
+                variables,
+            };
+        }
+    };
+    let (program, mut arguments) = match kind {
         ScriptKind::PowerShell => {
             let mut leading: Vec<String> = POWERSHELL_ARGUMENTS
                 .iter()

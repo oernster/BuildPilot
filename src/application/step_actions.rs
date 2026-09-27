@@ -3,11 +3,12 @@
 use std::path::{Path, PathBuf};
 
 use crate::domain::environment::{Need, Offer, environments_among, offer, resolve, step_variables};
-use crate::domain::launch_plan::{LaunchPlan, ScriptKind, need_of, plan};
+use crate::domain::host::{Host, HostTable};
+use crate::domain::launch_plan::{LaunchPlan, ScriptKind, command_line, need_of, plan};
 use crate::domain::lifecycle::LaunchError;
 use crate::domain::operation::OperationConfig;
 use crate::domain::output::Stream;
-use crate::domain::step::StepSpec;
+use crate::domain::step::{Step, StepSpec};
 
 use super::ports::{ProcessHandle, RunKey};
 use super::{App, AppError};
@@ -22,17 +23,19 @@ impl App {
     /// What the dialog shows about the environment for `steps` run in `working_dir` (ENV-002).
     pub fn environment_offer(&self, working_dir: &Path, steps: &[StepSpec]) -> Offer {
         // A step of no known kind yet (still being typed) needs nothing.
-        let kinds = steps
+        let hosts = steps
             .iter()
-            .filter_map(|step| ScriptKind::of(&step.script_path));
-        offer(need_of(kinds), &self.environments_found(working_dir))
+            .filter_map(|step| self.preferences.hosts.host_for(&step.script_path));
+        offer(need_of(hosts), &self.environments_found(working_dir))
     }
 
-    /// Refuses a configuration that leaves open which of several environments to use
-    /// (ENV-002).
-    pub(super) fn check_environment(&self, config: &OperationConfig) -> Result<(), AppError> {
+    /// Refuses a configuration with a step nothing runs (LCH-001) or that leaves open which of
+    /// several environments to use (ENV-002).
+    pub(super) fn check_config(&self, config: &OperationConfig) -> Result<(), AppError> {
+        let hosts = &self.preferences.hosts;
+        config.check_hosts(hosts)?;
         let found = self.environments_found(config.working_dir());
-        let unchosen = config.environment_need() != Need::None
+        let unchosen = config.environment_need(hosts) != Need::None
             && config.environment().is_none()
             && found.len() > 1;
         if unchosen {
@@ -55,12 +58,16 @@ impl App {
                 step.script_path().to_path_buf(),
             ));
         }
+        let hosts = &self.preferences.hosts;
+        for step in config.steps() {
+            host_of(hosts, step)?;
+        }
         let dir = config.working_dir();
         if !paths.is_dir(dir) {
             return Err(LaunchError::WorkingDirNotFound(dir.to_path_buf()));
         }
         let found = self.environments_found(dir);
-        resolve(config.environment_need(), config.environment(), &found)
+        resolve(config.environment_need(hosts), config.environment(), &found)
             .map(|name| name.map(|name| dir.join(name)))
             .map_err(|problem| LaunchError::Environment {
                 problem,
@@ -79,13 +86,16 @@ impl App {
         environment: Option<&Path>,
     ) -> Result<Box<dyn ProcessHandle>, LaunchError> {
         let step = &config.steps()[index];
-        let activation = environment.filter(|_| step.kind().environment_need() != Need::None);
+        // Checked by `prepare`; Settings may have changed the table since step 1.
+        let host = host_of(&self.preferences.hosts, step)?;
+        let activation = environment.filter(|_| host.environment_need() != Need::None);
         let paths = &self.ports.paths;
         let variables = step_variables(&self.ports.variables.inherited(), activation, |path| {
             paths.is_file(path)
         });
         let launch = plan(
             step,
+            host,
             config.working_dir(),
             self.powershell,
             activation,
@@ -98,7 +108,7 @@ impl App {
             notes.push(format!("Step {} of {steps}: {command}", index + 1));
         }
         if let Some(folder) = activation {
-            let interpreter = if step.kind() == ScriptKind::Python {
+            let interpreter = if host == Host::BuiltIn(ScriptKind::Python) {
                 format!(", interpreter {}", launch.program.display())
             } else {
                 String::new()
@@ -127,18 +137,15 @@ impl App {
     }
 }
 
+/// What runs `step`, from `hosts` and the built-in rule; refused when nothing does.
+fn host_of<'a>(hosts: &'a HostTable, step: &Step) -> Result<Host<'a>, LaunchError> {
+    hosts
+        .host_for(step.script_path())
+        .ok_or_else(|| LaunchError::NoHost(step.script_path().to_path_buf()))
+}
+
 /// `launch` as the operator would type it, for a launch failure message (LCH-009) and the
 /// step's line (STEP-006).
 pub(super) fn display_command(launch: &LaunchPlan) -> String {
-    std::iter::once(launch.program.to_string_lossy().into_owned())
-        .chain(launch.arguments.iter().cloned())
-        .map(|part| {
-            if part.is_empty() || part.contains(char::is_whitespace) {
-                format!("\"{part}\"")
-            } else {
-                part
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
+    command_line(&launch.program, &launch.arguments)
 }

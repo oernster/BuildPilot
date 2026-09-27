@@ -8,7 +8,6 @@ use slint::{ComponentHandle, ModelRc, SharedString, VecModel};
 
 use crate::application::{FolderScan, ScannedFolder};
 
-use super::dialog::pick_script;
 use super::{MainWindow, ScanList, ScannedRow, StepEditor, Ui};
 
 /// The projects a list shows, each with whether it is ticked.
@@ -54,7 +53,7 @@ impl Ui {
 
     /// ADD-001: a chosen script opens the dialog with its defaults.
     pub(super) fn add_script_from(&self, folder: Option<&Path>) {
-        let Some(script) = pick_script(folder) else {
+        let Some(script) = self.pick_script(folder) else {
             return;
         };
         let draft = self.app.borrow().draft_for(&script);

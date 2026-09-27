@@ -74,6 +74,8 @@ pub enum LaunchError {
     ScriptNotFound(PathBuf),
     /// The working directory does not exist.
     WorkingDirNotFound(PathBuf),
+    /// Nothing runs this script's type: its host was removed after the step was saved.
+    NoHost(PathBuf),
     /// No environment could be used, searching this working directory.
     Environment {
         /// What was wrong.
@@ -101,6 +103,12 @@ impl fmt::Display for LaunchError {
             Self::WorkingDirNotFound(path) => write!(
                 f,
                 "Working directory not found: {}. Use Edit to choose another.",
+                path.display()
+            ),
+            Self::NoHost(path) => write!(
+                f,
+                "Nothing runs {}: add a host for its type in Settings or use Edit to choose \
+                 another script.",
                 path.display()
             ),
             Self::Os { command, message } => {

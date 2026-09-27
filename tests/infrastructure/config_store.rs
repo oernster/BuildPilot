@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use buildpilot::application::ports::{ConfigStore, LoadProblem};
+use buildpilot::domain::host::{HostRow, HostTable};
 use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, draft_for_script,
 };
@@ -13,7 +14,7 @@ use buildpilot::infrastructure::config_store::{CONFIG_FILE, JsonConfigStore, SET
 use serde_json::{Value, json};
 
 fn operation(id: &str, script: &str) -> Operation {
-    let mut spec = draft_for_script(Path::new(script)).unwrap();
+    let mut spec = draft_for_script(Path::new(script), &HostTable::default()).unwrap();
     spec.steps[0].arguments = vec!["--release".to_owned(), "two words".to_owned()];
     spec.icon = IconRef::Chosen(PathBuf::from(r"C:\data\icons\x.png"));
     Operation::new(
@@ -36,6 +37,17 @@ fn preferences() -> Preferences {
             height: Some(260),
         },
         skipped_update: Version::parse("1.2.0"),
+        // HOST-001: the host table round-trips, leading arguments and all.
+        hosts: HostTable::new(vec![
+            HostRow::new(
+                "rb",
+                PathBuf::from(r"C:\Ruby33\bin\ruby.exe"),
+                vec!["-W0".to_owned(), "two words".to_owned()],
+            )
+            .unwrap(),
+            HostRow::new("sh", PathBuf::from("bash.exe"), Vec::new()).unwrap(),
+        ])
+        .unwrap(),
     }
 }
 
@@ -59,7 +71,8 @@ fn every_field_and_the_order_round_trip() {
     let folder = tempfile::tempdir().unwrap();
     let data = folder.path().join("BuildPilot");
     // Amendment 4: several steps and a chosen environment survive too.
-    let mut python = draft_for_script(Path::new(r"C:\src\py\buildexe.py")).unwrap();
+    let mut python =
+        draft_for_script(Path::new(r"C:\src\py\buildexe.py"), &HostTable::default()).unwrap();
     python.steps.push(StepSpec::for_script(Path::new(
         r"C:\src\py\buildinstaller.py",
     )));
@@ -202,6 +215,42 @@ fn unreadable_preferences_fall_back_to_defaults() {
     let loaded = JsonConfigStore::new(folder.path().to_path_buf()).load();
     assert_eq!(loaded.preferences, Preferences::default());
     assert!(loaded.problems.is_empty());
+}
+
+// HOST-001: a hand-edited mistake costs its own row, not the table; with no rows, nothing is
+// written, so a file without hosts reads the same before and after.
+#[test]
+fn bad_host_rows_are_dropped_and_an_empty_table_is_not_written() {
+    let folder = tempfile::tempdir().unwrap();
+    let document = json!({"schema": 2, "preferences": {"hosts": [
+        {"extension": "rb", "program": "C:\\Ruby33\\bin\\ruby.exe"},
+        {"extension": "r b", "program": "x.exe"},
+        {"extension": ".RB", "program": "jruby.exe"},
+        {"extension": "sh", "program": "bash.exe", "arguments": ["-e"]},
+    ]}});
+    fs::write(folder.path().join(CONFIG_FILE), document.to_string()).unwrap();
+    let mut store = JsonConfigStore::new(folder.path().to_path_buf());
+    let loaded = store.load();
+    let rows = loaded.preferences.hosts.rows();
+    let kept: Vec<(&str, &Path)> = rows
+        .iter()
+        .map(|row| (row.extension(), row.program()))
+        .collect();
+    assert_eq!(
+        kept,
+        [
+            ("rb", Path::new(r"C:\Ruby33\bin\ruby.exe")),
+            ("sh", Path::new("bash.exe")),
+        ]
+    );
+    assert_eq!(rows[1].arguments(), ["-e"]);
+
+    store.save(&[], &Preferences::default()).unwrap();
+    assert!(
+        file_json(folder.path())["preferences"]
+            .get("hosts")
+            .is_none()
+    );
 }
 
 // CFG-009: a file from a newer BuildPilot is read but never overwritten.

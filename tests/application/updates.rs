@@ -147,7 +147,7 @@ fn a_skip_is_saved() {
     let world = world();
     let mut app = world.app();
     app.skip_update(version("1.2.0"));
-    let saved = world.state.borrow().saves.last().unwrap().1;
+    let saved = world.state.borrow().saves.last().unwrap().1.clone();
     assert_eq!(saved.skipped_update, Some(version("1.2.0")));
     assert_eq!(app.preferences().skipped_update, Some(version("1.2.0")));
 }

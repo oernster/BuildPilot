@@ -717,16 +717,23 @@ folder.
 Added by Amendment 4, for script types BuildPilot has no built-in rule for, such as `.rb`.
 
 **HOST-001 (S) Host table.** Settings shall hold a table in which each row maps one file
-extension to a program and its leading arguments. Verified by: `domain::config` round-trip test.
+extension to a program and its leading arguments. An extension is letters and digits, stored
+lower case without its dot; it has at most one row. A program is a full path or a bare file name
+found on PATH. A row that breaks these rules is refused when added, naming what to change; one
+read from a hand-edited file is dropped. Removing a row never removes an operation: a step of
+that type still loads; its run fails before step 1 with a message naming Settings.
+Verified by: `infrastructure::config_store` round-trip and load tests; `domain::host` row tests;
+`application::hosts` tests.
 
 **HOST-002 (S) Operator first.** When a step's extension has a row in the operator's host table,
 the launcher shall start that row's program with its leading arguments, then the script path, then
 the step's arguments, in place of the built-in rule of LCH-001. Acceptance: `.rb` mapped to
 `C:\Ruby33\bin\ruby.exe` runs `build.rb --release` as `ruby.exe build.rb --release`. A `.py` row
-replaces environment activation for `.py` entirely. Verified by: `domain::launch_plan` test.
+replaces environment activation for `.py` entirely. Verified by: `domain::launch_plan` and
+`domain::host` tests; `application::hosts` acceptance test.
 
 **HOST-003 (S) Picker follows the table.** The Add and step pickers shall offer the operator's
-extensions beside the built-in ones. Verified by: `domain::launch_plan` test.
+extensions beside the built-in ones. Verified by: `domain::host` test.
 
 A host program that cannot be started is a launch failure (LCH-009).
 

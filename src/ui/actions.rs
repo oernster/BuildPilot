@@ -60,6 +60,7 @@ fn wire_toolbar(ui: &Rc<Ui>, window: &MainWindow) {
     let this = ui.clone();
     window.on_open_settings(move || {
         let folder = this.app.borrow().data_folder();
+        this.show_hosts();
         this.with_window(|window| {
             window.set_data_folder(SharedString::from(folder.display().to_string()));
             window.set_show_settings(true);

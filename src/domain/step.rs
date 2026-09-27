@@ -2,7 +2,6 @@
 
 use std::path::{Path, PathBuf};
 
-use super::launch_plan::ScriptKind;
 use super::operation::OperationError;
 
 /// A step's fields, as entered. Not yet validated.
@@ -24,12 +23,13 @@ impl StepSpec {
     }
 }
 
-/// A step after validation. Construct with `Step::try_from`.
+/// A step after validation. Construct with `Step::try_from`. Its type is not judged here: the
+/// host table does that. A row removed after the step was saved must not stop it loading
+/// (HOST-001).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Step {
     script_path: PathBuf,
     arguments: Vec<String>,
-    kind: ScriptKind,
 }
 
 impl Step {
@@ -40,10 +40,6 @@ impl Step {
     /// Arguments, one entry each.
     pub fn arguments(&self) -> &[String] {
         &self.arguments
-    }
-    /// What kind of file the script is.
-    pub fn kind(&self) -> ScriptKind {
-        self.kind
     }
     /// The fields back as an editable spec.
     pub fn to_spec(&self) -> StepSpec {
@@ -156,12 +152,9 @@ impl TryFrom<StepSpec> for Step {
         if !spec.script_path.is_absolute() {
             return Err(OperationError::ScriptPathNotAbsolute(spec.script_path));
         }
-        let kind = ScriptKind::of(&spec.script_path)
-            .ok_or_else(|| OperationError::UnsupportedScriptType(spec.script_path.clone()))?;
         Ok(Self {
             script_path: spec.script_path,
             arguments: spec.arguments,
-            kind,
         })
     }
 }

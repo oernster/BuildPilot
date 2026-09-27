@@ -2,6 +2,7 @@
 
 use std::path::PathBuf;
 
+use buildpilot::domain::host::{HostRow, HostTable};
 use buildpilot::domain::operation::{
     IconRef, Operation, OperationConfig, OperationId, OperationSpec,
 };
@@ -31,6 +32,19 @@ pub fn spec_with_steps(first: &str, later: &[&str]) -> OperationSpec {
             .map(|script| StepSpec::for_script(script.as_ref())),
     );
     spec
+}
+
+/// A host table with one row per `(extension, program)`, each with no leading arguments.
+pub fn hosts(rows: &[(&str, &str)]) -> HostTable {
+    HostTable::new(
+        rows.iter()
+            .map(|(extension, program)| {
+                HostRow::new(extension, PathBuf::from(program), Vec::new())
+                    .expect("test host row is valid")
+            })
+            .collect(),
+    )
+    .expect("test host rows are distinct")
 }
 
 /// A validated configuration for `script`.

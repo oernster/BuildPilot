@@ -5,6 +5,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use crate::domain::deck::DeckError;
+use crate::domain::host::HostError;
 use crate::domain::lifecycle::TransitionError;
 use crate::domain::operation::OperationError;
 
@@ -35,6 +36,8 @@ pub enum AppError {
     Shell(String),
     /// Several environments were found and none was chosen (ENV-002).
     EnvironmentNotChosen(Vec<String>),
+    /// A row of the host table is invalid (HOST-001).
+    Host(HostError),
 }
 
 impl fmt::Display for AppError {
@@ -62,6 +65,7 @@ impl fmt::Display for AppError {
                 "Choose the environment to use: this folder holds several ({}).",
                 found.join(", ")
             ),
+            Self::Host(error) => error.fmt(f),
         }
     }
 }
@@ -103,6 +107,12 @@ impl fmt::Display for Notice {
 impl From<OperationError> for AppError {
     fn from(error: OperationError) -> Self {
         Self::Invalid(error)
+    }
+}
+
+impl From<HostError> for AppError {
+    fn from(error: HostError) -> Self {
+        Self::Host(error)
     }
 }
 

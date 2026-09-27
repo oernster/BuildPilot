@@ -5,7 +5,6 @@ use std::rc::Rc;
 
 use slint::{ComponentHandle, Image, SharedString};
 
-use crate::domain::launch_plan::ScriptKind;
 use crate::domain::operation::{IconRef, OperationId, OperationSpec};
 use crate::domain::step::StepList;
 
@@ -32,7 +31,7 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     });
     let this = ui.clone();
     window.on_browse_script(move || {
-        if let Some(script) = pick_script(None) {
+        if let Some(script) = this.pick_script(None) {
             this.with_window(|w| {
                 w.set_field_script(SharedString::from(script.display().to_string()))
             });
@@ -68,19 +67,21 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     window.on_cancel_operation(move || this.close_dialog());
 }
 
-/// Asks for a build script, starting in `folder` when given (ADD-001, STEP-008).
-pub(super) fn pick_script(folder: Option<&Path>) -> Option<PathBuf> {
-    let extensions: Vec<&str> = ScriptKind::supported_extensions().collect();
-    let mut picker = rfd::FileDialog::new()
-        .set_title("Choose a build script")
-        .add_filter("Build scripts", &extensions);
-    if let Some(folder) = folder {
-        picker = picker.set_directory(folder);
-    }
-    picker.pick_file()
-}
-
 impl Ui {
+    /// Asks for a build script of any type BuildPilot or the host table runs, starting in
+    /// `folder` when given (ADD-001, STEP-008, HOST-003). The types are read before the picker
+    /// opens, so no borrow of the app is held while Windows runs the dialog.
+    pub(super) fn pick_script(&self, folder: Option<&Path>) -> Option<PathBuf> {
+        let extensions = self.app.borrow().script_extensions();
+        let mut picker = rfd::FileDialog::new()
+            .set_title("Choose a build script")
+            .add_filter("Build scripts", &extensions);
+        if let Some(folder) = folder {
+            picker = picker.set_directory(folder);
+        }
+        picker.pick_file()
+    }
+
     fn open_edit(&self, id: OperationId) {
         let (spec, running) = {
             let app = self.app.borrow();

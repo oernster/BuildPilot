@@ -5,6 +5,7 @@ import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
 import { TextButton, Field } from "widgets.slint";
 import { StepEditor, StepsField, EnvironmentField, StepWarning } from "steps.slint";
+import { HostsField } from "hosts.slint";
 
 export component Modal inherits Rectangle {
     in property <length> panel-width: 560px;
@@ -214,7 +215,7 @@ export component SettingsDialog inherits Modal {
     callback open-data-folder();
     callback close();
     heading: "Settings";
-    panel-width: 480px;
+    panel-width: 560px;
     dismissed => { root.close(); }
     init => { light-button.focus-me(); }
 
@@ -255,6 +256,8 @@ export component SettingsDialog inherits Modal {
             clicked => { root.open-data-folder(); }
         }
     }
+    FieldLabel { text: "Hosts for other script types"; }
+    HostsField { }
     HorizontalLayout {
         alignment: end;
         TextButton { text: "Close"; primary: true; in-dialog: true; clicked => { root.close(); } }

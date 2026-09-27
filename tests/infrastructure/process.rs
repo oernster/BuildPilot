@@ -12,6 +12,7 @@ use std::time::{Duration, Instant};
 
 use buildpilot::application::ports::{Launcher, ProcessHandle, RunEvent, RunEventKind, RunKey};
 use buildpilot::domain::environment::{VariableEdits, step_variables};
+use buildpilot::domain::host::HostTable;
 use buildpilot::domain::launch_plan::{LaunchPlan, plan};
 use buildpilot::domain::operation::{OperationConfig, OperationId, draft_for_script};
 use buildpilot::domain::output::Stream;
@@ -81,14 +82,18 @@ impl Rig {
         environment: Option<&Path>,
         variables: VariableEdits,
     ) -> LaunchPlan {
-        let mut spec = draft_for_script(&self.folder.path().join(fixture)).unwrap();
+        let mut spec =
+            draft_for_script(&self.folder.path().join(fixture), &HostTable::default()).unwrap();
         spec.steps[0].arguments = arguments
             .iter()
             .map(|argument| (*argument).to_owned())
             .collect();
         let config = OperationConfig::try_from(spec).unwrap();
+        let hosts = HostTable::default();
+        let step = config.first_step();
         plan(
-            config.first_step(),
+            step,
+            hosts.host_for(step.script_path()).unwrap(),
             config.working_dir(),
             detect_powershell(env::var_os("PATH").as_deref()),
             environment,

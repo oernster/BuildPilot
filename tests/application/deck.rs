@@ -24,7 +24,9 @@ fn draft_uses_the_discovered_icon() {
     assert_eq!(draft(&app, SCRIPT_B).icon, IconRef::Placeholder);
     assert!(matches!(
         app.draft_for(Path::new(r"C:\src\x\notes.txt")),
-        Err(AppError::Invalid(OperationError::UnsupportedScriptType(_)))
+        Err(AppError::Invalid(
+            OperationError::UnsupportedScriptType { .. }
+        ))
     ));
 }
 
@@ -300,7 +302,7 @@ fn preferences_are_saved() {
         height: Some(240),
     };
     app.set_layout(Some(window), tray);
-    let saved = world.state.borrow().saves.last().unwrap().1;
+    let saved = world.state.borrow().saves.last().unwrap().1.clone();
     assert_eq!(saved.theme, ThemeChoice::Light);
     assert_eq!(saved.window, Some(window));
     assert_eq!(saved.tray, tray);

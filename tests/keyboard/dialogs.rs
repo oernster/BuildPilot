@@ -25,7 +25,17 @@ fn a_dialog_owns_the_ring_while_open() {
     press(&window, " ");
     assert_eq!(focused(&window), "Light theme");
 
-    let dialog = ["Dark theme", "Open the data folder", "Close", "Light theme"];
+    let dialog = [
+        "Dark theme",
+        "Open the data folder",
+        "File type",
+        "Program",
+        "Browse for the host program",
+        "Host arguments before the script, one per line",
+        "Add this host to the table",
+        "Close",
+        "Light theme",
+    ];
     assert_eq!(walk(&window, Key::Tab, dialog.len()), dialog);
 
     press(&window, Key::Escape);

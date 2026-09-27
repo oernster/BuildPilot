@@ -8,6 +8,7 @@ mod domain {
     mod elapsed;
     mod environment;
     mod follow;
+    mod host;
     mod launch_plan;
     mod lifecycle;
     mod line_assembler;

@@ -11,7 +11,6 @@ use crate::domain::environment::Offer;
 use crate::domain::operation::{format_argument_lines, parse_argument_lines};
 use crate::domain::step::StepSpec;
 
-use super::dialog::pick_script;
 use super::{MainWindow, StepEditor, Ui};
 
 pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
@@ -23,7 +22,7 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
     let this = ui.clone();
     editor.on_add(move || {
         let folder = this.with_window_value(|w| PathBuf::from(w.get_field_working_dir().trim()));
-        if let Some(script) = pick_script(folder.as_deref()) {
+        if let Some(script) = this.pick_script(folder.as_deref()) {
             this.change_steps(|steps| {
                 steps.add(StepSpec::for_script(&script));
                 true

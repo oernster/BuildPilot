@@ -8,7 +8,8 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use super::environment::Need;
-use super::launch_plan::{ScriptKind, need_of};
+use super::host::HostTable;
+use super::launch_plan::need_of;
 use super::step::{Step, StepSpec};
 
 /// Stable identity of an operation (CFG-003). Assigned once by infrastructure, never reused.
@@ -99,9 +100,21 @@ impl OperationConfig {
     pub fn icon(&self) -> &IconRef {
         &self.icon
     }
-    /// How much the steps depend on an environment: the most any one step needs.
-    pub fn environment_need(&self) -> Need {
-        need_of(self.steps.iter().map(Step::kind))
+    /// How much the steps depend on an environment, run by `hosts`: the most any one step
+    /// needs. A step nothing runs needs nothing; Run refuses it on its own account.
+    pub fn environment_need(&self, hosts: &HostTable) -> Need {
+        need_of(
+            self.steps
+                .iter()
+                .filter_map(|step| hosts.host_for(step.script_path())),
+        )
+    }
+    /// Refuses the first step whose type nothing in `hosts` runs (LCH-001). Add and Edit ask
+    /// this; loading does not, so removing a host never loses an operation.
+    pub fn check_hosts(&self, hosts: &HostTable) -> Result<(), OperationError> {
+        self.steps
+            .iter()
+            .try_for_each(|step| hosts.check(step.script_path()).map(|_| ()))
     }
     /// The same configuration with a different icon; an icon never affects a run.
     pub fn with_icon(&self, icon: IconRef) -> Self {
@@ -191,10 +204,8 @@ impl Operation {
 
 /// The defaults for a newly chosen script (ADD-002 to ADD-004). The icon is left as the
 /// placeholder; icon discovery is infrastructure's job and happens afterwards.
-pub fn draft_for_script(script: &Path) -> Result<OperationSpec, OperationError> {
-    if ScriptKind::of(script).is_none() {
-        return Err(OperationError::UnsupportedScriptType(script.to_path_buf()));
-    }
+pub fn draft_for_script(script: &Path, hosts: &HostTable) -> Result<OperationSpec, OperationError> {
+    hosts.check(script)?;
     let working_dir = script
         .parent()
         .filter(|parent| !parent.as_os_str().is_empty())
@@ -247,8 +258,13 @@ pub enum OperationError {
     EmptyScriptPath,
     /// The script path was relative.
     ScriptPathNotAbsolute(PathBuf),
-    /// The script's extension is not one BuildPilot can launch.
-    UnsupportedScriptType(PathBuf),
+    /// Nothing runs the script's type: neither a built-in rule nor the operator's table.
+    UnsupportedScriptType {
+        /// The script.
+        path: PathBuf,
+        /// The types that can run, as the operator reads them.
+        supported: String,
+    },
     /// No working directory was given.
     EmptyWorkingDir,
     /// The working directory was relative.
@@ -268,11 +284,11 @@ impl fmt::Display for OperationError {
                 "Script path {} is relative: give the full path, starting with the drive.",
                 path.display()
             ),
-            Self::UnsupportedScriptType(path) => write!(
+            Self::UnsupportedScriptType { path, supported } => write!(
                 f,
-                "{} is not a type BuildPilot can run. Supported types: {}.",
-                path.display(),
-                ScriptKind::supported_list()
+                "{} is not a type BuildPilot can run. Supported types: {supported}. \
+                 Add a host for its type in Settings to run it.",
+                path.display()
             ),
             Self::EmptyWorkingDir => {
                 f.write_str("Working directory is missing: choose the folder to run in.")

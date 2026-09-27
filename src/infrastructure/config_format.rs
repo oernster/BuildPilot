@@ -9,6 +9,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::domain::host::{HostRow, HostTable};
 use crate::domain::operation::{IconRef, Operation, OperationConfig, OperationId, OperationSpec};
 use crate::domain::preferences::{Preferences, ThemeChoice, TrayLayout, WindowGeometry};
 use crate::domain::step::StepSpec;
@@ -57,6 +58,16 @@ struct PreferencesDto {
     // Written only once a release is skipped, so older files and newer ones read alike.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     skipped_update: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    hosts: Vec<HostDto>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct HostDto {
+    extension: String,
+    program: PathBuf,
+    #[serde(default)]
+    arguments: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -237,7 +248,23 @@ fn preferences_from_dto(dto: PreferencesDto) -> Preferences {
             height: dto.tray.height,
         },
         skipped_update: dto.skipped_update.as_deref().and_then(Version::parse),
+        hosts: hosts_from_dtos(dto.hosts),
     }
+}
+
+/// The host table as stored. A row that fails validation is dropped, as is a second row for one
+/// extension, so a hand-edited mistake costs that row and not the table.
+fn hosts_from_dtos(dtos: Vec<HostDto>) -> HostTable {
+    let mut rows: Vec<HostRow> = Vec::new();
+    for dto in dtos {
+        let Ok(row) = HostRow::new(&dto.extension, dto.program, dto.arguments) else {
+            continue;
+        };
+        if !rows.iter().any(|kept| kept.extension() == row.extension()) {
+            rows.push(row);
+        }
+    }
+    HostTable::new(rows).expect("a second row for an extension was dropped")
 }
 
 fn preferences_to_dto(preferences: &Preferences) -> PreferencesDto {
@@ -260,5 +287,15 @@ fn preferences_to_dto(preferences: &Preferences) -> PreferencesDto {
         skipped_update: preferences
             .skipped_update
             .map(|version| version.to_string()),
+        hosts: preferences
+            .hosts
+            .rows()
+            .iter()
+            .map(|row| HostDto {
+                extension: row.extension().to_owned(),
+                program: row.program().to_path_buf(),
+                arguments: row.arguments().to_vec(),
+            })
+            .collect(),
     }
 }

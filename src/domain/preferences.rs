@@ -1,5 +1,6 @@
 //! Global preferences (CFG-003, CFG-010, UI-001, UI-004, UI-010).
 
+use super::host::HostTable;
 use super::version::Version;
 
 /// The theme the operator chose.
@@ -58,7 +59,7 @@ pub struct TrayLayout {
 }
 
 /// Everything global BuildPilot remembers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Preferences {
     /// The chosen theme.
     pub theme: ThemeChoice,
@@ -68,4 +69,6 @@ pub struct Preferences {
     pub tray: TrayLayout,
     /// The release the operator chose not to hear about unbidden (UI-010); `None` until one is.
     pub skipped_update: Option<Version>,
+    /// The operator's host table (HOST-001).
+    pub hosts: HostTable,
 }

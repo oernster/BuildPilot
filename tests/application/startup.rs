@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use buildpilot::application::ports::LoadedConfig;
 use buildpilot::application::{IconStatus, LoadProblem, Notice};
+use buildpilot::domain::host::HostTable;
 use buildpilot::domain::lifecycle::RunState;
 use buildpilot::domain::operation::{IconRef, Operation, OperationConfig, OperationId};
 use buildpilot::domain::preferences::{Preferences, ThemeChoice};
@@ -10,7 +11,9 @@ use super::fakes::World;
 use super::support::{SCRIPT_A, SCRIPT_B};
 
 fn stored(id: &str, script: &str, icon: IconRef) -> Operation {
-    let mut spec = buildpilot::domain::operation::draft_for_script(script.as_ref()).unwrap();
+    let mut spec =
+        buildpilot::domain::operation::draft_for_script(script.as_ref(), &HostTable::default())
+            .unwrap();
     spec.icon = icon;
     Operation::new(
         OperationId::new(id).unwrap(),

@@ -13,6 +13,7 @@ mod actions;
 mod dialog;
 mod events;
 mod help;
+mod hosts;
 mod layout;
 mod output_model;
 mod reading;
@@ -103,7 +104,7 @@ pub fn run(
     environment: Environment,
 ) -> Result<(), slint::PlatformError> {
     let window = MainWindow::new()?;
-    let preferences = *app.preferences();
+    let preferences = app.preferences().clone();
     let app = Rc::new(RefCell::new(app));
     let ui = Rc::new(Ui {
         output: Rc::new(OutputModel::new(app.clone())),
@@ -146,6 +147,7 @@ pub fn run(
     actions::wire(&ui, &window);
     dialog::wire(&ui, &window);
     step_editor::wire(&ui, &window);
+    hosts::wire(&ui, &window);
     scan::wire(&ui, &window);
     reading::wire_reading(&window.global::<Reading>());
     let _update_timers = help::wire(&ui, &window);

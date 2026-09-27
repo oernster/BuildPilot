@@ -1,0 +1,91 @@
+// The operator's host table in Settings (HOST-001). The state lives in a global so the main
+// window carries none of it; Rust fills it and answers the callbacks.
+
+import { LineEdit, TextEdit } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { TextButton, Field } from "widgets.slint";
+
+export global HostEditor {
+    // `.rb: C:\Ruby33\bin\ruby.exe -W0` per row, in table order.
+    in property <[string]> rows;
+    // The row being written: its file type, program and arguments one per line.
+    in-out property <string> extension;
+    in-out property <string> program;
+    in-out property <string> arguments;
+    // Why the last Add or Remove was refused; empty when it was not.
+    in property <string> error;
+    callback add();
+    callback remove(int);
+    callback browse();
+}
+
+export component HostsField inherits VerticalLayout {
+    spacing: Theme.gap;
+    if HostEditor.rows.length == 0: Text {
+        text: "No hosts yet: only the built-in types run.";
+        color: Theme.text-muted;
+        wrap: word-wrap;
+    }
+    for row[index] in HostEditor.rows: HorizontalLayout {
+        spacing: Theme.gap;
+        Text {
+            text: row;
+            color: Theme.text;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        TextButton {
+            text: "Remove";
+            label: "Remove host " + row;
+            in-dialog: true;
+            clicked => { HostEditor.remove(index); }
+        }
+    }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        extension-field := Field {
+            focused: extension-edit.has-focus;
+            label: "File type";
+            width: 96px;
+            extension-edit := LineEdit {
+                text <=> HostEditor.extension;
+                placeholder-text: ".rb";
+                accessible-label: extension-field.label;
+            }
+        }
+        program-field := Field {
+            focused: program-edit.has-focus;
+            label: "Program";
+            program-edit := LineEdit {
+                text <=> HostEditor.program;
+                accessible-label: program-field.label;
+            }
+        }
+        TextButton {
+            text: "Browse";
+            label: "Browse for the host program";
+            in-dialog: true;
+            clicked => { HostEditor.browse(); }
+        }
+    }
+    arguments-field := Field {
+        focused: arguments-edit.has-focus;
+        label: "Host arguments before the script, one per line";
+        arguments-edit := TextEdit {
+            text <=> HostEditor.arguments;
+            height: 52px;
+            accessible-label: arguments-field.label;
+        }
+    }
+    if HostEditor.error != "": Text { text: HostEditor.error; color: Theme.failure; wrap: word-wrap; }
+    HorizontalLayout {
+        alignment: start;
+        TextButton {
+            text: "Add host";
+            label: "Add this host to the table";
+            in-dialog: true;
+            clicked => { HostEditor.add(); }
+        }
+    }
+}
