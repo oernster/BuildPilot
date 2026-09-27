@@ -171,6 +171,24 @@ h1 {
     box-shadow: var(--shadow);
 }
 
+/* The gallery: dialogs side by side, each with its caption. */
+
+.gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+    margin-top: 24px;
+}
+
+.shot figcaption {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.shot figcaption strong { color: var(--text); }
+
 /* Sections */
 
 section { padding-top: 72px; padding-bottom: 24px; }
@@ -326,7 +344,8 @@ code {
 
 @media (max-width: 820px) {
     .hero { grid-template-columns: 1fr; gap: 36px; padding-top: 24px; }
-    .two-col { grid-template-columns: 1fr; }
+    .two-col,
+    .gallery { grid-template-columns: 1fr; }
     .site-head nav { gap: 12px; }
 }
 

@@ -34,6 +34,7 @@
     <a class="brand" href="#top"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
     <nav aria-label="Sections">
         <a href="#what">What it does</a>
+        <a href="#screens" class="hide-sm">Screens</a>
         <a href="#engineering" class="hide-sm">Engineering</a>
         <a href="#install">Install</a>
         <a href="https://github.com/oernster/BuildPilot">GitHub</a>
@@ -111,6 +112,27 @@
                     <li><strong>Anything but Windows.</strong> Windows only, for good.</li>
                 </ul>
             </div>
+        </div>
+    </section>
+
+    <section class="wrap" id="screens">
+        <p class="kicker">A closer look</p>
+        <h2>Steps, environments and hosts, in two dialogs.</h2>
+        <div class="gallery">
+            <figure class="shot">
+                <img src="screenshots/edit.png" width="555" height="731" loading="lazy"
+                    alt="The Edit build operation dialog for AudioDeck: two steps, buildexe.py then buildinstaller.py, the working directory, the environment venv and the project's icon.">
+                <figcaption><strong>Edit.</strong> A Python project's two steps, run in order
+                    inside its own <code>venv</code>. Steps are added, removed and reordered
+                    here; the icon was found beside the script.</figcaption>
+            </figure>
+            <figure class="shot">
+                <img src="screenshots/settings.png" width="555" height="560" loading="lazy"
+                    alt="The Settings dialog: the theme, the data folder, the build types that run with no host (Go and Rust, Python, batch files and executables) and the fields for adding a host.">
+                <figcaption><strong>Settings.</strong> Go, Rust and Python builds run out of
+                    the box. A host runs any other script type, such as <code>.rb</code> with
+                    <code>ruby.exe</code>.</figcaption>
+            </figure>
         </div>
     </section>
 
