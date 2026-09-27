@@ -1,0 +1,214 @@
+// The modal dialogs, drawn over the main window.
+
+import { Button, LineEdit, TextEdit } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+component Modal inherits Rectangle {
+    in property <length> panel-width: 560px;
+    in property <string> heading;
+    background: Theme.scrim;
+    // Swallows clicks so nothing behind the dialog can be used while it is open.
+    TouchArea { }
+    Rectangle {
+        width: root.panel-width;
+        height: content.preferred-height;
+        background: Theme.surface;
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Theme.border;
+        content := VerticalLayout {
+            padding: 20px;
+            spacing: 12px;
+            Text {
+                text: root.heading;
+                font-size: Theme.title-size;
+                font-weight: 600;
+                color: Theme.text;
+            }
+            @children
+        }
+    }
+}
+
+component FieldLabel inherits Text {
+    color: Theme.text-muted;
+    font-size: 12px;
+}
+
+// Add and Edit (SRS 3.2, 3.4).
+export component OperationDialog inherits Modal {
+    in-out property <string> name;
+    in-out property <string> script;
+    in-out property <string> working-dir;
+    in-out property <string> arguments;
+    in property <image> icon;
+    in property <bool> icon-is-placeholder;
+    in property <string> icon-note;
+    in property <string> note;
+    in property <string> error;
+    in property <string> save-label: "Save";
+    callback browse-script();
+    callback browse-folder();
+    callback choose-icon();
+    callback use-placeholder-icon();
+    callback save();
+    callback cancel();
+
+    FieldLabel { text: "Name"; }
+    LineEdit { text <=> root.name; accessible-label: "Name"; }
+    FieldLabel { text: "Script"; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        LineEdit { text <=> root.script; accessible-label: "Script"; }
+        Button { text: "Browse"; clicked => { root.browse-script(); } }
+    }
+    FieldLabel { text: "Working directory"; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        LineEdit { text <=> root.working-dir; accessible-label: "Working directory"; }
+        Button { text: "Browse"; clicked => { root.browse-folder(); } }
+    }
+    FieldLabel { text: "Arguments, one per line"; }
+    TextEdit {
+        text <=> root.arguments;
+        height: 76px;
+        accessible-label: "Arguments, one per line";
+    }
+    FieldLabel { text: "Icon"; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        Image {
+            source: root.icon-is-placeholder
+                ? @image-url("../assets/application-icon.png") : root.icon;
+            opacity: root.icon-is-placeholder ? 0.45 : 1;
+            width: 40px;
+            height: 40px;
+            image-fit: contain;
+        }
+        Button {
+            text: "Choose image";
+            icon: @image-url("../assets/choose-change-application-icon.png");
+            clicked => { root.choose-icon(); }
+        }
+        Button { text: "Use placeholder"; clicked => { root.use-placeholder-icon(); } }
+        Text {
+            text: root.icon-note;
+            color: Theme.text-muted;
+            vertical-alignment: center;
+            wrap: word-wrap;
+            horizontal-stretch: 1;
+        }
+    }
+    if root.note != "": Text { text: root.note; color: Theme.caution; wrap: word-wrap; }
+    if root.error != "": Text { text: root.error; color: Theme.failure; wrap: word-wrap; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: Theme.gap;
+        Button { text: "Cancel"; clicked => { root.cancel(); } }
+        Button { text: root.save-label; primary: true; clicked => { root.save(); } }
+    }
+}
+
+// A yes-or-no question (REM-001, STOP-004).
+export component ConfirmDialog inherits Modal {
+    in property <string> message;
+    in property <string> confirm-label;
+    callback confirm();
+    callback cancel();
+    panel-width: 460px;
+
+    Text { text: root.message; color: Theme.text; wrap: word-wrap; }
+    HorizontalLayout {
+        alignment: end;
+        spacing: Theme.gap;
+        Button { text: "Cancel"; clicked => { root.cancel(); } }
+        Button { text: root.confirm-label; primary: true; clicked => { root.confirm(); } }
+    }
+}
+
+// Global options only (UI-004).
+export component SettingsDialog inherits Modal {
+    // 0 light, 1 dark, 2 follow Windows.
+    in property <int> theme-choice;
+    in property <string> data-folder;
+    callback choose-theme(int);
+    callback open-data-folder();
+    callback close();
+    heading: "Settings";
+    panel-width: 480px;
+
+    FieldLabel { text: "Theme"; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        Button {
+            text: "Light";
+            checkable: true;
+            checked: root.theme-choice == 0;
+            icon: @image-url("../assets/light-mode.png");
+            clicked => { root.choose-theme(0); }
+        }
+        Button {
+            text: "Dark";
+            checkable: true;
+            checked: root.theme-choice == 1;
+            icon: @image-url("../assets/dark-mode.png");
+            clicked => { root.choose-theme(1); }
+        }
+        Button {
+            text: "Follow Windows";
+            checkable: true;
+            checked: root.theme-choice == 2;
+            clicked => { root.choose-theme(2); }
+        }
+    }
+    FieldLabel { text: "Data folder"; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        Text {
+            text: root.data-folder;
+            color: Theme.text;
+            vertical-alignment: center;
+            overflow: elide;
+            horizontal-stretch: 1;
+        }
+        Button { text: "Open folder"; clicked => { root.open-data-folder(); } }
+    }
+    HorizontalLayout {
+        alignment: end;
+        Button { text: "Close"; primary: true; clicked => { root.close(); } }
+    }
+}
+
+// Help and About (UI-003).
+export component AboutDialog inherits Modal {
+    in property <string> version;
+    callback close();
+    heading: "About BuildPilot";
+    panel-width: 460px;
+
+    HorizontalLayout {
+        spacing: 16px;
+        Image {
+            source: @image-url("../assets/application-icon.png");
+            width: 72px;
+            height: 72px;
+            image-fit: contain;
+        }
+        VerticalLayout {
+            spacing: 4px;
+            Text { text: "BuildPilot " + root.version; font-size: Theme.body-size; font-weight: 600; color: Theme.text; }
+            Text {
+                text: "A build flight deck: remembers your build scripts, runs several at once, shows their output live and stops them cleanly.";
+                color: Theme.text;
+                wrap: word-wrap;
+            }
+        }
+    }
+    Text { text: "https://github.com/oernster/BuildPilot"; color: Theme.accent; }
+    Text { text: "Licensed under the GNU General Public License v3.0."; color: Theme.text-muted; }
+    Text { text: "Built with Slint (slint.dev), used under its GPLv3 licence."; color: Theme.text-muted; }
+    HorizontalLayout {
+        alignment: end;
+        Button { text: "Close"; primary: true; clicked => { root.close(); } }
+    }
+}

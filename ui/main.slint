@@ -1,0 +1,277 @@
+// The main window (SRS 4 of the spec): toolbar, operation rows, output tray and the dialogs.
+
+import { Button, ScrollView, Palette } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { IconButton } from "widgets.slint";
+import { OperationRow, RowData, StatusKind } from "row.slint";
+import { OutputTray, OutputLineData } from "tray.slint";
+import { OperationDialog, ConfirmDialog, SettingsDialog, AboutDialog } from "dialogs.slint";
+
+export { Theme, RowData, StatusKind, OutputLineData }
+
+export component MainWindow inherits Window {
+    title: "BuildPilot";
+    icon: @image-url("../assets/application-icon.png");
+    min-width: 760px;
+    min-height: 480px;
+    preferred-width: 1100px;
+    preferred-height: 760px;
+    background: Theme.background;
+
+    in property <[RowData]> rows;
+    in property <[OutputLineData]> lines;
+    in property <[string]> notices;
+    in property <string> version;
+
+    in property <string> tray-heading;
+    in property <string> dropped-note;
+    in property <bool> tray-expanded;
+    in property <bool> following: true;
+    in property <length> tray-height: 260px;
+
+    in property <bool> show-operation-dialog;
+    in property <string> operation-heading;
+    in property <string> operation-save-label;
+    in-out property <string> field-name;
+    in-out property <string> field-script;
+    in-out property <string> field-working-dir;
+    in-out property <string> field-arguments;
+    in property <image> field-icon;
+    in property <bool> field-icon-is-placeholder;
+    in property <string> field-icon-note;
+    in property <string> operation-note;
+    in property <string> operation-error;
+
+    in property <bool> show-confirm;
+    in property <string> confirm-heading;
+    in property <string> confirm-message;
+    in property <string> confirm-label;
+
+    in property <bool> show-settings;
+    in property <int> theme-choice;
+    in property <string> data-folder;
+    in property <bool> show-about;
+
+    callback add();
+    callback toggle-theme();
+    callback open-settings();
+    callback open-about();
+    callback dismiss-notice(int);
+
+    callback select(string);
+    callback toggle-checked(string);
+    callback run(string);
+    callback stop(string);
+    callback edit(string);
+    callback open-script(string);
+    callback locate-script(string);
+    callback remove(string);
+    callback move-up(string);
+    callback move-down(string);
+    callback move-to(string, int);
+
+    callback toggle-tray();
+    callback jump-to-latest();
+    callback tray-scrolled(bool);
+    callback resize-tray(length);
+
+    callback browse-script();
+    callback browse-folder();
+    callback choose-icon();
+    callback use-placeholder-icon();
+    callback save-operation();
+    callback cancel-operation();
+    callback confirm();
+    callback cancel-confirm();
+    callback choose-theme(int);
+    callback open-data-folder();
+    callback close-settings();
+    callback close-about();
+
+    public function scroll-output-to-end() {
+        tray.scroll-to-end();
+    }
+
+    public function apply-theme(dark: bool) {
+        Theme.dark = dark;
+        Palette.color-scheme = dark ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    // Drag state: the row being dragged, how far the pointer has moved, where it would land.
+    property <int> dragging: -1;
+    property <length> drag-offset;
+    property <length> row-pitch: Theme.row-height + 6px;
+    // The target changes only once the pointer passes the middle of the next row (R-1).
+    property <int> drop-target: root.dragging < 0 ? -1
+        : max(0, min(root.rows.length - 1,
+            floor((root.dragging * root.row-pitch + root.drag-offset + root.row-pitch / 2)
+                / root.row-pitch)));
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 10px;
+            spacing: Theme.gap;
+            IconButton {
+                icon: @image-url("../assets/add.png");
+                label: "Add a build script";
+                tooltip-below: true;
+                activated => { root.add(); }
+            }
+            Text {
+                text: "BuildPilot";
+                font-size: Theme.title-size;
+                font-weight: 600;
+                color: Theme.text;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            IconButton {
+                icon: Theme.dark ? @image-url("../assets/light-mode.png")
+                    : @image-url("../assets/dark-mode.png");
+                label: Theme.dark ? "Switch to light theme" : "Switch to dark theme";
+                tooltip-below: true;
+                activated => { root.toggle-theme(); }
+            }
+            IconButton {
+                icon: @image-url("../assets/settings.png");
+                label: "Settings";
+                tooltip-below: true;
+                activated => { root.open-settings(); }
+            }
+            IconButton {
+                icon: @image-url("../assets/help-about.png");
+                label: "Help and About";
+                tooltip-below: true;
+                activated => { root.open-about(); }
+            }
+        }
+
+        for notice[n] in root.notices: Rectangle {
+            height: notice-text.preferred-height + 16px;
+            background: Theme.surface;
+            border-width: 1px;
+            border-color: Theme.caution;
+            HorizontalLayout {
+                padding-left: 12px;
+                padding-right: 6px;
+                spacing: Theme.gap;
+                notice-text := Text {
+                    text: notice;
+                    color: Theme.text;
+                    wrap: word-wrap;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                }
+                Button { text: "Dismiss"; clicked => { root.dismiss-notice(n); } }
+            }
+        }
+
+        Rectangle {
+            vertical-stretch: 1;
+            if root.rows.length == 0: VerticalLayout {
+                alignment: center;
+                spacing: 12px;
+                Text {
+                    text: "No build scripts yet.";
+                    horizontal-alignment: center;
+                    font-size: Theme.title-size;
+                    color: Theme.text;
+                }
+                Text {
+                    text: "Add one with the + button: BuildPilot remembers it from then on.";
+                    horizontal-alignment: center;
+                    color: Theme.text-muted;
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    Button { text: "Add a build script"; primary: true; clicked => { root.add(); } }
+                }
+            }
+            ScrollView {
+                visible: root.rows.length > 0;
+                content-height: root.rows.length * root.row-pitch + 20px;
+                for row[i] in root.rows: OperationRow {
+                    x: 10px;
+                    y: 10px + i * root.row-pitch;
+                    width: parent.width - 20px;
+                    data: row;
+                    being-dragged: root.dragging == i;
+                    drop-marker: root.dragging < 0 || root.drop-target != i || root.drop-target == root.dragging ? 0
+                        : root.drop-target > root.dragging ? 1 : -1;
+                    select => { root.select(row.id); }
+                    toggle-checked => { root.toggle-checked(row.id); }
+                    run => { root.run(row.id); }
+                    stop => { root.stop(row.id); }
+                    edit => { root.edit(row.id); }
+                    open-script => { root.open-script(row.id); }
+                    locate-script => { root.locate-script(row.id); }
+                    remove => { root.remove(row.id); }
+                    move-up => { root.move-up(row.id); }
+                    move-down => { root.move-down(row.id); }
+                    drag-start => {
+                        root.dragging = i;
+                        root.drag-offset = 0;
+                    }
+                    drag-move(offset) => { root.drag-offset = offset; }
+                    drag-end => {
+                        if (root.dragging >= 0 && root.drop-target != root.dragging) {
+                            root.move-to(row.id, root.drop-target);
+                        }
+                        root.dragging = -1;
+                    }
+                }
+            }
+        }
+
+        tray := OutputTray {
+            height: root.tray-expanded ? root.tray-height : Theme.tray-header-height;
+            lines: root.lines;
+            heading: root.tray-heading;
+            dropped-note: root.dropped-note;
+            expanded: root.tray-expanded;
+            following: root.following;
+            toggle => { root.toggle-tray(); }
+            jump-to-latest => { root.jump-to-latest(); }
+            scrolled(at-end) => { root.tray-scrolled(at-end); }
+            resize-by(delta) => { root.resize-tray(delta); }
+        }
+    }
+
+    if root.show-operation-dialog: OperationDialog {
+        heading: root.operation-heading;
+        save-label: root.operation-save-label;
+        name <=> root.field-name;
+        script <=> root.field-script;
+        working-dir <=> root.field-working-dir;
+        arguments <=> root.field-arguments;
+        icon: root.field-icon;
+        icon-is-placeholder: root.field-icon-is-placeholder;
+        icon-note: root.field-icon-note;
+        note: root.operation-note;
+        error: root.operation-error;
+        browse-script => { root.browse-script(); }
+        browse-folder => { root.browse-folder(); }
+        choose-icon => { root.choose-icon(); }
+        use-placeholder-icon => { root.use-placeholder-icon(); }
+        save => { root.save-operation(); }
+        cancel => { root.cancel-operation(); }
+    }
+    if root.show-confirm: ConfirmDialog {
+        heading: root.confirm-heading;
+        message: root.confirm-message;
+        confirm-label: root.confirm-label;
+        confirm => { root.confirm(); }
+        cancel => { root.cancel-confirm(); }
+    }
+    if root.show-settings: SettingsDialog {
+        theme-choice: root.theme-choice;
+        data-folder: root.data-folder;
+        choose-theme(choice) => { root.choose-theme(choice); }
+        open-data-folder => { root.open-data-folder(); }
+        close => { root.close-settings(); }
+    }
+    if root.show-about: AboutDialog {
+        version: root.version;
+        close => { root.close-about(); }
+    }
+}

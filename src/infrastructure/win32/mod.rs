@@ -4,3 +4,4 @@
 pub mod codepage;
 pub mod job;
 pub mod shell;
+pub mod theme;

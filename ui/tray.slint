@@ -1,0 +1,88 @@
+// The live output tray at the foot of the window (SRS 3.10).
+
+import { ListView, Button } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+export struct OutputLineData { text: string, err: bool }
+
+export component OutputTray inherits Rectangle {
+    in property <[OutputLineData]> lines;
+    in property <string> heading;
+    in property <string> dropped-note;
+    in property <bool> expanded;
+    in property <bool> following: true;
+    callback toggle();
+    callback jump-to-latest();
+    // The operator scrolled; the argument is true when the view reached the last line.
+    callback scrolled(bool);
+    // Drag on the top edge: the change in height asked for.
+    callback resize-by(length);
+
+    background: Theme.surface;
+    border-width: 1px;
+    border-color: Theme.border;
+
+    public function scroll-to-end() {
+        list.content-y = min(0px, list.visible-height - list.content-height);
+    }
+
+    if root.expanded: TouchArea {
+        y: 0;
+        height: 5px;
+        mouse-cursor: MouseCursor.row-resize;
+        moved => { root.resize-by(self.pressed-y - self.mouse-y); }
+    }
+
+    VerticalLayout {
+        HorizontalLayout {
+            height: Theme.tray-header-height;
+            padding-left: 8px;
+            padding-right: 8px;
+            spacing: Theme.gap;
+            Button {
+                text: root.expanded ? "Hide output" : "Show output";
+                clicked => { root.toggle(); }
+            }
+            Text {
+                text: root.heading;
+                vertical-alignment: center;
+                color: Theme.text;
+                overflow: elide;
+                horizontal-stretch: 1;
+            }
+            Text {
+                text: root.dropped-note;
+                vertical-alignment: center;
+                color: Theme.caution;
+            }
+            if root.expanded && !root.following: Button {
+                text: "Jump to latest";
+                clicked => { root.jump-to-latest(); }
+            }
+        }
+        list := ListView {
+            visible: root.expanded;
+            vertical-stretch: 1;
+            scrolled => {
+                root.scrolled(self.content-y <= self.visible-height - self.content-height + 2px);
+            }
+            for line in root.lines: HorizontalLayout {
+                padding-left: 6px;
+                spacing: 4px;
+                Text {
+                    width: 12px;
+                    text: line.err ? "!" : "";
+                    color: Theme.failure;
+                    font-family: "Consolas";
+                    font-size: Theme.mono-size;
+                }
+                Text {
+                    text: line.text;
+                    color: line.err ? Theme.failure : Theme.text;
+                    font-family: "Consolas";
+                    font-size: Theme.mono-size;
+                }
+            }
+        }
+    }
+}

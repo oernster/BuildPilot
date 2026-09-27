@@ -1,0 +1,33 @@
+// Every colour and size BuildPilot draws with, in one place, for light and dark (UI-001).
+// Nothing else in the UI names a colour literal.
+
+export global Theme {
+    in-out property <bool> dark: false;
+
+    out property <color> background: dark ? #1c1d20 : #f4f5f7;
+    out property <color> surface: dark ? #26282c : #ffffff;
+    out property <color> surface-hover: dark ? #2f3237 : #eef0f3;
+    out property <color> surface-selected: dark ? #2f3d55 : #dce7f8;
+    out property <color> border: dark ? #3a3d43 : #d3d7dd;
+    out property <color> text: dark ? #e9eaec : #1b1d21;
+    out property <color> text-muted: dark ? #b0b4bb : #555b65;
+    out property <color> accent: dark ? #7cb0ff : #2463c9;
+    out property <color> success: dark ? #6fd08f : #1c7039;
+    out property <color> failure: dark ? #ff8a80 : #b3261e;
+    out property <color> caution: dark ? #e8bb4a : #7d5300;
+    out property <color> tooltip-background: dark ? #f0f1f3 : #24262a;
+    out property <color> tooltip-text: dark ? #1b1d21 : #f0f1f3;
+    out property <color> scrim: dark ? #000000b0 : #00000070;
+
+    out property <length> row-height: 96px;
+    out property <length> icon-button-size: 68px;
+    out property <length> operation-icon-size: 72px;
+    out property <length> handle-icon-size: 40px;
+    out property <length> handle-width: 52px;
+    out property <length> radius: 6px;
+    out property <length> gap: 8px;
+    out property <length> tray-header-height: 36px;
+    out property <length> mono-size: 13px;
+    out property <length> body-size: 14px;
+    out property <length> title-size: 18px;
+}

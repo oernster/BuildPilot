@@ -1,0 +1,245 @@
+// One operation row (ROW-001). Every control keeps its place in every state; controls that do
+// not apply are disabled, never hidden (ROW-002).
+
+import { CheckBox } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { IconButton } from "widgets.slint";
+
+export enum StatusKind { idle, running, succeeded, failed, stopped }
+
+export struct RowData {
+    id: string,
+    name: string,
+    detail: string,
+    icon: image,
+    icon-is-placeholder: bool,
+    icon-problem: string,
+    status: string,
+    glyph: string,
+    kind: StatusKind,
+    problem: string,
+    checked: bool,
+    selected: bool,
+    can-run: bool,
+    can-stop: bool,
+    can-remove: bool,
+}
+
+export component OperationRow inherits Rectangle {
+    in property <RowData> data;
+    in property <bool> being-dragged;
+    // Where a dragged row would land relative to this one: -1 above, 1 below, 0 neither.
+    in property <int> drop-marker;
+    callback select();
+    callback toggle-checked();
+    callback run();
+    callback stop();
+    callback edit();
+    callback open-script();
+    callback locate-script();
+    callback remove();
+    callback move-up();
+    callback move-down();
+    // Drag by the handle: pointer y within the handle, relative to where it was pressed.
+    callback drag-start();
+    callback drag-move(length);
+    callback drag-end();
+
+    height: Theme.row-height;
+    background: root.being-dragged ? Theme.surface-hover
+        : root.data.selected ? Theme.surface-selected : Theme.surface;
+    border-radius: Theme.radius;
+    border-width: row-focus.has-focus ? 2px : 1px;
+    border-color: row-focus.has-focus ? Theme.accent : Theme.border;
+
+    row-focus := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.alt && event.text == Key.UpArrow) {
+                root.move-up();
+                return accept;
+            }
+            if (event.modifiers.alt && event.text == Key.DownArrow) {
+                root.move-down();
+                return accept;
+            }
+            return reject;
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            row-focus.focus();
+            root.select();
+        }
+    }
+
+    if root.drop-marker != 0: Rectangle {
+        y: root.drop-marker < 0 ? -4px : root.height + 1px;
+        height: 3px;
+        background: Theme.accent;
+    }
+
+    HorizontalLayout {
+        padding-left: 6px;
+        padding-right: 8px;
+        spacing: Theme.gap;
+        alignment: stretch;
+
+        handle-area := Rectangle {
+            width: Theme.handle-width;
+            accessible-role: text;
+            accessible-label: "Drag to reorder " + root.data.name + "; Alt+Up and Alt+Down also move it";
+            Image {
+                source: @image-url("../assets/reorder-rows.png");
+                width: Theme.handle-icon-size;
+                height: Theme.handle-icon-size;
+                image-fit: contain;
+                colorize: Theme.text-muted;
+            }
+            TouchArea {
+                mouse-cursor: root.being-dragged ? MouseCursor.grabbing : MouseCursor.grab;
+                pointer-event(event) => {
+                    if (event.kind == PointerEventKind.down) {
+                        row-focus.focus();
+                        root.select();
+                        root.drag-start();
+                    }
+                    if (event.kind == PointerEventKind.up || event.kind == PointerEventKind.cancel) {
+                        root.drag-end();
+                    }
+                }
+                moved => {
+                    root.drag-move(self.mouse-y - self.pressed-y);
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            CheckBox {
+                checked: root.data.checked;
+                accessible-label: "Select " + root.data.name;
+                toggled => { root.toggle-checked(); }
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            Image {
+                source: root.data.icon-is-placeholder
+                    ? @image-url("../assets/application-icon.png") : root.data.icon;
+                width: Theme.operation-icon-size;
+                height: Theme.operation-icon-size;
+                image-fit: contain;
+                opacity: root.data.icon-is-placeholder ? 0.45 : 1;
+                accessible-role: image;
+                accessible-label: root.data.icon-problem == "" ? "" : root.data.icon-problem;
+            }
+        }
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            horizontal-stretch: 1;
+            Text {
+                text: root.data.name;
+                font-size: Theme.body-size;
+                font-weight: 600;
+                color: Theme.text;
+                overflow: elide;
+            }
+            Text {
+                text: root.data.problem != "" ? root.data.problem : root.data.detail;
+                font-size: 12px;
+                color: root.data.problem != "" ? Theme.failure : Theme.text-muted;
+                overflow: elide;
+            }
+        }
+
+        HorizontalLayout {
+            width: 210px;
+            spacing: 6px;
+            alignment: start;
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    width: 18px;
+                    text: root.data.glyph;
+                    font-size: 16px;
+                    color: root.data.kind == StatusKind.succeeded ? Theme.success
+                        : root.data.kind == StatusKind.failed ? Theme.failure
+                        : root.data.kind == StatusKind.running ? Theme.accent
+                        : root.data.kind == StatusKind.stopped ? Theme.caution : Theme.text-muted;
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: root.data.status;
+                    font-size: 13px;
+                    color: Theme.text;
+                    overflow: elide;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 2px;
+            alignment: end;
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/run.png");
+                    label: "Run " + root.data.name;
+                    enabled: root.data.can-run;
+                    disabled-reason: "already running";
+                    activated => { root.run(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/stop.png");
+                    label: "Stop " + root.data.name;
+                    enabled: root.data.can-stop;
+                    disabled-reason: "not running";
+                    activated => { root.stop(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/edit-script.png");
+                    label: "Edit " + root.data.name;
+                    activated => { root.edit(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/open-script.png");
+                    label: "Open script";
+                    activated => { root.open-script(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/browse-locate-script.png");
+                    label: "Show script in Explorer";
+                    activated => { root.locate-script(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/negative.png");
+                    label: "Remove " + root.data.name + " from BuildPilot";
+                    enabled: root.data.can-remove;
+                    disabled-reason: "stop it first";
+                    activated => { root.remove(); }
+                }
+            }
+        }
+    }
+}

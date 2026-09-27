@@ -57,6 +57,17 @@ fn lines_from_counts_from_the_start_of_the_run() {
 }
 
 #[test]
+fn get_indexes_the_lines_held() {
+    let mut buffer = OutputBuffer::with_capacity(2);
+    for text in ["a", "b", "c"] {
+        buffer.push(Stream::Stdout, text);
+    }
+    assert_eq!(buffer.get(0).map(|line| line.text.as_str()), Some("b"));
+    assert_eq!(buffer.get(1).map(|line| line.text.as_str()), Some("c"));
+    assert!(buffer.get(2).is_none());
+}
+
+#[test]
 fn zero_capacity_still_holds_one_line() {
     let mut buffer = OutputBuffer::with_capacity(0);
     buffer.push(Stream::Stdout, "a");

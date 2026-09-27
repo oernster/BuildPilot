@@ -94,6 +94,12 @@ impl OutputBuffer {
         self.dropped + self.lines.len() as u64
     }
 
+    /// The line at `index` among those held (0 is the oldest held), for a view that shows
+    /// one row per line.
+    pub fn get(&self, index: usize) -> Option<&OutputLine> {
+        self.lines.get(index)
+    }
+
     /// Every line held, oldest first.
     pub fn lines(&self) -> impl Iterator<Item = &OutputLine> {
         self.lines.iter()
