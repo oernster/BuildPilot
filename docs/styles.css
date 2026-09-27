@@ -269,39 +269,50 @@ h2 {
 
 .stat p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
-/* Install */
+/* Downloads: the house card per platform (EarthNow, SymDiary, BridgeTalk). BuildPilot is
+   Windows only, so there is one card, centred at a card's width. */
 
-.steps { counter-reset: step; list-style: none; padding: 0; margin: 24px 0 0; display: grid; gap: 12px; max-width: 40em; }
+.dl-version {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 14px;
+}
 
-.steps li {
-    counter-increment: step;
-    position: relative;
-    padding: 14px 18px 14px 60px;
+.downloads {
+    display: grid;
+    grid-template-columns: minmax(0, 420px);
+    justify-content: center;
+    margin-top: 28px;
+}
+
+.dl-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    color: var(--muted);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-.steps li::before {
-    content: counter(step);
-    position: absolute;
-    left: 18px;
-    top: 13px;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: grid;
-    place-items: center;
-    background: var(--accent);
-    color: var(--on-accent);
-    font-weight: 700;
-    font-size: 0.9rem;
-}
+.dl-card .ico { font-size: 30px; }
 
-.steps li strong { color: var(--text); }
+.dl-card h3 { margin: 4px 0 0; }
 
-.after-steps { margin-top: 20px; }
+.dl-card .req { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+.dl-card .btn { align-self: center; margin: 14px 0 4px; }
+
+.dl-card .meta { color: var(--muted); font-size: 0.8rem; min-height: 1.2em; margin: 0; }
+
+.dl-card .how { color: var(--muted); font-size: 0.85rem; margin: 8px 0 0; }
+
+.dl-links { text-align: center; margin-top: 20px; font-size: 0.9rem; }
 
 code {
     font-family: "Cascadia Code", Consolas, monospace;
