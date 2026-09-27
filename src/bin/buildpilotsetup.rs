@@ -20,7 +20,7 @@ use buildpilot::infrastructure::locations::{
 };
 use buildpilot::infrastructure::log_file::{LogFile, ROTATE_AT_BYTES};
 use buildpilot::infrastructure::setup::{self as work, UNINSTALL_ARGUMENT};
-use buildpilot::infrastructure::win32::diagnostics::show_error;
+use buildpilot::infrastructure::win32::diagnostics::{hide_frame_counter, show_error};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::setup::plan::{self, Choices, Step};
 use buildpilot::setup::route::{Route, route};
@@ -290,6 +290,7 @@ fn relocated() -> bool {
 }
 
 fn main() -> ExitCode {
+    hide_frame_counter();
     if relocated() {
         return ExitCode::SUCCESS;
     }

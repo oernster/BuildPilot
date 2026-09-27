@@ -23,7 +23,7 @@ use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::releases::{GitHubReleases, REPOSITORY};
 use buildpilot::infrastructure::shell::ExplorerShell;
 use buildpilot::infrastructure::system::{FsPaths, ProcessVariables, SystemClock, UuidIds};
-use buildpilot::infrastructure::win32::diagnostics::show_error;
+use buildpilot::infrastructure::win32::diagnostics::{hide_frame_counter, show_error};
 use buildpilot::infrastructure::win32::instance::{self, Claim};
 use buildpilot::infrastructure::win32::theme::windows_uses_dark;
 use buildpilot::ui::{self, Environment, HelpFacts, Waker};
@@ -32,6 +32,7 @@ use buildpilot::ui::{self, Environment, HelpFacts, Waker};
 const ICONS_FOLDER_NAME: &str = "icons";
 
 fn main() -> ExitCode {
+    hide_frame_counter();
     let data = data_folder();
     // DATA-001, settled before the config or the log is touched so each has one writer. A later
     // BuildPilot leaves both alone and exits.

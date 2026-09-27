@@ -10,6 +10,19 @@ use windows_sys::Win32::System::Console::{STD_ERROR_HANDLE, SetStdHandle};
 use windows_sys::Win32::System::SystemInformation::GetLocalTime;
 use windows_sys::Win32::UI::WindowsAndMessaging::{MB_ICONERROR, MB_OK, MessageBoxW};
 
+/// The variable that makes Slint count frames and draw the count over the window.
+const SLINT_PERFORMANCE_VARIABLE: &str = "SLINT_DEBUG_PERFORMANCE";
+
+/// Removes Slint's frame counter from this process, whatever environment started it. Slint reads
+/// the variable each time a window's renderer is made, so this must run before any window
+/// exists; it is the first line of each executable's `main`. The builds BuildPilot starts
+/// inherit its environment, so they no longer see the variable either.
+pub fn hide_frame_counter() {
+    // SAFETY: called first in `main`, while the process has one thread, so nothing else can be
+    // reading or writing the environment at the same time.
+    unsafe { std::env::remove_var(SLINT_PERFORMANCE_VARIABLE) };
+}
+
 /// Points the process's standard error at `file`. A windowed program is started with none, so
 /// without this whatever the Rust runtime writes there (a stack overflow, an abort) is lost.
 /// `file` must stay open for as long as standard error points at it.
