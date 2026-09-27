@@ -544,8 +544,8 @@ Personal developer utility: a full FMEA is judged disproportionate. Named risks,
 
 | ID | Risk | Mitigation |
 |---|---|---|
-| R-1 | Slint has no ready-made drag reordering for list rows (hypothesis). | Spike first; Alt+Up/Down (ROW-004) works regardless. |
-| R-2 | A plain Slint text view may not cope with 100,000 lines (hypothesis). | Spike a virtualised line list against OUT-005 early. |
+| R-1 | Slint has no ready-made drag reordering for list rows. | **Retired 2026-09-27 by a throwaway spike (since removed).** A `TouchArea` on the handle keeps receiving `moved` after the pointer leaves it in any direction and receives the release, so the drag is built from it. Measured flaw to design out: a twitch of a few pixels retargeted the row; the target must change only when the pointer passes the middle of the next row. |
+| R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Run is clicked. |
 | R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone; Rust's standard library is believed to refuse arguments it cannot quote safely for batch files (to verify). | LCH-003 fixture test covers `.cmd` too; surface a refusal as a launch failure. |
 | R-4 | A script that breaks away from its Job Object would survive Stop. | Accept for v1; STOP-003 reports survivors by PID. |
 
