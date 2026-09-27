@@ -5,8 +5,47 @@ use std::path::PathBuf;
 use buildpilot::application::{App, AppError};
 use buildpilot::domain::lifecycle::{RunState, TransitionError};
 use buildpilot::domain::operation::OperationId;
+use buildpilot::domain::output::Stream;
 
-use super::support::{SCRIPT_A, SCRIPT_B, SCRIPT_C, add, draft, exited, world};
+use super::support::{SCRIPT_A, SCRIPT_B, SCRIPT_C, add, draft, exited, line, output_texts, world};
+
+// ROW-005: reordering while builds run neither stops, restarts nor re-attributes any of them;
+// output arriving after the move lands under the operation that produced it.
+#[test]
+fn reorder_during_run_keeps_run() {
+    let world = world();
+    let mut app = world.app();
+    let a = add(&mut app, SCRIPT_A);
+    let b = add(&mut app, SCRIPT_B);
+    let c = add(&mut app, SCRIPT_C);
+    app.run(&a).unwrap();
+    app.run(&b).unwrap();
+    let (run_a, run_b) = (world.launch_key(0), world.launch_key(1));
+    app.handle_event(line(&run_a, Stream::Stdout, "a before"));
+
+    app.move_to(&a, 2).unwrap();
+    assert!(app.move_down(&b).unwrap());
+    let order: Vec<&OperationId> = app.deck().operations().iter().map(|op| op.id()).collect();
+    assert_eq!(order, [&c, &b, &a]);
+
+    app.handle_event(line(&run_a, Stream::Stdout, "a after"));
+    app.handle_event(line(&run_b, Stream::Stderr, "b after"));
+    assert!(app.is_running(&a) && app.is_running(&b));
+    assert!(!app.is_running(&c));
+    assert_eq!(world.state.borrow().launches.len(), 2, "nothing restarted");
+    assert!(world.state.borrow().stops.is_empty(), "nothing stopped");
+    assert!(output_texts(&app, &a).ends_with(&["a before".to_owned(), "a after".to_owned()]));
+    assert!(output_texts(&app, &b).ends_with(&["b after".to_owned()]));
+    assert!(
+        !output_texts(&app, &b)
+            .iter()
+            .any(|text| text.starts_with("a "))
+    );
+
+    app.handle_event(exited(&run_a, 0));
+    assert_eq!(app.run_state(&a), &RunState::Succeeded);
+    assert!(app.is_running(&b));
+}
 
 /// Who holds operation `id`'s folder, asked as its row asks.
 fn busy(app: &App, id: &OperationId) -> Option<String> {

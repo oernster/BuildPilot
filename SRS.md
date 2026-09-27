@@ -308,8 +308,7 @@ Verified by: `domain::deck` tests `move_up_and_down`, `move_at_edge_is_no_op`.
 
 **ROW-005 (M) Reorder does not touch runs.** Reordering shall not interrupt, restart or
 re-attribute any running operation or its output. Source: spec §4.3.
-Verified by: **no test yet.** `application::deck` test `reorder_during_run_keeps_run` is
-planned and not written.
+Verified by: `application::concurrency` test `reorder_during_run_keeps_run`.
 
 **ROW-006 (M) Checkboxes.** Each row shall have a checkbox whose state the flight deck holds as a
 set of operation IDs. Run the ticked builds uses it (LCH-011). Checkbox state is not persisted
@@ -964,7 +963,7 @@ decided. No question is open. Where a later amendment changed an answer, the row
 ## Appendix C. Traceability
 
 Each requirement above carries its own Verified by line. Every test named there exists in
-`tests/`, except where the line says **no test yet**. A test names its requirement ID in a
+`tests/`. A test names its requirement ID in a
 comment above it, so traceability runs from code back to this document as well as forwards.
 
 ## Appendix D. Won't this time (v1)

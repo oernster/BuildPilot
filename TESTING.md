@@ -48,12 +48,12 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-337 tests, counted from the source.
+338 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
 | `tests/domain` | 135 | The rules: validation, steps, folders compared as Windows compares them, deck order and slotting in by name, the run state machine, launch plans per kind of script, the host table, environment discovery with the deactivate and activate variables, the scan patterns and proposals, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
-| `tests/application` | 90 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running steps in order, one build per folder, running the ticked rows, stopping, environments, hosts, folder scans, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
+| `tests/application` | 91 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering (including during a run), running steps in order, one build per folder, running the ticked rows, stopping, environments, hosts, folder scans, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
 | `tests/infrastructure` | 58 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders, finding and ending a process by name and clearing setup's stale copy; the donation address; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
 | `tests/keyboard` | 14 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down, a folder already on the deck off the ring. |
 | `tests/ui.rs` | 11 | What rows and the tray say, without a window. |
