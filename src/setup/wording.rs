@@ -1,7 +1,7 @@
 //! Everything setup says. Pure, so every screen's words are a test rather than a screenshot.
 
 use super::plan::Step;
-use super::route::Route;
+use super::route::{Installed, Route};
 use crate::domain::version::Version;
 
 /// What the route screen says and offers.
@@ -114,6 +114,15 @@ pub fn step_words(step: Step) -> &'static str {
         Step::Unregister => "Removing BuildPilot from the Apps list",
         Step::RemoveFiles => "Removing the program files",
         Step::RemoveData => "Removing your operations, settings and log",
+    }
+}
+
+/// What the log says is installed as setup starts.
+pub fn installed_words(installed: Installed) -> String {
+    match installed {
+        Installed::Nothing => "nothing".to_owned(),
+        Installed::Recorded(Some(version)) => format!("version {version}"),
+        Installed::Recorded(None) => "a version the Apps list does not state".to_owned(),
     }
 }
 

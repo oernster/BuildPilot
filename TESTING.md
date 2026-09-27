@@ -48,14 +48,14 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-236 tests, counted from the source.
+237 tests, counted from the source.
 
 | Suite | Tests | What it proves |
 |---|---|---|
 | `tests/domain` | 89 | The rules: validation, deck order, the run state machine, launch plans per kind of script, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
 | `tests/application` | 60 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering, running, stopping, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
 | `tests/infrastructure` | 48 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders and finding and ending a process by name; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
-| `tests/setup.rs` | 5 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
+| `tests/setup.rs` | 6 | The setup program's policy: version order, the route for each installed state, each plan's steps and weights, every screen's words. |
 | `tests/keyboard.rs` | 11 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down. |
 | `tests/geometry.rs` | 5 | Where Slint laid things out, headless: every toolbar tooltip inside the window, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text. |
 | `tests/structural.rs` | 8 | The invariants in [ARCHITECTURE.md](ARCHITECTURE.md), by reading the source. |
@@ -109,7 +109,7 @@ These need a real desktop and a real person; the SRS marks them Manual.
 | Escape closes a dialog | Known limitation, not pursued: on the real window Escape leaves dialogs open, although the headless suite passes it. Close a dialog with its own button. |
 | DATA-001 single instance | Starting BuildPilot again brings the open window forward, restoring it if minimised. |
 | INST-001 to INST-005 | Build with `build.ps1`, then install, run setup again to repair, then uninstall from the Apps list: check the folder, the Start menu shortcut, the Apps entry and that uninstall removes them. Driven through UI Automation on 2026-09-27; each step's time is in setup's log. |
-| INST-004 running | Install with BuildPilot open: setup says so and offers to close it. Not yet checked. |
+| INST-004 running | Install with BuildPilot open: setup says so and offers to close it. Driven through UI Automation on 2026-09-27: the Running screen shows, Cancel returns to Install with BuildPilot still open, Close it and continue ends it and installs. |
 | UI-006, UI-007 Help | The menu drops from Help; Guide, About and Licence open, each with its buttons held still below the text. |
 | UI-011 reading | Guide, About, Licence and setup's licence page hold still 5 seconds, read down slowly, hold, rewind fast; a wheel or a key holds them 2.5 seconds, then they carry on. |
 | UI-010 update check | With the network watched: one request to api.github.com 3 seconds after opening; Help > Check for Updates says one of the three answers; with the network off it says GitHub could not be reached. |

@@ -311,7 +311,8 @@ fn main() -> ExitCode {
     }
     let installed = work::installed();
     log.write(&format!(
-        "Setup {carried} started; installed: {installed:?}"
+        "Setup {carried} started; installed: {}",
+        wording::installed_words(installed)
     ));
     let window = match SetupWindow::new() {
         Ok(window) => window,

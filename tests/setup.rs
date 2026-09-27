@@ -120,6 +120,19 @@ fn each_route_says_what_it_does() {
 }
 
 #[test]
+fn what_is_installed_reads_in_words() {
+    assert_eq!(wording::installed_words(Installed::Nothing), "nothing");
+    assert_eq!(
+        wording::installed_words(Installed::Recorded(Some(v("0.1.0")))),
+        "version 0.1.0"
+    );
+    assert_eq!(
+        wording::installed_words(Installed::Recorded(None)),
+        "a version the Apps list does not state"
+    );
+}
+
+#[test]
 fn every_step_and_verdict_has_words() {
     let steps = [
         Step::CopyFiles,
