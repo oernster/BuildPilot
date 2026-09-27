@@ -40,7 +40,11 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 - a replacement for PowerShell, cmd, Make, Cargo, npm, Gradle or any build tool;
 - a CI/CD server, a cloud service or a networked service of any kind;
 - a build-script editor (BuildPilot never writes to a script);
-- a dependency graph, pipeline or sequencing designer;
+- a dependency graph, pipeline or sequencing designer; an operation's own ordered steps (STEP-001)
+  are the one sequence, with no branching, no condition and no link between operations
+  (Amendment 4);
+- an environment builder: BuildPilot never creates, installs into, upgrades or repairs a Python
+  environment or any other; it uses one that already exists (ENV-007, Amendment 4);
 - an "autopilot" that decides what to run;
 - a CPU-core or thread scheduler for the underlying tools;
 - a build-artifact manager;
@@ -51,7 +55,9 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 
 | Term | Meaning |
 |---|---|
-| Operation | One configured build command: a script or executable, its working directory, its arguments, its name and its icon. Persisted. |
+| Operation | One configured build command: one or more steps, its working directory, its name and its icon. Persisted. |
+| Step | One script or executable with its arguments. An operation runs its steps in order (Amendment 4). |
+| Environment | A Python virtual environment that already exists: a direct subfolder of the working directory holding `pyvenv.cfg` and `Scripts\python.exe` (ENV-001). |
 | Run | One execution of an operation, from launch to termination. Transient. |
 | Flight deck | The ordered list of operations shown in the main window. |
 | Row | The visual representation of one operation in the flight deck. |
@@ -145,9 +151,11 @@ Acceptance: a write interrupted after the temporary file is written leaves the p
 file intact. Verified by: `config_store` test `interrupted_write_keeps_previous_file`.
 
 **CFG-003 (M) Persisted fields.** For each operation the config file shall hold: a stable ID
-(UUID, assigned at creation, never reused), display name, script path (absolute), working
-directory (absolute), arguments, icon reference, position in the flight deck. Globally it shall
-hold the schema version and the theme preference. Source: spec §12.
+(UUID, assigned at creation, never reused), display name, its steps in order (each a script path,
+absolute, plus arguments), working directory (absolute), the chosen environment's folder name
+where ENV-002 asked for one, icon reference, position in the flight deck. Globally it shall hold
+the schema version, the theme preference and the operator's host table (HOST-001). Source: spec
+§12; amended by Amendment 4. An operation saved by an earlier schema migrates to one step (CFG-009).
 Verified by: `domain::config` round-trip test `every_field_round_trips`.
 
 **CFG-004 (M) Runtime state is never persisted.** The config file shall hold no process ID,
@@ -190,7 +198,8 @@ Verified by: `domain::config` round-trip test; Manual for restore.
 
 **ADD-001 (M) Add by browsing.** When the operator activates Add, BuildPilot shall open a file
 picker filtered to the supported types (LCH-001). When a file is chosen, BuildPilot shall open the
-operation dialog pre-filled with the derived defaults. Source: spec §5.
+operation dialog pre-filled with the derived defaults, the chosen file as its only step.
+Source: spec §5.
 Verified by: Manual (file picker); defaults per ADD-002 to ADD-004.
 
 **ADD-002 (M) Default working directory.** The operation factory shall default the working
@@ -243,8 +252,9 @@ matters. Verified by: Manual.
 ### 3.4 Editing (EDIT)
 
 **EDIT-001 (M) Edit fields.** When the operator activates Edit, BuildPilot shall open the
-operation dialog showing the name, script path, working directory, arguments and icon, all
-editable. Edit never touches the script. Source: spec §6.
+operation dialog showing the name, the steps (each a script path with its arguments, STEP-008),
+the working directory, the environment where ENV-002 applies and the icon, all editable. Edit
+never touches a script. Source: spec §6; amended by Amendment 4.
 
 **EDIT-002 (M) Edit while running.** While an operation is running, the operation dialog shall
 state that changes to the script path, working directory and arguments take effect on the next
@@ -269,7 +279,8 @@ Verified by: `application::deck` test `remove_refused_while_running`.
 
 **ROW-001 (M) Row contents.** Each row shall show, left to right: reorder handle, checkbox, icon,
 name, script file name with its folder, status, Run, Stop, Edit, Open Script, Locate Script,
-Remove. Source: spec §4.1.
+Remove. Source: spec §4.1. For an operation with several steps, the script shown, opened and
+located is the first step's, followed by `+N` for the rest (Amendment 4).
 
 **ROW-002 (M) Stable layout.** The row shall keep every control in the same position in every
 state; controls that do not apply are disabled, never hidden. Source: spec §4.1, §19.
@@ -302,8 +313,11 @@ file extension:
 | `.ps1` | `pwsh.exe` if found on PATH, else `powershell.exe`; with `-NoProfile -NonInteractive -ExecutionPolicy Bypass -File <script> <arguments>` |
 | `.bat`, `.cmd` | the script itself, with `<arguments>`; the standard library runs it through `cmd.exe` (Amendment 1) |
 | `.exe`, `.com` | directly |
+| `.py` | the environment's `Scripts\python.exe` with `<script> <arguments>`, activated as ENV-006 states (Amendment 4) |
 
-A file of any other type is refused at Add with a message listing the supported types.
+An extension in the operator's host table is launched as HOST-002 states, ahead of this table.
+A file of any other type is refused at Add with a message listing the supported types, the
+operator's own included.
 Verified by: `domain::launch_plan` table tests (one per row, plus the pwsh-absent case).
 
 **LCH-002 (M) Launch.** When the operator activates Run on an idle, succeeded, failed or stopped
@@ -506,8 +520,9 @@ seconds, then again. Any scroll by the operator suspends the cycle for 2.5 secon
 carries on from where they left it; it is never switched off. The dialog's buttons stay in place
 below the text. Source: house `/scroll` model.
 
-**UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark, Follow Windows)
-plus the data folder path with an Open Folder button. Source: OQ-9.
+**UI-004 (M) Settings.** Settings shall hold only the theme choice (Light, Dark, Follow Windows),
+the data folder path with an Open Folder button and the operator's host table (HOST-001).
+Source: OQ-9; amended by Amendment 4.
 
 **UI-005 (M) Theme toggle.** The toolbar shall carry a theme toggle using the light and dark
 artwork; Settings shall show the same choice. Source: OQ-13.
@@ -571,6 +586,114 @@ the single writer.
 the same Windows user, the new process shall bring the running instance's window forward and exit.
 Source: OQ-10. Verified by: Manual.
 
+### 3.17 Steps (STEP)
+
+Added by Amendment 4. The case that asked for it, measured 2026-09-27: 15 repositories under the
+owner's Development folder document running `python buildexe.py` and then
+`python buildinstaller.py`; none of their `buildinstaller.py` files runs `buildexe.py` itself.
+
+**STEP-001 (M) Ordered steps.** Each operation shall hold an ordered list of one or more steps,
+each a script path plus its arguments. The working directory, name and icon stay per operation.
+Acceptance: an operation in `C:\src\app` holds `buildexe.py` then `buildinstaller.py`.
+Verified by: `domain::operation` tests.
+
+**STEP-002 (M) Run in order.** When a step exits with code 0 and a later step exists, the run use
+case shall start the next step. Verified by: `application::run` test with a two-step fake.
+
+**STEP-003 (M) Stop on failure.** If a step exits with a non-zero code, then the run use case shall
+start no further step; the run shall end Failed with that code and the step's number.
+Acceptance: step 1 exits 3, so step 2 never starts and the row reads "Failed: step 1 exited
+with code 3". Verified by: `application::run` test.
+
+**STEP-004 (M) Stop ends the sequence.** When the operator activates Stop during a step, the run
+use case shall stop that step's process tree (STOP-001) and start no further step; the run
+shall end Stopped. Verified by: `application::run` test.
+
+**STEP-005 (M) Checked before any step starts.** When Run is activated, the run use case shall
+check every step's script (LCH-007) and resolve the environment (ENV-003) before step 1 starts.
+If any check fails, then no step starts; the row shall name the failing step. Rationale: a
+missing second script found only after a ten minute first step wastes the first.
+Verified by: `application::run` test with step 2's script absent.
+
+**STEP-006 (M) One output per run.** The output store shall hold every step of a run as one
+output. Where an operation has more than one step, a line before each step shall name its number,
+its script and the program started. Verified by: `application::output` test.
+
+**STEP-007 (M) Step shown while running.** While an operation with more than one step is running,
+its row shall show which step is running as `step n of N`. Verified by: `ui` test.
+
+**STEP-008 (M) Editing steps.** The operation dialog shall let the operator add a step by
+browsing, remove a step and move a step up or down. It shall refuse to remove the only step.
+Verified by: `domain::operation` tests; Manual for the dialog.
+
+### 3.18 Python environments (ENV)
+
+Added by Amendment 4. BuildPilot uses an environment that already exists; it never makes one.
+What activation does was read from `venv\Scripts\activate.bat` on the reference machine on
+2026-09-27: it sets `VIRTUAL_ENV`, clears `PYTHONHOME` and puts `Scripts` first on `PATH`; the
+rest changes only an interactive prompt.
+
+**ENV-001 (M) Discovery.** The environment finder shall treat a direct subfolder of the
+operation's working directory as an environment when it holds both `pyvenv.cfg` and
+`Scripts\python.exe`, whatever the folder's name.
+Acceptance: in `C:\src\app`, `venv` and `.venv` holding both files are found; `tools` holding
+`Scripts\python.exe` without `pyvenv.cfg` is not. Verified by: `infrastructure` test in a
+temporary folder.
+
+**ENV-002 (M) Choice when several.** While the working directory holds more than one environment
+and the operation has a `.py` step, the operation dialog shall list them and refuse to save until
+one is chosen. Where exactly one is named `venv` or `.venv`, the dialog shall preselect it. The
+choice is saved by folder name. Measured case: AxisDB holds `venv` and `venv_smoke`.
+Verified by: `domain` test for the preselection; Manual for the dialog.
+
+**ENV-003 (M) Resolution at Run.** When a run of an operation with a `.py` step starts, the run use
+case shall use the environment the operation names; where it names none, the only one found.
+Verified by: `application::run` tests.
+
+**ENV-004 (M) No environment.** If a `.py` step has no environment at Run (none found; the named
+one gone), then no step shall start; the row shall show Failed naming the working directory
+searched and saying BuildPilot uses an existing environment and does not create one.
+Verified by: `application::run` test.
+
+**ENV-005 (M) Several found, none chosen.** If Run finds several environments where the operation
+names none (one appeared after it was saved), then no step shall start; the row shall name the
+environments found and say to choose one in Edit. Verified by: `application::run` test.
+
+**ENV-006 (M) Activation.** When the launcher starts a `.py` step, it shall start
+`<environment>\Scripts\python.exe` with the script and its arguments. In that process alone it
+shall set `VIRTUAL_ENV` to the environment folder, remove `PYTHONHOME` and put
+`<environment>\Scripts` first on `PATH`. BuildPilot's own environment is unchanged.
+Acceptance: given `C:\src\app\venv`, a fixture `.py` printing `sys.executable` and
+`VIRTUAL_ENV` prints `C:\src\app\venv\Scripts\python.exe` and `C:\src\app\venv`.
+Verified by: `infrastructure::process` test with a real environment made by the test setup.
+
+**ENV-007 (M) Never builds an environment.** BuildPilot shall not create, install into, upgrade or
+repair any environment; it runs no `venv`, `virtualenv`, `pip`, `uv`, `poetry` or `conda` command
+of its own. Source: owner, 2026-09-27. Verified by: inspection; a structural test that the source
+names none of those commands.
+
+**ENV-008 (M) Interpreter named.** When a `.py` step starts, the output tray's line for it shall
+name the interpreter path, including for a single-step operation. Verified by: `application::output`
+test.
+
+### 3.19 Operator hosts (HOST)
+
+Added by Amendment 4, for script types BuildPilot has no built-in rule for, such as `.rb`.
+
+**HOST-001 (S) Host table.** Settings shall hold a table in which each row maps one file
+extension to a program and its leading arguments. Verified by: `domain::config` round-trip test.
+
+**HOST-002 (S) Operator first.** When a step's extension has a row in the operator's host table,
+the launcher shall start that row's program with its leading arguments, then the script path, then
+the step's arguments, in place of the built-in rule of LCH-001. Acceptance: `.rb` mapped to
+`C:\Ruby33\bin\ruby.exe` runs `build.rb --release` as `ruby.exe build.rb --release`. A `.py` row
+replaces environment activation for `.py` entirely. Verified by: `domain::launch_plan` test.
+
+**HOST-003 (S) Picker follows the table.** The Add and step pickers shall offer the operator's
+extensions beside the built-in ones. Verified by: `domain::launch_plan` test.
+
+A host program that cannot be started is a launch failure (LCH-009).
+
 ---
 
 ## 4. Other requirements
@@ -596,6 +719,7 @@ Personal developer utility: a full FMEA is judged disproportionate. Named risks,
 | R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Run is clicked. |
 | R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone; Rust's standard library is believed to refuse arguments it cannot quote safely for batch files (to verify). | LCH-003 fixture test covers `.cmd` too; surface a refusal as a launch failure. |
 | R-4 | A script that breaks away from its Job Object would survive Stop. | Accept for v1; STOP-003 reports survivors by PID. |
+| R-5 | Hypothesis, not measured: Python writing to a pipe buffers its output (so OUT-001's live lines would arrive in bursts) and encodes it in the ANSI code page, which OUT-008 would misread as OEM. | Measure before ENV-006 is built: run a fixture `.py` through the real launcher, timing when lines arrive and reading the bytes of `é`. Only if either is confirmed, amend ENV-006 to set `PYTHONUNBUFFERED` or `PYTHONIOENCODING` for the run. |
 
 ---
 
@@ -615,7 +739,7 @@ Every use case is runnable from a test before any window exists.
 ## Appendix B. Decisions register
 
 Every question raised against Draft 0.1 is closed. All were decided by Oliver on 2026-09-27,
-accepting the proposed default in each case. No question is open.
+accepting the proposed default in each case. OQ-14 to OQ-18 arose with Amendment 4; OQ-18 is open.
 
 | ID | Question | Decision |
 |---|---|---|
@@ -632,6 +756,11 @@ accepting the proposed default in each case. No question is open.
 | OQ-11 | Supported script types beyond `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`? | None in v1 (see Appendix D). |
 | OQ-12 | How Cargo.toml's version follows `VERSION` (CON-005). | The build script stamps Cargo.toml from `VERSION`; a structural test fails when they differ. |
 | OQ-13 | Theme toggle location: toolbar buttons using the light/dark artwork? Settings? Both? | Toolbar toggle using the artwork; Settings mirrors it. |
+| OQ-14 | How is a sequence such as `buildexe.py` then `buildinstaller.py` expressed? | Ordered steps inside one operation, stopping on the first failure (STEP). Decided 2026-09-27. |
+| OQ-15 | Several environments in one working directory? | The operation dialog asks; the choice is saved (ENV-002). Decided 2026-09-27. |
+| OQ-16 | No environment for a `.py` step? | Refuse to run; never fall back to a Python on PATH and never create one (ENV-004, ENV-007). Decided 2026-09-27. |
+| OQ-17 | Where does a host for another script type live? | One table in Settings keyed by extension (HOST). Decided 2026-09-27. |
+| OQ-18 | Should a `.ps1`, `.bat` or `.cmd` step also run inside the environment, for a script that calls `python` itself? | **Open.** Owner: Oliver. Until decided, only `.py` steps are activated. |
 
 ## Appendix C. Traceability
 
@@ -645,7 +774,9 @@ this document as well as forwards.
 - Graceful stop (Ctrl+Break then wait), per OQ-1.
 - A progress protocol for scripts to report percentages (the model allows it: LIFE-006).
 - Keeping output from runs before the latest.
-- Script types beyond those in LCH-001, e.g. `.py`, `.sh`.
+- Built-in script types beyond those in LCH-001, e.g. `.sh`; the operator's host table
+  (HOST-001) covers them instead.
+- A working directory per step; environments other than Python virtual environments.
 - Windows 10 testing; macOS and Linux builds.
 - Localisation.
 - Per-operation preferences (spec §12), until a real one is found.
@@ -685,3 +816,16 @@ that the house update check (automatic at launch and daily, plus on demand) is w
 it means one request to GitHub. The About credit list was measured against the shipped graph:
 292 crates under 25 licence expressions, where About named one. The update check uses WinHTTP,
 built into Windows, so BuildPilot still carries no HTTP or TLS crate.
+
+**Amendment 4 (2026-09-27): steps, Python environments and operator hosts.** Changes §1.4, §1.5,
+ADD-001, CFG-003, LCH-001, UI-004 and Appendix D; adds STEP-001 to STEP-008, ENV-001 to ENV-008,
+HOST-001 to HOST-003, R-5 and OQ-14 to OQ-18. Baseline 1.0 launched one script per operation and
+listed `.py` as won't-this-time.
+
+Reason: the owner's Python projects need an existing virtual environment active and two scripts
+run in order (`buildexe.py`, then `buildinstaller.py`). Measured on the reference machine: 31
+projects hold an environment, each a `venv` folder with `pyvenv.cfg`; one holds two; 15 document
+the two-script order. The owner ruled that BuildPilot detects and activates an environment that
+exists but never builds one. It also ruled that BuildPilot refuses a `.py` step with no environment rather than
+guessing at a Python on PATH. A host table in Settings covers other script types without a
+per-operation field. Existing config files migrate each operation to a single step.
