@@ -246,6 +246,28 @@ fn blank_id_is_refused() {
     assert_eq!(id.to_string(), "4f1c");
 }
 
+// LCH-010: one folder however it is written, as Windows tells folders apart.
+#[test]
+fn folders_compare_as_windows_does() {
+    let base = config(r"C:\src\app\build.ps1");
+    let in_folder = |folder: &str| {
+        let mut spec = base.to_spec();
+        spec.working_dir = PathBuf::from(folder);
+        OperationConfig::try_from(spec).unwrap()
+    };
+    for same in [
+        r"C:\src\app",
+        r"c:\SRC\App",
+        r"C:\src\app\",
+        r"C:\src\.\app",
+    ] {
+        assert!(base.shares_folder_with(&in_folder(same)), "{same}");
+    }
+    for other in [r"C:\src\app2", r"C:\src", r"D:\src\app"] {
+        assert!(!base.shares_folder_with(&in_folder(other)), "{other}");
+    }
+}
+
 // EDIT-002: only steps, folder and environment change what a run launches.
 #[test]
 fn execution_difference_ignores_name_and_icon() {

@@ -38,6 +38,13 @@ pub enum AppError {
     EnvironmentNotChosen(Vec<String>),
     /// A row of the host table is invalid (HOST-001).
     Host(HostError),
+    /// Another operation is running in this working directory (LCH-010).
+    FolderInUse {
+        /// The working directory.
+        folder: PathBuf,
+        /// The operation running there.
+        by: String,
+    },
 }
 
 impl fmt::Display for AppError {
@@ -66,6 +73,12 @@ impl fmt::Display for AppError {
                 found.join(", ")
             ),
             Self::Host(error) => error.fmt(f),
+            Self::FolderInUse { folder, by } => write!(
+                f,
+                "{by} is building in {} now. Run this when it has finished, so the two do not \
+                 overwrite each other's files.",
+                folder.display()
+            ),
         }
     }
 }

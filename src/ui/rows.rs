@@ -46,6 +46,8 @@ pub struct RowFacts<'a> {
     pub elapsed: Option<Duration>,
     /// The process still alive after a Stop that timed out (STOP-003).
     pub overdue_pid: Option<u32>,
+    /// Another operation running in this one's folder, which holds its Run back (LCH-010).
+    pub folder_busy_with: Option<&'a str>,
     /// Which spinner frame to show.
     pub tick: usize,
 }
@@ -63,8 +65,10 @@ pub struct RowText {
     pub class: StatusClass,
     /// Something wrong the operator can act on; empty when nothing is.
     pub problem: String,
-    /// Run is available (LCH-005).
+    /// Run is available (LCH-005, LCH-010).
     pub can_run: bool,
+    /// Why Run is not, for its tooltip.
+    pub run_blocked: String,
     /// Stop is available.
     pub can_stop: bool,
     /// Remove is available (REM-003).
@@ -74,8 +78,53 @@ pub struct RowText {
 /// The row for `facts`.
 pub fn row_text(facts: &RowFacts<'_>) -> RowText {
     let running = facts.state.is_running();
-    let took = facts.elapsed.map(format_elapsed);
-    let (glyph, class, status, mut problem) = match facts.state {
+    let (glyph, class, status, mut problem) = state_words(facts.state, facts.elapsed, facts.tick);
+    if let Some(pid) = facts.overdue_pid {
+        problem = format!(
+            "Stop has not finished: process {pid} is still running. Press Stop again or end it in Task Manager."
+        );
+    }
+    let run_blocked = match facts.folder_busy_with {
+        _ if running => "already running".to_owned(),
+        Some(other) => format!("{other} is building in this folder"),
+        None => String::new(),
+    };
+    RowText {
+        detail: detail(facts.script, facts.later_steps),
+        glyph,
+        status,
+        class,
+        problem,
+        can_run: run_blocked.is_empty(),
+        run_blocked,
+        can_stop: running,
+        can_remove: !running,
+    }
+}
+
+/// The tray's last line once a run has ended: the row's own glyph and words with the class that
+/// colours it (OUT-007). `None` while the operation is idle or running.
+pub fn closing_line(state: &RunState, elapsed: Option<Duration>) -> Option<(String, StatusClass)> {
+    if matches!(state, RunState::Idle | RunState::Running(_)) {
+        return None;
+    }
+    let (glyph, class, status, problem) = state_words(state, elapsed, 0);
+    let line = if problem.is_empty() {
+        format!("{glyph} {status}")
+    } else {
+        format!("{glyph} {status}: {problem}")
+    };
+    Some((line, class))
+}
+
+/// A run state's glyph, class, words and problem, as a row and the tray's last line say them.
+fn state_words(
+    state: &RunState,
+    elapsed: Option<Duration>,
+    tick: usize,
+) -> (&'static str, StatusClass, String, String) {
+    let took = elapsed.map(format_elapsed);
+    match state {
         RunState::Idle => (
             GLYPH_IDLE,
             StatusClass::Idle,
@@ -99,7 +148,7 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
                 None => verb,
             };
             (
-                SPINNER[facts.tick % SPINNER.len()],
+                SPINNER[tick % SPINNER.len()],
                 StatusClass::Running,
                 status,
                 String::new(),
@@ -138,21 +187,6 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
             after("Stopped", &took),
             String::new(),
         ),
-    };
-    if let Some(pid) = facts.overdue_pid {
-        problem = format!(
-            "Stop has not finished: process {pid} is still running. Press Stop again or end it in Task Manager."
-        );
-    }
-    RowText {
-        detail: detail(facts.script, facts.later_steps),
-        glyph,
-        status,
-        class,
-        problem,
-        can_run: !running,
-        can_stop: running,
-        can_remove: !running,
     }
 }
 

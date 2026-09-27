@@ -104,6 +104,15 @@ fn wire_rows(ui: &Rc<Ui>, window: &MainWindow) {
         this.report(ran);
     });
     let this = ui.clone();
+    window.on_run_checked(move || {
+        let refused = this.app.borrow_mut().run_checked();
+        for (name, error) in refused {
+            this.app.borrow().record_refusal(&error);
+            this.notify(format!("{name} was not run: {error}"));
+        }
+        this.refresh();
+    });
+    let this = ui.clone();
     window.on_stop(move |row| {
         let Some(id) = id(&row) else { return };
         let stopped = this.app.borrow_mut().stop(&id);

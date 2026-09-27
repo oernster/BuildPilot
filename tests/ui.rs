@@ -7,10 +7,58 @@ use buildpilot::application::IconStatus;
 use buildpilot::domain::lifecycle::{Failure, LaunchError, RunState};
 use buildpilot::ui::icon_image::load_scaled;
 use buildpilot::ui::rows::{
-    RowFacts, SPINNER, StatusClass, detail, dropped_note, icon_problem, row_text,
+    RowFacts, SPINNER, StatusClass, closing_line, detail, dropped_note, icon_problem, row_text,
 };
 
 const SCRIPT: &str = r"C:\src\app\build.ps1";
+
+// OUT-007: a run that has ended closes the tray with the row's glyph and words, classed by how
+// it ended so the tray colours it; nothing closes a run that is idle or still going.
+#[test]
+fn a_finished_run_closes_the_tray_in_its_outcome() {
+    let took = Some(Duration::from_secs(83));
+    let cases = [
+        (
+            RunState::Succeeded,
+            "\u{2713} Succeeded after 1:23",
+            StatusClass::Succeeded,
+        ),
+        (
+            RunState::Failed(Failure::ExitCode(1)),
+            "\u{2717} Failed, exit code 1, after 1:23",
+            StatusClass::Failed,
+        ),
+        (
+            RunState::Failed(Failure::StepExitCode { step: 2, code: 3 }),
+            "\u{2717} Failed, step 2 exited with code 3, after 1:23",
+            StatusClass::Failed,
+        ),
+        (
+            RunState::Stopped,
+            "\u{25A0} Stopped after 1:23",
+            StatusClass::Stopped,
+        ),
+    ];
+    for (state, text, class) in cases {
+        assert_eq!(
+            closing_line(&state, took),
+            Some((text.to_owned(), class)),
+            "{state:?}"
+        );
+    }
+    let unstarted = RunState::Failed(Failure::FailedToStart(LaunchError::ScriptNotFound(
+        PathBuf::from(SCRIPT),
+    )));
+    let (text, class) = closing_line(&unstarted, None).unwrap();
+    assert_eq!(class, StatusClass::Failed);
+    assert!(
+        text.starts_with("\u{2717} Failed to start: Script not found"),
+        "{text}"
+    );
+    assert_eq!(closing_line(&RunState::Idle, None), None);
+    let running = RunState::Idle.launched(1).unwrap();
+    assert_eq!(closing_line(&running, took), None);
+}
 
 /// The pixels a test icon is shrunk to fit.
 const ICON_PIXELS: u32 = 144;
@@ -33,6 +81,7 @@ fn ico_and_png_icons_load_shrunk() {
     }
     assert!(load_scaled(&asset("..").join("Cargo.toml"), ICON_PIXELS).is_none());
 }
+
 fn text_for(
     state: &RunState,
     elapsed: Option<Duration>,
@@ -46,6 +95,7 @@ fn text_for(
         state,
         elapsed,
         overdue_pid,
+        folder_busy_with: None,
         tick,
     })
 }
@@ -152,6 +202,25 @@ fn controls_follow_the_state() {
     assert!(idle.can_run && !idle.can_stop && idle.can_remove);
     let busy = text_for(&running(false), None, None, 0);
     assert!(!busy.can_run && busy.can_stop && !busy.can_remove);
+    assert_eq!(busy.run_blocked, "already running");
+    assert_eq!(idle.run_blocked, "");
+}
+
+// LCH-010: another build in the same folder holds Run back, saying which.
+#[test]
+fn a_busy_folder_holds_run_back() {
+    let text = row_text(&RowFacts {
+        name: "app build",
+        script: Path::new(SCRIPT),
+        later_steps: 0,
+        state: &RunState::Succeeded,
+        elapsed: None,
+        overdue_pid: None,
+        folder_busy_with: Some("app release"),
+        tick: 0,
+    });
+    assert!(!text.can_run && !text.can_stop && text.can_remove);
+    assert_eq!(text.run_blocked, "app release is building in this folder");
 }
 
 // LIFE-005: the running indicator moves with the tick and wraps.

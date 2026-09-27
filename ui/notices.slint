@@ -1,0 +1,36 @@
+// Notices under the toolbar: what the operator should know that is not the answer to their last
+// action (a load problem, a failed save, a refused run), each with its own Dismiss.
+
+import { Theme } from "theme.slint";
+import { TextButton } from "widgets.slint";
+
+export component NoticeStrip inherits VerticalLayout {
+    in property <[string]> notices;
+    callback dismiss(int);
+
+    for notice[n] in root.notices: Rectangle {
+        height: max(notice-text.preferred-height + 16px, 44px);
+        background: Theme.surface;
+        border-width: 1px;
+        border-color: Theme.caution;
+        HorizontalLayout {
+            padding-left: 12px;
+            padding-right: 6px;
+            padding-top: 4px;
+            padding-bottom: 4px;
+            spacing: Theme.gap;
+            notice-text := Text {
+                text: notice;
+                color: Theme.text;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            TextButton {
+                text: "Dismiss";
+                label: "Dismiss notice " + (n + 1);
+                clicked => { root.dismiss(n); }
+            }
+        }
+    }
+}

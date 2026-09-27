@@ -130,7 +130,7 @@ fn the_output_is_a_stop_only_while_it_overflows() {
     window.set_tray_expanded(true);
     let line = |text: &str| buildpilot::ui::OutputLineData {
         text: text.into(),
-        err: false,
+        kind: buildpilot::ui::LineKind::Plain,
     };
     window.set_lines(ModelRc::new(VecModel::from(vec![line("one line")])));
     settle();

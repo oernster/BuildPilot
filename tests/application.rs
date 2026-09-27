@@ -2,6 +2,7 @@
 //! the SRS requirement it verifies.
 
 mod application {
+    mod concurrency;
     mod deck;
     mod fakes;
     mod hosts;

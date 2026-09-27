@@ -9,7 +9,10 @@ import { Theme } from "theme.slint";
 import { TextButton, Ring } from "widgets.slint";
 import { ScrollBar } from "scrollbar.slint";
 
-export struct OutputLineData { text: string, err: bool }
+// How a line is drawn (OUT-007): output in the plain text colour whichever stream it came on,
+// since a tool that logs to stderr is not failing; a run's closing line in its outcome's colour.
+export enum LineKind { plain, succeeded, failed, stopped }
+export struct OutputLineData { text: string, kind: LineKind }
 
 export component OutputTray inherits Rectangle {
     in property <[OutputLineData]> lines;
@@ -118,17 +121,13 @@ export component OutputTray inherits Rectangle {
                 }
                 for line in root.lines: HorizontalLayout {
                     padding-left: 6px;
-                    spacing: 4px;
-                    Text {
-                        width: 12px;
-                        text: line.err ? "!" : "";
-                        color: Theme.failure;
-                        font-family: "Consolas";
-                        font-size: Theme.mono-size;
-                    }
                     Text {
                         text: line.text;
-                        color: line.err ? Theme.failure : Theme.text;
+                        color: line.kind == LineKind.succeeded ? Theme.success
+                            : line.kind == LineKind.failed ? Theme.failure
+                            : line.kind == LineKind.stopped ? Theme.text-muted
+                            : Theme.text;
+                        font-weight: line.kind == LineKind.plain ? 400 : 600;
                         font-family: "Consolas";
                         font-size: Theme.mono-size;
                     }

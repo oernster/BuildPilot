@@ -302,7 +302,8 @@ re-attribute any running operation or its output. Source: spec §4.3.
 Verified by: `application::deck` test `reorder_during_run_keeps_run`.
 
 **ROW-006 (M) Checkboxes.** Each row shall have a checkbox whose state the flight deck holds as a
-set of operation IDs. No action uses it in v1. Checkbox state is not persisted (OQ-7).
+set of operation IDs. Run the ticked builds uses it (LCH-011). Checkbox state is not persisted
+(OQ-7).
 
 **ROW-007 (M) Selection.** When the operator clicks a row (or moves focus to it), the flight deck
 shall make it the selected row and the output tray shall show its latest run. Source: spec §11.1.
@@ -350,8 +351,22 @@ disabled and the run use case shall refuse a second launch of it. Source: spec �
 Verified by: `application::runner` test `second_run_is_refused`.
 
 **LCH-006 (M) Concurrent runs.** The run use case shall allow any number of different operations
-to run at once, with no queueing. Source: spec §8.1. Verified by: `application::runner` test
-running three fake processes that finish in reverse order of launch.
+to run at once, with no queueing, subject to LCH-010. Source: spec §8.1. Verified by:
+`application::runner` test running three fake processes that finish in reverse order of launch.
+
+**LCH-010 (M) One build per folder.** While an operation is running, the run use case shall
+refuse to start another whose working directory is the same folder, compared as Windows compares
+folders (letter case, a trailing separator and `.` parts ignored). The refusal names the running
+operation; the waiting row's Run is disabled with that reason as its tooltip. The running
+operation is judged by the folder its run started in. Rationale: two builds in one folder
+overwrite each other's `build` and `dist` output; ADD-006 lets the same project be added twice
+(owner, 2026-09-27). Verified by: `application::concurrency` tests; `domain::operation` test
+`folders_compare_as_windows_does`; `ui` test `a_busy_folder_holds_run_back`.
+
+**LCH-011 (S) Run ticked.** The toolbar shall carry Run the ticked builds, disabled while no row
+is ticked. When activated, BuildPilot shall run every ticked operation in row order, each as its
+own Run would; one that Run refuses is named in a notice and the rest still run. Source: owner,
+2026-09-27. Verified by: `application::concurrency` test `run_ticked_starts_every_ticked_row`.
 
 **LCH-007 (M) Missing script.** If the script file does not exist when Run is activated, then the
 run use case shall not launch it; the row shall show Failed with the reason "Script not found"
@@ -447,8 +462,14 @@ output. When the operator scrolls up, it shall stop following and show a Jump to
 When the operator returns to the last line or activates Jump to latest, following shall resume.
 Source: spec §11. Verified by: `domain::follow` state tests; Manual.
 
-**OUT-007 (M) stderr marked.** The tray shall mark stderr lines with a gutter marker as well as a
-colour. Source: spec §11.1, §19.
+**OUT-007 (M) Outcome, not stream, is coloured.** The tray shall draw every output line in the
+plain text colour whichever stream it came on. When the run ends it shall add one closing line:
+the row's glyph and status words, in the success colour for a run that succeeded, the failure
+colour for one that failed (with the reason when it failed to start) and muted for one stopped.
+Rationale: many build tools log to stderr, PyInstaller among them, so a stderr line is not a
+failure; marking it red made a good AudioDeck build look broken (owner, 2026-09-27). The exit
+code is what decides. Verified by: `ui` test `a_finished_run_closes_the_tray_in_its_outcome`;
+Manual for the colours.
 
 **OUT-008 (M) Text decoding.** The output reader shall decode each line as UTF-8 when it is valid
 UTF-8; otherwise it shall decode the line in the Windows OEM code page (Amendment 2). It shall

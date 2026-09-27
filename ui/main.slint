@@ -10,12 +10,13 @@ import { Theme } from "theme.slint";
 import { IconButton, TextButton, Ring, TooltipLayer, Tooltip } from "widgets.slint";
 import { RowData, StatusKind } from "row.slint";
 import { RowsList } from "rows_list.slint";
-import { OutputTray, OutputLineData } from "tray.slint";
+import { OutputTray, OutputLineData, LineKind } from "tray.slint";
 import { OperationDialog, ConfirmDialog, SettingsDialog } from "dialogs.slint";
 import { HelpMenu, AboutDialog, LicenceDialog, UpdateDialog, CreditData } from "help.slint";
 import { GuideDialog } from "guide.slint";
+import { NoticeStrip } from "notices.slint";
 
-export { Theme, RowData, StatusKind, OutputLineData, Ring, CreditData }
+export { Theme, RowData, StatusKind, OutputLineData, LineKind, Ring, CreditData }
 export { SetupWindow, SetupScreen, FooterAction } from "setup.slint";
 export { Reading } from "reading.slint";
 export { StepEditor } from "steps.slint";
@@ -38,6 +39,8 @@ export component MainWindow inherits Window {
     in property <[RowData]> rows;
     // The selected row's position in `rows`; -1 when none is selected.
     in property <int> selected-index: -1;
+    // A row is ticked, so Run ticked has something to run (ROW-006).
+    in property <bool> any-checked;
     in property <[OutputLineData]> lines;
     in property <[string]> notices;
     in property <string> version;
@@ -99,6 +102,7 @@ export component MainWindow inherits Window {
     callback select(string);
     callback toggle-checked(string);
     callback run(string);
+    callback run-checked();
     callback stop(string);
     callback edit(string);
     callback open-script(string);
@@ -212,6 +216,14 @@ export component MainWindow inherits Window {
                     tooltip-below: true;
                     activated => { root.opener = Opener.add; root.add(); }
                 }
+                IconButton {
+                    icon: @image-url("../assets/ui/run.png");
+                    label: "Run the ticked builds";
+                    enabled: root.any-checked;
+                    disabled-reason: "tick the rows to run first";
+                    tooltip-below: true;
+                    activated => { root.run-checked(); }
+                }
                 Text {
                     text: "BuildPilot";
                     font-size: Theme.title-size;
@@ -241,30 +253,9 @@ export component MainWindow inherits Window {
                 }
             }
 
-            for notice[n] in root.notices: Rectangle {
-                height: max(notice-text.preferred-height + 16px, 44px);
-                background: Theme.surface;
-                border-width: 1px;
-                border-color: Theme.caution;
-                HorizontalLayout {
-                    padding-left: 12px;
-                    padding-right: 6px;
-                    padding-top: 4px;
-                    padding-bottom: 4px;
-                    spacing: Theme.gap;
-                    notice-text := Text {
-                        text: notice;
-                        color: Theme.text;
-                        wrap: word-wrap;
-                        vertical-alignment: center;
-                        horizontal-stretch: 1;
-                    }
-                    TextButton {
-                        text: "Dismiss";
-                        label: "Dismiss notice " + (n + 1);
-                        clicked => { root.dismiss-notice(n); }
-                    }
-                }
+            NoticeStrip {
+                notices: root.notices;
+                dismiss(n) => { root.dismiss-notice(n); }
             }
 
             rows-list := RowsList {

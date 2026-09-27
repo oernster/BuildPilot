@@ -21,6 +21,8 @@ export struct RowData {
     checked: bool,
     selected: bool,
     can-run: bool,
+    // Why Run is disabled, for its tooltip (LCH-005, LCH-010).
+    run-blocked: string,
     can-stop: bool,
     can-remove: bool,
 }
@@ -178,7 +180,7 @@ export component OperationRow inherits Rectangle {
                     icon: @image-url("../assets/ui/run.png");
                     label: "Run " + root.data.name;
                     enabled: root.data.can-run;
-                    disabled-reason: "already running";
+                    disabled-reason: root.data.run-blocked;
                     on-ring: root.data.selected;
                     activated => { root.run(); }
                 }

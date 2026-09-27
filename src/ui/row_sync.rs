@@ -39,7 +39,11 @@ impl Ui {
             .position(|row| row.selected)
             .and_then(|index| i32::try_from(index).ok())
             .unwrap_or(NONE_SELECTED);
-        self.with_window(|window| window.set_selected_index(selected));
+        let any_checked = fresh.iter().any(|row| row.checked);
+        self.with_window(|window| {
+            window.set_selected_index(selected);
+            window.set_any_checked(any_checked);
+        });
         let same_rows = fresh.len() == self.rows.row_count()
             && fresh.iter().enumerate().all(|(index, row)| {
                 self.rows
@@ -65,6 +69,7 @@ impl Ui {
     ) -> RowData {
         let id = operation.id();
         let config = operation.config();
+        let busy_with = app.folder_busy(id, config);
         let text = rows::row_text(&RowFacts {
             name: config.name(),
             script: config.first_step().script_path(),
@@ -72,6 +77,7 @@ impl Ui {
             state: app.run_state(id),
             elapsed: app.elapsed(id),
             overdue_pid,
+            folder_busy_with: busy_with.as_deref(),
             tick: self.tick.get(),
         });
         let (icon, icon_is_placeholder, icon_problem) = self.icon_for(&app.icon_status(id));
@@ -89,6 +95,7 @@ impl Ui {
             checked: app.selection().is_checked(id),
             selected: app.selection().selected() == Some(id),
             can_run: text.can_run,
+            run_blocked: SharedString::from(text.run_blocked),
             can_stop: text.can_stop,
             can_remove: text.can_remove,
         }

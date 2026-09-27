@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::domain::deck::DeckError;
 use crate::domain::lifecycle::{Failure, RunState, TransitionError};
-use crate::domain::operation::OperationId;
+use crate::domain::operation::{OperationConfig, OperationId};
 use crate::domain::output::OutputBuffer;
 
 use super::ports::{RunEvent, RunEventKind, RunKey};
@@ -41,6 +41,12 @@ impl App {
         // LCH-005, settled once: the run's state from here on is this transition or a failure to
         // start, both allowed exactly when this one is.
         let started = self.run_state(id).launched(config.steps().len())?;
+        if let Some(by) = self.folder_busy(id, &config) {
+            return Err(AppError::FolderInUse {
+                folder: config.working_dir().to_path_buf(),
+                by,
+            });
+        }
 
         self.runs_started += 1;
         let run = self.runs_started;
@@ -78,6 +84,22 @@ impl App {
             Err(error) => RunState::Failed(Failure::FailedToStart(error)),
         };
         Ok(())
+    }
+
+    /// Runs every ticked operation, top row first, each as `run` would (ROW-006, LCH-011). One
+    /// that `run` refuses is skipped and answered with its name, so the rest still start.
+    pub fn run_checked(&mut self) -> Vec<(String, AppError)> {
+        let ticked: Vec<OperationId> = self
+            .deck
+            .operations()
+            .iter()
+            .map(|operation| operation.id().clone())
+            .filter(|id| self.selection.is_checked(id))
+            .collect();
+        ticked
+            .iter()
+            .filter_map(|id| self.run(id).err().map(|error| (self.name_of(id), error)))
+            .collect()
     }
 
     /// Asks for operation `id`'s process tree to be terminated (STOP-001). Answers at once; the
@@ -167,6 +189,23 @@ impl App {
         self.runtimes
             .get(id)
             .map_or(&IDLE, |runtime| &runtime.state)
+    }
+
+    /// The name of another operation running in the working directory of operation `id`,
+    /// configured as `wanted`, which holds its Run back (LCH-010); `None` when the folder is
+    /// free. A running operation is judged by the configuration its run started with, not by an
+    /// edit made since.
+    pub fn folder_busy(&self, id: &OperationId, wanted: &OperationConfig) -> Option<String> {
+        self.runtimes
+            .iter()
+            .filter(|(other, runtime)| *other != id && runtime.state.is_running())
+            .find(|(_, runtime)| {
+                runtime
+                    .config
+                    .as_ref()
+                    .is_some_and(|running| running.shares_folder_with(wanted))
+            })
+            .map(|(other, _)| self.name_of(other))
     }
 
     /// True while operation `id` has a process running.

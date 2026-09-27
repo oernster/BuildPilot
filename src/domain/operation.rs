@@ -133,6 +133,11 @@ impl OperationConfig {
             icon: self.icon.clone(),
         }
     }
+    /// True when `other` runs in the same working directory, compared as Windows does: without
+    /// regard to case, a trailing separator or `.` parts (LCH-010).
+    pub fn shares_folder_with(&self, other: &Self) -> bool {
+        folder_key(&self.working_dir) == folder_key(&other.working_dir)
+    }
     /// True when running with `other` would launch something different (EDIT-002).
     pub fn differs_in_execution(&self, other: &Self) -> bool {
         self.steps != other.steps
@@ -230,6 +235,15 @@ fn default_name(script: &Path, folder: &Path) -> String {
         Some(folder_name) => format!("{} {stem}", folder_name.to_string_lossy()),
         None => stem,
     }
+}
+
+/// A folder as Windows tells folders apart: its parts, lower case, `.` parts left out.
+fn folder_key(folder: &Path) -> Vec<String> {
+    folder
+        .components()
+        .filter(|part| !matches!(part, std::path::Component::CurDir))
+        .map(|part| part.as_os_str().to_string_lossy().to_lowercase())
+        .collect()
 }
 
 /// Parses the Edit dialog's argument box: one argument per line, each trimmed, blank lines
