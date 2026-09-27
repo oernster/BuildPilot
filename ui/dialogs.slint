@@ -3,7 +3,7 @@
 
 import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
-import { TextButton, Field } from "widgets.slint";
+import { TextButton, Field, FieldLabel } from "widgets.slint";
 import { StepEditor, StepsField, EnvironmentField, StepWarning } from "steps.slint";
 import { HostsField } from "hosts.slint";
 
@@ -52,11 +52,6 @@ export component Modal inherits Rectangle {
             }
         }
     }
-}
-
-export component FieldLabel inherits Text {
-    color: Theme.text-muted;
-    font-size: 12px;
 }
 
 // Add and Edit (SRS 3.2, 3.4).

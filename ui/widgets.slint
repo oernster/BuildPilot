@@ -319,6 +319,12 @@ export component Toggle inherits Rectangle {
 
 // A frame round a text input that rings it while hovered or focused; the input keeps its arrow
 // keys for the caret and is left with Tab.
+// The words above a field, naming it.
+export component FieldLabel inherits Text {
+    color: Theme.text-muted;
+    font-size: 12px;
+}
+
 export component Field inherits Rectangle {
     in property <bool> focused;
     // The name `Ring.focused` reports while the input holds focus.

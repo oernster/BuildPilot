@@ -3,7 +3,10 @@
 
 import { LineEdit, TextEdit } from "std-widgets.slint";
 import { Theme } from "theme.slint";
-import { TextButton, Field } from "widgets.slint";
+import { TextButton, Field, FieldLabel } from "widgets.slint";
+
+// What runs with no host at all (LCH-001), one kind of project per row.
+struct BuiltIn { kind: string, how: string }
 
 export global HostEditor {
     // `.rb: C:\Ruby33\bin\ruby.exe -W0` per row, in table order.
@@ -20,14 +23,34 @@ export global HostEditor {
 }
 
 export component HostsField inherits VerticalLayout {
+    // The width of the first column of the built-in list, so the second lines up.
+    property <length> kind-width: 150px;
+    // The file type field: room for a short extension such as .rb or .lua.
+    property <length> extension-width: 96px;
+    property <[BuiltIn]> built-in: [
+        { kind: "Go and Rust", how: "build.ps1 (or any .ps1), run by PowerShell" },
+        { kind: "Python", how: ".py, inside the project's environment" },
+        { kind: "Batch and executables", how: ".bat, .cmd, .exe and .com" },
+    ];
     spacing: Theme.gap;
     Text {
-        text: "Built in, with no host needed: Go and Rust builds (PowerShell .ps1), Python builds (.py, in the project's environment), batch files and executables. A host runs any other type, such as .rb with ruby.exe.";
+        text: "Built in, with no host needed:";
         color: Theme.text-muted;
         wrap: word-wrap;
     }
-    if HostEditor.rows.length == 0: Text {
-        text: "No hosts yet.";
+    VerticalLayout {
+        spacing: Theme.gap / 2;
+        padding-left: Theme.gap * 2;
+        for entry in root.built-in: HorizontalLayout {
+            spacing: Theme.gap;
+            Text { text: entry.kind; color: Theme.text; font-weight: 600; width: root.kind-width; }
+            Text { text: entry.how; color: Theme.text-muted; wrap: word-wrap; horizontal-stretch: 1; }
+        }
+    }
+    Text {
+        text: HostEditor.rows.length == 0
+            ? "A host runs any other type, such as .rb with ruby.exe. No hosts yet."
+            : "A host runs any other type, such as .rb with ruby.exe.";
         color: Theme.text-muted;
         wrap: word-wrap;
     }
@@ -49,31 +72,49 @@ export component HostsField inherits VerticalLayout {
     }
     HorizontalLayout {
         spacing: Theme.gap;
-        extension-field := Field {
-            focused: extension-edit.has-focus;
-            label: "File type";
-            width: 96px;
-            extension-edit := LineEdit {
-                text <=> HostEditor.extension;
-                placeholder-text: ".rb";
-                accessible-label: extension-field.label;
+        alignment: stretch;
+        VerticalLayout {
+            spacing: Theme.gap / 2;
+            FieldLabel { text: extension-field.label; }
+            extension-field := Field {
+                focused: extension-edit.has-focus;
+                label: "File type";
+                width: root.extension-width;
+                extension-edit := LineEdit {
+                    // The standard edit asks for 160px at least, which spilled out of this
+                    // narrow box over the start of the Program field (measured).
+                    min-width: 0;
+                    text <=> HostEditor.extension;
+                    placeholder-text: ".rb";
+                    accessible-label: extension-field.label;
+                }
             }
         }
-        program-field := Field {
-            focused: program-edit.has-focus;
-            label: "Program";
-            program-edit := LineEdit {
-                text <=> HostEditor.program;
-                accessible-label: program-field.label;
+        VerticalLayout {
+            spacing: Theme.gap / 2;
+            horizontal-stretch: 1;
+            FieldLabel { text: program-field.label; }
+            HorizontalLayout {
+                spacing: Theme.gap;
+                program-field := Field {
+                    focused: program-edit.has-focus;
+                    label: "Program";
+                    program-edit := LineEdit {
+                        text <=> HostEditor.program;
+                        placeholder-text: "ruby.exe or its full path";
+                        accessible-label: program-field.label;
+                    }
+                }
+                TextButton {
+                    text: "Browse";
+                    label: "Browse for the host program";
+                    in-dialog: true;
+                    clicked => { HostEditor.browse(); }
+                }
             }
-        }
-        TextButton {
-            text: "Browse";
-            label: "Browse for the host program";
-            in-dialog: true;
-            clicked => { HostEditor.browse(); }
         }
     }
+    FieldLabel { text: arguments-field.label; }
     arguments-field := Field {
         focused: arguments-edit.has-focus;
         label: "Host arguments before the script, one per line";
