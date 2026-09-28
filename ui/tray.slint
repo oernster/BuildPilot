@@ -39,6 +39,16 @@ export component OutputTray inherits Rectangle {
         list.content-y = root.lowest;
     }
 
+    // While following, stay on the last line whenever the end moves. The list measures rows
+    // added a moment ago only when it next lays out, after scroll-to-end has already run, so a
+    // scroll asked for then stops short; a run's closing line, the last row added, stayed out of
+    // sight (OUT-003).
+    changed lowest => {
+        if (root.following) {
+            list.content-y = root.lowest;
+        }
+    }
+
     function scroll-to(y: length) {
         list.content-y = max(root.lowest, min(0px, y));
         root.scrolled(list.content-y <= root.lowest + 2px);
