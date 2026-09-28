@@ -40,8 +40,8 @@ Every script stays runnable without it.
   the program that runs it. A step that fails stops the rest.
 - **Finds a project's build.** Add takes a script or a folder. A folder holding `build.ps1` is
   proposed as an operation; so is one holding `buildexe.py` then `buildinstaller.py`. A folder
-  of projects lists each one with a tick box. A partial match says which file is missing. Nothing is added until
-  you confirm.
+  of projects lists each one with a tick box. A partial match says which file is missing.
+  Nothing is added until you confirm.
 - **Uses the project's Python environment.** A `.py` or `.ps1` step runs inside the environment
   in its working directory (a folder holding `pyvenv.cfg`), chosen in the dialog when there are
   several. Any environment BuildPilot inherited from your shell is undone first.
@@ -73,7 +73,8 @@ Every script stays runnable without it.
   file it cannot read at all is set aside as `buildpilot.json.unreadable` rather than
   overwritten.
 - **Runs once.** Starting BuildPilot while it is already running brings the open window forward.
-- **Follows your theme.** Light, dark or whatever Windows is set to.
+- **Light and dark.** It starts in the theme Windows uses; the toolbar toggle or Settings then
+  picks Light or Dark for good.
 - **Keeps a log.** Launches, exits, stops and errors go to `buildpilot.log`. A crash is recorded
   there too and never ends the application silently.
 - **Explains itself.** Help holds a Guide to every control, About with the open source credits,
@@ -81,9 +82,10 @@ Every script stays runnable without it.
   you scroll it.
 - **Makes one request, to ask about updates.** Shortly after it opens and once a day, BuildPilot
   asks GitHub whether a newer release is published; Help > Check for Updates asks on demand. The
-  request carries nothing about you or your scripts, a release can be skipped and a failed check
-  says nothing. It goes through WinHTTP, which is part of Windows, so no HTTP or TLS library is
-  among BuildPilot's dependencies. Nothing else it does touches the network.
+  request carries nothing about you or your scripts and a release can be skipped. An automatic
+  check that fails says nothing; one you ask for always says what it found. It goes through
+  WinHTTP, which is part of Windows, so no HTTP or TLS library is among BuildPilot's
+  dependencies. Nothing else it does touches the network.
 
 ## Where it keeps things
 
@@ -113,7 +115,7 @@ Run `BuildPilotSetup.exe`. It installs BuildPilot for your own Windows account i
 Start menu shortcut, offers a desktop one and adds BuildPilot to the Apps list, where Modify,
 Repair and Uninstall all reopen it. Run it again to update, go back to an earlier version,
 repair or reinstall; it reads what is installed and offers the one that fits. Uninstalling
-keeps your operations and settings unless you untick that. Neither executable is signed.
+keeps your operations, settings and log unless you untick that. Neither executable is signed.
 
 ## Testing
 

@@ -58,7 +58,7 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 
 | Term | Meaning |
 |---|---|
-| Operation | One configured build command: one or more steps, its working directory, its name and its icon. Persisted. |
+| Operation | One configured build command: one or more steps, its working directory, its name, its icon and any installer the operator set (PKG-001). Persisted. |
 | Step | One script or executable with its arguments. An operation runs its steps in order (Amendment 4). |
 | Environment | A Python virtual environment that already exists: a direct subfolder of the working directory holding `pyvenv.cfg` and `Scripts\python.exe` (ENV-001). |
 | Run | One execution of an operation, from launch to termination. Transient. |
@@ -88,9 +88,8 @@ A new, standalone, local-only desktop application. It depends on nothing network
 network request is the update check (UI-010), whose failure changes nothing. It interacts with
 the operating system in six ways only: launching processes, terminating process trees, opening
 a file with its associated application (a script; an installer, which Windows runs, PKG-005),
-revealing a file in Explorer, handing a web address to
-Windows to open in the operator's browser (UI-010 Download, UI-014) and reading and writing its
-own data folder.
+revealing a file in Explorer, handing a web address to Windows to open in the operator's browser
+(UI-010 Download, UI-014) and reading and writing its own data folder.
 
 ### 2.2 User classes
 
@@ -138,8 +137,8 @@ needs.
 | egui/eframe | Pure Rust; quickest start. | Immediate-mode look reads less like a polished Windows app; accessibility less mature. |
 | iced | Pure Rust, Elm architecture. | Weakest accessibility of the four, against spec §19. |
 
-The Slint "against" points are hypotheses from general knowledge, not measurements. The first two
-implementation spikes (R-1, R-2) settle them before the design depends on them.
+The Slint "against" points were hypotheses from general knowledge, not measurements. The first
+two implementation spikes settled both before the design depended on them (R-1 and R-2 in 4.3).
 
 ---
 
@@ -163,9 +162,10 @@ file intact. Verified by: `config_store` test `interrupted_write_keeps_previous_
 (UUID, assigned at creation, never reused), display name, its steps in order (each a script path,
 absolute, plus arguments), working directory (absolute), the chosen environment's folder name
 where ENV-002 asked for one, icon reference, the installer where the operator set one (PKG-001),
-position in the flight deck. Globally it shall hold
-the schema version, the theme preference and the operator's host table (HOST-001). Source: spec
-§12; amended by Amendment 4. An operation saved by an earlier schema migrates to one step (CFG-009).
+position in the flight deck. Globally it shall hold the schema version, the theme preference, the
+window and tray layout (CFG-010), a skipped release (UI-010) and the operator's host table
+(HOST-001). Source: spec §12; amended by Amendments 4 and 10. An operation saved by an earlier
+schema migrates to one step (CFG-009).
 Verified by: `infrastructure::config_store` test `every_field_and_the_order_round_trip`.
 
 **CFG-004 (M) Runtime state is never persisted.** The config file shall hold no process ID,
@@ -208,8 +208,8 @@ Verified by: `application::deck` test `preferences_are_saved`; Manual for restor
 
 **ADD-001 (M) Add by browsing.** When the operator chooses to add a script (SCAN-002 offers a
 folder as well; Amendment 5), BuildPilot shall open a file picker filtered to the supported types
-(LCH-001). When a file is chosen, BuildPilot shall open the
-operation dialog pre-filled with the derived defaults, the chosen file as its only step.
+(LCH-001). When a file is chosen, BuildPilot shall open the operation dialog pre-filled with the
+derived defaults, the chosen file as its only step.
 Source: spec §5.
 Verified by: Manual (file picker); defaults per ADD-002 to ADD-004.
 
@@ -276,7 +276,7 @@ icon, all editable. Edit never touches a script. Source: spec §6; amended by Am
 
 **EDIT-002 (M) Edit while running.** While an operation is running, the operation dialog shall
 state that changes to the script path, working directory and arguments take effect on the next
-run; the running process shall be unaffected. Name and icon changes apply at once.
+run; the running process shall be unaffected. Name, icon and installer changes apply at once.
 Source: spec §6. Verified by: `application::deck` test `edit_during_run_does_not_touch_run`.
 
 ### 3.5 Removal (REM)
@@ -374,7 +374,8 @@ Verified by: `application::run` test `second_run_is_refused`.
 
 **LCH-006 (M) Concurrent runs.** The run use case shall allow any number of different operations
 to run at once, with no queueing, subject to LCH-010. Source: spec §8.1. Verified by:
-`application::run` test `concurrent_runs_finish_in_any_order`: three fake processes finishing in reverse order of launch.
+`application::run` test `concurrent_runs_finish_in_any_order`: three fake processes finishing in
+reverse order of launch.
 
 **LCH-010 (M) One build per folder.** While an operation is running, the run use case shall
 refuse to start another whose working directory is the same folder, compared as Windows compares
@@ -406,9 +407,9 @@ Verified by: `infrastructure::process` test with a nonexistent host.
 ### 3.8 Lifecycle and progress (LIFE)
 
 **LIFE-001 (M) States.** The run state machine shall have exactly these states: Idle, Running,
-Succeeded, Failed, Stopped. Failed carries one of two reasons: failed to start; exited with code N.
-Source: spec §10. Verified by: `domain::lifecycle` tests covering every allowed transition and
-refusing every other.
+Succeeded, Failed, Stopped. Failed carries one of three reasons: failed to start; exited with code
+N; step n of several exited with code N (STEP-003, Amendment 4). Source: spec §10. Verified by:
+`domain::lifecycle` tests covering every allowed transition and refusing every other.
 
 **LIFE-002 (M) Success from exit status.** When a run's process exits by itself, the run state
 machine shall move to Succeeded if the exit code is 0 and to Failed with the code otherwise.
@@ -550,8 +551,8 @@ of licence text pointless.
 **UI-009 (M) Open source credits.** The credits shall list every crate built into BuildPilot
 with its version and licence, generated at build time; none is written by hand. Each licence
 is shown by the name a reader knows it by ("Unicode License v3", "MIT or Apache 2.0"), not as
-its SPDX identifier; a shipped crate stating an identifier with no name fails a test. The set is what
-`cargo tree` says a release build compiles in for the Windows target (normal dependencies,
+its SPDX identifier; a shipped crate stating an identifier with no name fails a test. The set is
+what `cargo tree` says a release build compiles in for the Windows target (normal dependencies,
 procedural macros left out); the licence of each comes from `cargo metadata`. Verified by: a
 test that the list holds `slint` and `windows-sys` and holds no dev-only, build-only or
 procedural-macro crate such as `tempfile`, `slint-build` or `syn`.
@@ -567,8 +568,9 @@ Version and Later. Download opens the release's `.exe` asset, else the release p
 Version records the tag in the config file and that release never prompts unbidden again. An
 automatic check that fails or finds nothing newer says nothing. A chosen check ignores the skip
 and reports every outcome: the prompt, "You are running the latest version." or "The update
-check could not reach GitHub. Please try again later." Each stage of the request (resolving, connecting, sending, receiving) waits at most 5 seconds;
-the request is never retried. Source: house model; Amendment 3.
+check could not reach GitHub. Please try again later." Each stage of the request (resolving,
+connecting, sending, receiving) waits at most 5 seconds; the request is never retried. Source:
+house model; Amendment 3.
 
 **UI-011 (M) Reading surfaces read themselves.** Guide, About, Licence and the installer's licence
 page shall scroll their text when it overflows: still for 5 seconds on opening, then down 1 pixel
@@ -587,8 +589,8 @@ is a 2 px line until the pointer finds it (measured in Slint 1.18.1's
 sign of the rest (owner, 2026-09-27). Verified by: `geometry` tests for the bar and the counts;
 the UI-002 contrast test for the thumb; Manual for the look.
 
-**UI-013 (M) Images drawn at their size.** The interface shall draw each bundled image from a
-copy no larger than twice the largest size it is drawn. It shall draw each operation's icon from a copy
+**UI-013 (M) Images drawn at their size.** The interface shall draw each bundled image from a copy
+no larger than twice the largest size it is drawn. It shall draw each operation's icon from a copy
 scaled once, when it is loaded, to the pixels its row covers on the display in use. Rationale:
 measured by the owner 2026-09-27 on an installed build with 20 rows, a drag ran at 20 frames a
 second with every image drawn from its 1254 px master and at 60 with the copies. Verified by:
@@ -689,27 +691,28 @@ owner's Development folder document running `python buildexe.py` and then
 `python buildinstaller.py`; none of their `buildinstaller.py` files runs `buildexe.py` itself.
 
 **STEP-001 (M) Ordered steps.** Each operation shall hold an ordered list of one or more steps,
-each a script path plus its arguments. The working directory, name and icon stay per operation.
+each a script path plus its arguments. The working directory, name, icon and installer stay per
+operation.
 Acceptance: an operation in `C:\src\app` holds `buildexe.py` then `buildinstaller.py`.
 Verified by: `domain::operation` tests.
 
 **STEP-002 (M) Run in order.** When a step exits with code 0 and a later step exists, the run use
-case shall start the next step. Verified by: `application::run` test with a two-step fake.
+case shall start the next step. Verified by: `application::steps` test `steps_run_in_order`.
 
 **STEP-003 (M) Stop on failure.** If a step exits with a non-zero code, then the run use case shall
 start no further step; the run shall end Failed with that code and the step's number.
 Acceptance: step 1 exits 3, so step 2 never starts and the row reads "Failed, step 1 exited
-with code 3". Verified by: `application::run` test.
+with code 3". Verified by: `application::steps` test `a_failing_step_ends_the_run`.
 
 **STEP-004 (M) Stop ends the sequence.** When the operator activates Stop during a step, the run
 use case shall stop that step's process tree (STOP-001) and start no further step; the run
-shall end Stopped. Verified by: `application::run` test.
+shall end Stopped. Verified by: `application::steps` test `stop_ends_the_sequence`.
 
 **STEP-005 (M) Checked before any step starts.** When Run is activated, the run use case shall
 check every step's script (LCH-007) and resolve the environment (ENV-003) before step 1 starts.
 If any check fails, then no step starts; the row shall name the failing step. Rationale: a
 missing second script found only after a ten minute first step wastes the first.
-Verified by: `application::run` test with step 2's script absent.
+Verified by: `application::steps` test with step 2's script absent.
 
 **STEP-006 (M) One output per run.** The output store shall hold every step of a run as one
 output. Where an operation has more than one step, a line before each step shall name its number,
@@ -736,26 +739,27 @@ Acceptance: in `C:\src\app`, `venv` and `.venv` holding both files are found; `t
 `Scripts\python.exe` without `pyvenv.cfg` is not. Verified by: `infrastructure` test in a
 temporary folder.
 
-**ENV-002 (M) Choice when several.** While the working directory holds more than one environment
-and the operation has a `.py` or `.ps1` step, the operation dialog shall list them and refuse to save until
-one is chosen. Where exactly one is named `venv` or `.venv`, the dialog shall preselect it. The
-choice is saved by folder name. Measured case: AxisDB holds `venv` and `venv_smoke`.
-Verified by: `domain` test for the preselection; Manual for the dialog.
+**ENV-002 (M) Choice when several.** While the working directory holds more than one environment and
+the operation has a `.py` or `.ps1` step, the operation dialog shall list them and refuse to save
+until one is chosen. Where exactly one is named `venv` or `.venv`, the dialog shall preselect it.
+The choice is saved by folder name. Measured case: AxisDB holds `venv` and `venv_smoke`. Verified
+by: `domain` test for the preselection; Manual for the dialog.
 
 **ENV-003 (M) Resolution at Run.** When a run of an operation with a `.py` or `.ps1` step starts,
 the run use case shall use the environment the operation names; where it names none, the only
 one found.
-Verified by: `application::run` tests.
+Verified by: `application::steps` tests.
 
 **ENV-004 (M) No environment.** If a `.py` step has no environment at Run (none found; the named
 one gone), then no step shall start; the row shall show Failed naming the working directory
-searched and saying BuildPilot uses an existing environment and does not create one. A `.ps1` step with no environment found runs without one
-(deactivated as ENV-009 states), so a PowerShell build with no Python keeps working.
-Verified by: `application::run` tests for both kinds.
+searched and saying BuildPilot uses an existing environment and does not create one. A `.ps1`
+step with no environment found runs without one (deactivated as ENV-009 states), so a
+PowerShell build with no Python keeps working. Verified by: `application::steps` tests for both
+kinds.
 
 **ENV-005 (M) Several found, none chosen.** If Run finds several environments where the operation
 names none (one appeared after it was saved), then no step shall start; the row shall name the
-environments found and say to choose one in Edit. Verified by: `application::run` test.
+environments found and say to choose one in Edit. Verified by: `application::steps` test.
 
 **ENV-006 (M) Activation.** When the launcher starts a `.py` or `.ps1` step with an environment,
 it shall give that process the variables `activate.bat` would give it, applied to the
@@ -780,7 +784,9 @@ names none of those commands.
 
 **ENV-008 (M) Environment named.** When a `.py` or `.ps1` step starts with an environment, the
 output tray's line for it shall name the environment folder (plus the interpreter path for `.py`),
-including for a single-step operation. Verified by: `application::steps` tests `steps_run_in_order` and `powershell_is_activated_and_batch_is_not` (two-step operations); the single-step case by inspection, no test covers it yet.
+including for a single-step operation. Verified by: `application::steps` tests
+`steps_run_in_order` and `powershell_is_activated_and_batch_is_not` (two-step operations); the
+single-step case by inspection, no test covers it yet.
 
 **ENV-009 (M) Deactivate first, every step.** Before the launcher gives any step its variables,
 activated or not, it shall undo an activation inherited from BuildPilot's own environment, as
@@ -803,8 +809,8 @@ with a fixture printing its variables.
 step's `PATH` every entry that is the `Scripts` folder of an environment (its parent holds
 `pyvenv.cfg`), other than the step's own. Rationale: ENV-009 cannot see two cases. One is an
 activation that left no `_OLD_VIRTUAL_PATH` behind; the other is an environment added to the
-Windows `PATH` by hand. Either would still put a foreign `python.exe` ahead of the system one. Verified by: `infrastructure` test in a temporary
-folder.
+Windows `PATH` by hand. Either would still put a foreign `python.exe` ahead of the system one.
+Verified by: `infrastructure` test in a temporary folder.
 
 ### 3.19 Operator hosts (HOST)
 
@@ -856,8 +862,8 @@ offer to choose a script (ADD-001) or a folder. Verified by: Manual.
 
 **SCAN-003 (M) Best pattern.** When a folder is scanned, the folder scanner shall choose the
 pattern with the most of its files present directly in that folder (the earlier pattern on a
-tie). It shall propose those present files as steps in the pattern's order. A pattern with none of its
-files present is never chosen.
+tie). It shall propose those present files as steps in the pattern's order. A pattern with none
+of its files present is never chosen.
 Acceptance: `buildexe.py` and `buildinstaller.py` present gives both steps in that order;
 `buildinstaller.py` alone (EDColonisationAsst) gives that one step; `build.ps1` gives one step;
 a folder holding only `Makefile` gives no proposal. Verified by: `domain` tests.
@@ -875,13 +881,13 @@ confirms. Acceptance: choosing `C:\Users\Oliver\Development` lists 27 folders (1
 14 Python, EDColonisationAsst in part) and adds the ticked ones in the order listed.
 Verified by: `application` test; Manual for the list.
 
-**SCAN-006 (S) Unticked where a choice is owed.** In the SCAN-005 list, a folder shall start unticked
-with a note saying why when its proposed steps and working directory match an operation already
-on the deck; likewise when ENV-002 cannot preselect its environment. A folder already on the deck
-cannot be ticked at all: its tick box is shown dimmed and is no stop on the ring. Rationale:
+**SCAN-006 (S) Unticked where a choice is owed.** In the SCAN-005 list, a folder shall start
+unticked with a note saying why when its proposed steps and working directory match an operation
+already on the deck; likewise when ENV-002 cannot preselect its environment. A folder already on the
+deck cannot be ticked at all: its tick box is shown dimmed and is no stop on the ring. Rationale:
 ADD-006 allows a duplicate through Add, one at a time; a bulk add never makes one (owner,
-2026-09-27). An environment choice needs the single-folder dialog. Verified by: `application`
-test; `keyboard` test for the ring; Manual for the dimmed box.
+2026-09-27). An environment choice needs the single-folder dialog. Verified by: `application` test;
+`keyboard` test for the ring; Manual for the dimmed box.
 
 **SCAN-007 (M) Nothing found.** If neither the folder nor any folder directly inside it has a
 proposal, then BuildPilot shall say which file names it looked for and open the script picker in
@@ -900,8 +906,8 @@ both themes (UI-002). Verified by: `domain` test for the words; the UI-002 contr
 token; Manual for the pulse.
 
 **SCAN-008 (M) Depth.** The folder scanner shall read only the chosen folder plus (for
-SCAN-005) the folders directly inside it; never deeper. Rationale: a deeper search would find build scripts
-of dependencies and tools inside a project. Verified by: `infrastructure` test.
+SCAN-005) the folders directly inside it; never deeper. Rationale: a deeper search would find
+build scripts of dependencies and tools inside a project. Verified by: `infrastructure` test.
 
 ### 3.21 Launching a project's installer (PKG)
 
@@ -929,9 +935,9 @@ Verified by: `domain::installer` tests; `application::installer` tests
 `dist_is_the_fallback` and `a_new_installer_is_found_after_a_run_or_on_select`.
 
 **PKG-003 (M) The control.** Each row shall carry Launch installer immediately right of Stop. It
-shall be disabled, with the red ring every disabled control wears, while there is no installer
-to launch: none set and none found; else the one set is not on disk. Its tooltip says why. Source: owner,
-2026-09-28. Verified by: `application::installer` test `nothing_found_is_refused`; `ui` test
+shall be disabled, with the red ring every disabled control wears, while there is no installer to
+launch: none set and none found; else the one set is not on disk. Its tooltip says why. Source:
+owner, 2026-09-28. Verified by: `application::installer` test `nothing_found_is_refused`; `ui` test
 `launch_installer_says_why_it_is_held_back`; Manual for the ring.
 
 **PKG-004 (M) Held back by a run.** Launch installer shall be disabled while the operation runs
@@ -1021,8 +1027,8 @@ decided. No question is open. Where a later amendment changed an answer, the row
 ## Appendix C. Traceability
 
 Each requirement above carries its own Verified by line. Every test named there exists in
-`tests/`. A test names its requirement ID in a
-comment above it, so traceability runs from code back to this document as well as forwards.
+`tests/`. A test names its requirement ID in a comment above it, so traceability runs from code
+back to this document as well as forwards.
 
 ## Appendix D. Won't this time (v1)
 
@@ -1066,24 +1072,24 @@ and in the OEM code page otherwise; a pure ASCII line reads the same either way.
 NFR-SEC-001; adds UI-006 to UI-011. Baseline 1.0 had a Help and About button opening About
 directly, credited Slint alone and made no network connection at all.
 
-Reason: the owner's review of the first installed build asked for the house Help menu (Guide,
-About, Licence, Check for Updates) and for reading surfaces that scroll themselves. The owner also ruled
-that the house update check (automatic at launch and daily, plus on demand) is wanted even though
-it means one request to GitHub. The About credit list was measured against the shipped graph:
-292 crates under 25 licence expressions, where About named one. The update check uses WinHTTP,
-built into Windows, so BuildPilot still carries no HTTP or TLS crate.
+Reason: the owner's review of the first installed build asked for the house Help menu (Guide, About,
+Licence, Check for Updates) and for reading surfaces that scroll themselves. The owner also ruled
+that the house update check (automatic at launch and daily, plus on demand) is wanted even though it
+means one request to GitHub. The About credit list was measured against the shipped graph: 292
+crates under 25 licence expressions, where About named one. The update check uses WinHTTP, built
+into Windows, so BuildPilot still carries no HTTP or TLS crate.
 
 **Amendment 4 (2026-09-27): steps, Python environments and operator hosts.** Changes §1.4, §1.5,
 ADD-001, CFG-003, LCH-001, UI-004 and Appendix D; adds STEP-001 to STEP-008, ENV-001 to ENV-010,
 HOST-001 to HOST-003, R-5 and OQ-14 to OQ-18. Baseline 1.0 launched one script per operation and
 listed `.py` as won't-this-time.
 
-Reason: the owner's Python projects need an existing virtual environment active and two scripts
-run in order (`buildexe.py`, then `buildinstaller.py`). Measured on the reference machine: 31
-projects hold an environment, each a `venv` folder with `pyvenv.cfg`; one holds two; 15 document
-the two-script order. The owner ruled that BuildPilot detects and activates an environment that
-exists but never builds one. It also ruled that BuildPilot refuses a `.py` step with no environment rather than
-guessing at a Python on PATH. `.ps1` steps are activated as well, so a PowerShell build that
+Reason: the owner's Python projects need an existing virtual environment active and two scripts run
+in order (`buildexe.py`, then `buildinstaller.py`). Measured on the reference machine: 31 projects
+hold an environment, each a `venv` folder with `pyvenv.cfg`; one holds two; 15 document the
+two-script order. The owner ruled that BuildPilot detects and activates an environment that exists
+but never builds one. It also ruled that BuildPilot refuses a `.py` step with no environment rather
+than guessing at a Python on PATH. `.ps1` steps are activated as well, so a PowerShell build that
 calls Python finds its environment. Every step first undoes any activation BuildPilot inherited,
 since two environments may conflict. A host table in Settings covers other script types without a
 per-operation field. Existing config files migrate each operation to a single step.
@@ -1129,14 +1135,17 @@ change breaking either of the first two carries a new major version.
 
 Reason: in the first release, opening the output tray shortened the row list without moving it,
 so a selected row near the foot of the list dropped out of sight just as its output appeared.
+Found by the owner on the released build; reproduced by the ROW-009 geometry test before the fix.
 
-**Amendment 10 (2026-09-28): launching a project's installer.** Changes §1.3, §2.1, §2.2,
-ROW-001, EDIT-001 and CFG-003; adds PKG-001 to PKG-005. Separately, OUT-006 now states that a
-finished run's closing line ends in view, which 1.0 failed to do.
+**Amendment 10 (2026-09-28): launching a project's installer.** Changes §1.3, §1.5, §2.1,
+§2.2, ROW-001, EDIT-001, EDIT-002, STEP-001 and CFG-003; adds PKG-001 to PKG-005. Separately,
+OUT-006 now states that a finished run's closing line ends in view, which 1.0 failed to do.
+Made in the same pass to match the code as it already stood, with no change of behaviour:
+LIFE-001 names its three failure reasons, CFG-003 lists every global field and each Verified
+by line names the test module that holds its test.
 
 Reason: the owner builds a setup program for most projects on the deck and then runs it by hand
 from Explorer. The owner asked for a row control beside Stop that starts it, found by the
-convention the projects already follow (3.21) and set by hand where they do not. The installer is
-stored only once set, so the config file stays schema 2 and an earlier release still reads it
-(DATA-002).
-Found by the owner on the released build; reproduced by the ROW-009 geometry test before the fix.
+convention the projects already follow (3.21) and set by hand where they do not. An installer
+is stored only once saved from the dialog, so the config file stays schema 2 and an earlier
+release still reads it (DATA-002).

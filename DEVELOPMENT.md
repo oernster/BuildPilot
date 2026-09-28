@@ -149,8 +149,8 @@ your everyday one.
 The version lives in `VERSION` and nowhere else. The running application reads it through
 `build.rs`. Two places cannot read it, so `stamp_version.ps1` writes it into them. One is
 `Cargo.toml`, which `tests/structural.rs` checks. The other is the site under `docs/`, where each
-mention is a `<!--VERSION-->` token that `tests/site.rs` checks. No other document names a version. After
-changing `VERSION`, stamp before running the tests:
+mention is a `<!--VERSION-->` token that `tests/site.rs` checks. No other document names a
+version. After changing `VERSION`, stamp before running the tests:
 
 ```powershell
 ./stamp_version.ps1
@@ -162,8 +162,8 @@ It is idempotent: a second run writes nothing.
 
 `docs/` is the GitHub Pages site: `index.html`, `styles.css`, the icon, the donate artwork and
 three captures in `screenshots/` (the window, the Edit dialog and Settings). It carries no
-dates. Its colours are the application's tokens from
-`ui/theme.slint`, light or dark as the reader's system is set.
+dates. Its colours are the application's tokens from `ui/theme.slint`, light or dark as the
+reader's system is set.
 
 ## Where things live
 
@@ -181,7 +181,7 @@ dates. Its colours are the application's tokens from
 | `stamp_version.ps1` | Writes `VERSION` into `Cargo.toml` and the site |
 | `tools/genicons.py` | Makes the `.ico` from the PNG master |
 | `tools/uiicons.py` | Makes the small copies in `assets/ui` the interface draws |
-| `ui/` | The Slint interface: `theme.slint` holds every colour and size |
+| `ui/` | The Slint interface: `theme.slint` holds every colour and the sizes shared between files |
 | `assets/` | The application icon and every button image, as masters |
 | `assets/ui` | The small copies of those masters, the only images the interface names |
 | `docs/` | The GitHub Pages site |
@@ -198,8 +198,8 @@ dates. Its colours are the application's tokens from
   trimmed to fit.
 - **No magic numbers.** A literal that needs a comment to say what it represents is a named
   constant or derived from data.
-- **One home for everything.** Colours and sizes live in `ui/theme.slint`, notice wording in the
-  application layer, the version in `VERSION`.
+- **One home for everything.** Colours and the sizes several files share live in
+  `ui/theme.slint`, notice wording in the application layer, the version in `VERSION`.
 - **`unsafe` only in `src/infrastructure/win32`,** each block with the reason it is sound.
 - **Every guard is proved by planting a violation** and reading the exit code before it is
   trusted.

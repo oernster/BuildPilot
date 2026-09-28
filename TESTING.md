@@ -40,11 +40,11 @@ Read the exit code rather than the last line of output: `0` means every step pas
 | `src/domain`, `src/application` and `src/setup` | 100% of lines and of regions | The correctness core and the setup program's policy: no files, no processes, no clock, no window, so every line and every branch is reachable from a test. |
 | `src/infrastructure`, `src/ui`, `src/main.rs`, `src/bin` | measured, not floored | They need real processes, files, Explorer, the registry or a window; a number over them would mean little. Their behaviour is covered by the suites below and the checks by hand. |
 
-Every line and every region in the floor is covered: 3,255 regions over 2,232 lines. A region is a branch as
-well as a line, so an untaken `?` fails the gate even when its line ran. Where a branch could
-not be taken in production it was deleted rather than tested (an operation looked up twice, a
-refusal repeated after it had already been made). The region floor was proved by planting a
-one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
+Every line and every region in the floor is covered: 3,257 regions over 2,234 lines. A region is a
+branch as well as a line, so an untaken `?` fails the gate even when its line ran. Where a branch
+could not be taken in production it was deleted rather than tested (an operation looked up twice, a
+refusal repeated after it had already been made). The region floor was proved by planting a one-line
+`if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
@@ -85,8 +85,9 @@ killed with `taskkill` afterwards, even when the test fails part way.
 
 ## What is not tested and why
 
-- **Explorer.** Opening a script, revealing it and opening the data folder call the Windows
-  shell, which would open windows on the machine running the tests.
+- **Explorer.** Opening a script, revealing it, opening the data folder and launching an
+  installer call the Windows shell, which would open windows (or start a real setup program) on
+  the machine running the tests. The application tests drive each through a fake shell instead.
 - **What the rings look like.** The keyboard tests read which control holds focus, not what is
   painted. The colours are held by the contrast test; how they look on screen is a check by
   hand.

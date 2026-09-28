@@ -38,11 +38,11 @@ violation and watching the test fail.
   their validation, folders compared as Windows compares them, the flight deck with its order
   and where a new row slots in by name, the run state machine, the launch plan for each kind of
   script, where a project's installer is found and when it may be launched, the operator's host
-  table, finding a Python environment and the variables that
-  deactivate and activate one, the folder-scan patterns and what a scan proposes, cutting output
-  bytes into lines and decoding them, the output buffer and its caps, the tray's follow state,
-  selection and preferences, release versions, the open source credits and the self-reading cycle
-  of a surface of text. No I/O, no clock, no framework.
+  table, finding a Python environment and the variables that deactivate and activate one, the
+  folder-scan patterns and what a scan proposes, cutting output bytes into lines and decoding
+  them, the output buffer and its caps, the tray's follow state, selection and preferences,
+  release versions, the open source credits and the self-reading cycle of a surface of text. No
+  I/O, no clock, no framework.
 - **Application** (`src/application`). `App` owns all state and is driven from one thread. It
   offers one method per thing the operator can do and never waits on a process: a launch
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
@@ -209,7 +209,8 @@ built into it by `build.ps1` (INST-001 to INST-006).
 
 `BUILDPILOT_DATA_DIR` names a different data folder, for testing without touching the real one.
 BuildPilot itself never writes to a script, a working directory or anywhere outside its data
-folder; only setup writes the program folder, the shortcuts and the Apps list entry.
+folder; only setup writes the program folder, the shortcuts and the Apps list entry. What a
+script or a launched installer writes is that program's own doing.
 
 ## Design decisions
 
@@ -219,12 +220,12 @@ folder; only setup writes the program folder, the shortcuts and the Apps list en
 | Start suspended, then join the job | Nothing can start before it is in the job. | Joining after start, which leaves a window for escape. |
 | Batch files handed to the standard library as the program | Rust quotes their arguments by `cmd.exe` rules and refuses one it cannot escape safely (Amendment 1). | Starting `cmd.exe /c` by hand, which quotes by the wrong rules. |
 | Coalesced drains | One UI update per burst keeps the window responsive under a flood of output (spike R-2). | One UI update per line. |
-| The rows as one keyboard stop | Ten rows of seven controls would cost seventy Tab presses. | Every row's controls on the ring. |
+| The rows as one keyboard stop | Ten rows of eight controls would cost eighty Tab presses. | Every row's controls on the ring. |
 | One named event for the single instance | The same object answers "is one running?" and "come forward". | A mutex plus a second signal. |
 | The instance keyed on the data folder | The default folder is per user, which is DATA-001; a test copy on its own folder runs alongside. | One instance per user whatever the folder. |
 | Notice wording in the application layer | The window and the log say the same words. | Wording in the UI, which the log cannot reach. |
 | An installer is stored only once saved from Edit | The dialog shows the default found and Save keeps what its field holds; until then an operation follows the project's own convention. The config file stays schema 2, so an earlier release still reads it (DATA-002). | Writing the default into every operation at load, which rewrites every entry unasked. |
-| The tray pins itself to the end while following | The list measures new rows only when it next lays out, so a scroll asked for as they arrive stopped short and hid the run's closing line (OUT-003). | Scrolling once from Rust after each drain. |
+| The tray pins itself to the end while following | The list measures new rows only when it next lays out, so a scroll asked for as they arrive stopped short and hid the run's closing line (OUT-006). | Scrolling once from Rust after each drain. |
 
 See also [TESTING.md](TESTING.md) for how each layer is tested and [DEVELOPMENT.md](DEVELOPMENT.md)
 for building it.
