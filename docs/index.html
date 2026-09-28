@@ -47,7 +47,7 @@
     <div class="wrap hero">
         <div>
             <p class="eyebrow">
-                <span class="pill">v<!--VERSION-->1.0.1<!--/VERSION--></span>
+                <span class="pill">v<!--VERSION-->1.1.0<!--/VERSION--></span>
                 <span class="pill">Windows</span>
                 <span class="pill">Free and open source</span>
             </p>
@@ -62,7 +62,7 @@
             </div>
         </div>
         <figure class="shot">
-            <img src="screenshots/screenshot.png" alt="The BuildPilot window: a list of build operations, each with its status and controls, above the output of the selected run.">
+            <img src="screenshots/screenshot.png" alt="The BuildPilot window: a list of build operations, each with its status and controls. Launch installer is ready on every row with a setup program and greyed out with a red ring on the two without one.">
         </figure>
     </div>
 
@@ -93,6 +93,11 @@
                         outcome closes it in green, red or grey.</li>
                     <li><strong>Stops the whole tree.</strong> Stop ends the script and every
                         process it started, through a Windows job object.</li>
+                    <li><strong>Launches the installer it built.</strong> Beside Stop, Launch
+                        installer starts the project's setup program: the one set in Edit, else
+                        the folder's name plus <code>Setup.exe</code> in
+                        <code>dist-installer</code> or <code>dist</code>. It waits while the
+                        build runs and after one you stopped.</li>
                 </ul>
             </div>
             <div class="card">
@@ -118,14 +123,14 @@
 
     <section class="wrap" id="screens">
         <p class="kicker">A closer look</p>
-        <h2>Steps, environments and hosts, in two dialogs.</h2>
+        <h2>Steps, environments, installers and hosts, in two dialogs.</h2>
         <div class="gallery">
             <figure class="shot">
-                <img src="screenshots/edit.png" width="555" height="731" loading="lazy"
-                    alt="The Edit build operation dialog for AudioDeck: two steps, buildexe.py then buildinstaller.py, the working directory, the environment venv and the project's icon.">
+                <img src="screenshots/edit.png" width="557" height="730" loading="lazy"
+                    alt="The Edit build operation dialog for AudioDeck: two steps, buildexe.py then buildinstaller.py, the working directory, the environment venv, the installer found in dist-installer and the project's icon.">
                 <figcaption><strong>Edit.</strong> A Python project's two steps, run in order
                     inside its own <code>venv</code>. Steps are added, removed and reordered
-                    here; the icon was found beside the script.</figcaption>
+                    here; the installer and the icon were found in the project.</figcaption>
             </figure>
             <figure class="shot">
                 <img src="screenshots/settings.png" width="555" height="560" loading="lazy"
@@ -181,7 +186,7 @@
     <section class="wrap" id="download">
         <p class="kicker">Download</p>
         <h2>Install it once; add a project; press Run.</h2>
-        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.0.1<!--/VERSION--></span>
+        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.1.0<!--/VERSION--></span>
         <!--
             The button points at GitHub's releases/latest/download redirect, which always
             serves the newest release's file. The name carries no version, so the link

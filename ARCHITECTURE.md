@@ -37,7 +37,8 @@ violation and watching the test fail.
 - **Domain** (`src/domain`). BuildPilot's nouns and rules: an operation, its ordered steps and
   their validation, folders compared as Windows compares them, the flight deck with its order
   and where a new row slots in by name, the run state machine, the launch plan for each kind of
-  script, the operator's host table, finding a Python environment and the variables that
+  script, where a project's installer is found and when it may be launched, the operator's host
+  table, finding a Python environment and the variables that
   deactivate and activate one, the folder-scan patterns and what a scan proposes, cutting output
   bytes into lines and decoding them, the output buffer and its caps, the tray's follow state,
   selection and preferences, release versions, the open source credits and the self-reading cycle
@@ -94,6 +95,22 @@ Terminal escape sequences are removed rather than interpreted (OUT-008). A run k
 100,000 lines and splits a longer line into pieces of 16,384 characters (OUT-004). The tray
 reads the buffer directly rather than a copy. Every line is drawn in the plain text colour
 whichever stream it came on; the run's outcome is one closing line in its own colour (OUT-007).
+
+## Launching an installer
+
+Launch installer (PKG-001 to PKG-005) starts a project's setup program; BuildPilot never waits
+on it, reads its output or stops it.
+
+- **The rule is pure.** `domain/installer.rs` decides the default (the working directory's name
+  plus `Setup.exe` in `dist-installer`, then `dist`, compared by letters and digits) from a
+  listing it is handed. It also decides whether a run state allows a launch: not while running
+  or stopping, not after a stopped run.
+- **The looking is cached.** `App` records each operation's installer through `PathProbe` at
+  start, on add, edit and select and when a run ends; `application/installer_actions.rs` holds
+  the use case. The rows redraw four times a second and a look reads two folders, so the rows read
+  the record, never the disk. Launch looks again before it starts anything.
+- **Starting it is the shell's job.** `Shell::open` hands the file to Windows as Explorer would,
+  so an installer that needs administrator rights gets the usual prompt.
 
 ## Help, the credits and the update check
 
@@ -206,6 +223,8 @@ folder; only setup writes the program folder, the shortcuts and the Apps list en
 | One named event for the single instance | The same object answers "is one running?" and "come forward". | A mutex plus a second signal. |
 | The instance keyed on the data folder | The default folder is per user, which is DATA-001; a test copy on its own folder runs alongside. | One instance per user whatever the folder. |
 | Notice wording in the application layer | The window and the log say the same words. | Wording in the UI, which the log cannot reach. |
+| An installer is stored only once saved from Edit | The dialog shows the default found and Save keeps what its field holds; until then an operation follows the project's own convention. The config file stays schema 2, so an earlier release still reads it (DATA-002). | Writing the default into every operation at load, which rewrites every entry unasked. |
+| The tray pins itself to the end while following | The list measures new rows only when it next lays out, so a scroll asked for as they arrive stopped short and hid the run's closing line (OUT-003). | Scrolling once from Rust after each drain. |
 
 See also [TESTING.md](TESTING.md) for how each layer is tested and [DEVELOPMENT.md](DEVELOPMENT.md)
 for building it.

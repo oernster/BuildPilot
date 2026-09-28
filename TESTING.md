@@ -3,7 +3,7 @@
 What is tested, what is not and why the line falls where it does.
 
 This document exists because a coverage figure on its own is a number without a claim behind it.
-Every figure here was measured on 2026-09-27, when it was written.
+Every figure here was measured on 2026-09-28, when it was last revised.
 
 ## The standard
 
@@ -40,7 +40,7 @@ Read the exit code rather than the last line of output: `0` means every step pas
 | `src/domain`, `src/application` and `src/setup` | 100% of lines and of regions | The correctness core and the setup program's policy: no files, no processes, no clock, no window, so every line and every branch is reachable from a test. |
 | `src/infrastructure`, `src/ui`, `src/main.rs`, `src/bin` | measured, not floored | They need real processes, files, Explorer, the registry or a window; a number over them would mean little. Their behaviour is covered by the suites below and the checks by hand. |
 
-Every line and every region in the floor is covered: 3,060 regions over 2,124 lines. A region is a branch as
+Every line and every region in the floor is covered: 3,255 regions over 2,232 lines. A region is a branch as
 well as a line, so an untaken `?` fails the gate even when its line ran. Where a branch could
 not be taken in production it was deleted rather than tested (an operation looked up twice, a
 refusal repeated after it had already been made). The region floor was proved by planting a
@@ -48,15 +48,15 @@ one-line `if` whose branch never runs: lines stayed at 100% and the gate failed.
 
 ## What the suites prove
 
-339 tests, counted from the source.
+356 tests, counted with `cargo test -- --list`.
 
 | Suite | Tests | What it proves |
 |---|---|---|
-| `tests/domain` | 135 | The rules: validation, steps, folders compared as Windows compares them, deck order and slotting in by name, the run state machine, launch plans per kind of script, the host table, environment discovery with the deactivate and activate variables, the scan patterns and proposals, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
-| `tests/application` | 91 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering (including during a run), running steps in order, one build per folder, running the ticked rows, stopping, environments, hosts, folder scans, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
+| `tests/domain` | 142 | The rules: validation, steps, folders compared as Windows compares them, deck order and slotting in by name, the run state machine, launch plans per kind of script, where a project's installer is found and when it may be launched, the host table, environment discovery with the deactivate and activate variables, the scan patterns and proposals, line assembly and decoding, the output buffer's caps, follow state, selection, preferences, elapsed-time wording, reading the credits and naming their licences, the self-reading cycle tick by tick. |
+| `tests/application` | 100 | Every use case through `App` against hand-written fake ports: adding, editing, removing, reordering (including during a run), running steps in order, one build per folder, running the ticked rows, stopping, launching an installer (found, set, missing, held back by a run or a stop), environments, hosts, folder scans, stale events, notices, refusals and what is logged; the update check's decisions and wording, the saved skip. |
 | `tests/infrastructure` | 58 | The real machine: the settings file in a temporary folder (including unreadable and newer files), icons, PowerShell detection, real processes started and stopped, the single-instance event, the log's rotation, a reader thread that panics, the known folders, finding and ending a process by name and clearing setup's stale copy; the donation address; the generated credits against the shipped graph, with a readable name for every licence; reading GitHub's release answer as foreign input. |
 | `tests/keyboard` | 14 | The keyboard ring, driven headless by real key events through Slint's own focus handling: neutral start, Tab and Shift+Tab with wrap, Left and Right, the rows stop, dialogs opening on their first control, owning the ring, closing on Escape and handing focus back, the output stop only while it overflows, the Help menu walked with Up and Down, a folder already on the deck off the ring. |
-| `tests/ui.rs` | 11 | What rows and the tray say, without a window. |
+| `tests/ui.rs` | 12 | What rows and the tray say, without a window. |
 | `tests/structural.rs` | 8 | The invariants in [ARCHITECTURE.md](ARCHITECTURE.md), by reading the source. |
 | `tests/guide.rs` | 1 | Every toolbar and row control has a Guide entry, one per state where its label changes. |
 | `tests/geometry` | 9 | Where Slint laid things out, headless: every toolbar tooltip inside the window, row tooltips not clipped by the list, a button's icon level with its words and centred with them, every credit's licence inside About's pane with the real list loaded, About's header above the scrolling credits, Licence opening at the top of its text, the scroll bars and the counts of rows out of sight, the selected row kept in sight when the tray opens. |
@@ -100,12 +100,13 @@ These need a real desktop and a real person; the SRS marks them Manual.
 | Check | How |
 |---|---|
 | CFG-007 first run | Start with an empty data folder: the empty state shows with its Add button. |
-| ADD-001 add by browsing | Add opens the file picker, filtered to `.ps1`, `.bat`, `.cmd` and `.exe`. |
+| ADD-001 add by browsing | Add opens the file picker, filtered to the types BuildPilot runs: `.ps1`, `.bat`, `.cmd`, `.exe`, `.com`, `.py` and any in Settings' host table. |
 | ICON-006 no distortion | Every icon and asset keeps its proportions at every size. |
 | REM-001 confirm before remove | Remove asks first, naming the operation and saying the script is not touched; Cancel is focused. |
 | ROW-002 stable layout | Every control keeps its place in every state. |
 | LCH-004 no console window | Running a `.ps1`, `.bat` and `.exe` opens no console. |
-| OUT-006 auto-follow | The tray follows new output until scrolled up; Jump to latest resumes it. |
+| OUT-006 auto-follow | The tray follows new output until scrolled up; Jump to latest resumes it. When the run ends, its closing line is in view. Checked on 2026-09-28 with a burst of 120 lines and with 80 lines 50 ms apart: the headless backend never lays out the list, so only the real window can show this. |
+| PKG-003, PKG-004 Launch installer | Right of Stop: a red ring on a row with no installer, while it runs and after a stopped run; its tooltip says which. Launching it starts the setup program, with the Windows prompt where the installer asks for administrator rights. |
 | A11Y-001 names | Narrator reads every control's name. |
 | A11Y-002 focus visible | Green ring on hover or focus, red ring on a disabled control, none at rest, never round a pane. |
 | A11Y-003 keyboard reach | Tab, Shift+Tab, Left and Right reach every control; Space and Enter activate. |

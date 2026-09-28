@@ -55,6 +55,11 @@ Every script stays runnable without it.
   in green, red or muted grey.
 - **Stops the whole tree.** Stop ends the script and everything it started, through a Windows job
   object. A tree still alive five seconds after Stop is reported by process id.
+- **Launches the installer a build made.** Launch installer, beside Stop, starts the project's
+  setup program as Explorer would. It is the one set in Edit; with none set, the working
+  directory's name followed by `Setup.exe` in `dist-installer`, then in `dist`, matched on
+  letters and digits whatever the case. It is greyed out when there is none, while the row runs
+  and after a run you stopped, until a later run ends by itself.
 - **Opens and reveals scripts.** Open a script with its associated application or show it in
   Explorer, from its row.
 - **Uses PowerShell sensibly.** A `.ps1` runs under `pwsh` when it is on PATH and Windows
