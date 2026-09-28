@@ -104,7 +104,7 @@ on it, reads its output or stops it.
 - **The rule is pure.** `domain/installer.rs` decides the default (the working directory's name
   plus `Setup.exe` in `dist-installer`, then `dist`, compared by letters and digits) from a
   listing it is handed. It also decides whether a run state allows a launch: not while running
-  or stopping, not after a stopped run.
+  or stopping, not after a run that was stopped or failed.
 - **The looking is cached.** `App` records each operation's installer through `PathProbe` at
   start, on add, edit and select and when a run ends; `application/installer_actions.rs` holds
   the use case. The rows redraw four times a second and a look reads two folders, so the rows read

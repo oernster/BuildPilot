@@ -85,7 +85,7 @@ export component GuideDialog inherits Modal {
         { icon: @image-url("../assets/ui/stop.png"), name: "Stop",
           text: "ends the running step and every process it started; no later step starts. Every other run is left alone." },
         { icon: @image-url("../assets/ui/launch-installer.png"), name: "Launch installer",
-          text: "starts the project's setup program, as Explorer would. It is the one set in Edit; with none set, the folder's name plus Setup.exe in dist-installer, then in dist. Greyed out when there is none, while the row runs and after a run you stopped, until a run goes to the end." },
+          text: "starts the project's setup program, as Explorer would. It is the one set in Edit; with none set, the folder's name plus Setup.exe in dist-installer, then in dist. Greyed out when there is none, while the row runs and after a run that was stopped or failed, until a run succeeds." },
         { icon: @image-url("../assets/ui/edit-script.png"), name: "Edit",
           text: "change the name, the steps (add, remove or reorder them, each with its arguments), the working directory, the environment, the installer or the icon. BuildPilot never changes a script itself." },
         { icon: @image-url("../assets/ui/open-script.png"), name: "Open script",

@@ -94,14 +94,18 @@ fn a_run_and_a_stop_hold_it_back() {
     assert!(opened(&world).is_empty());
 }
 
-// PKG-004: a failed run does not hold it back; only a stop does.
+// PKG-004: a failed run holds it back until a later run succeeds.
 #[test]
-fn a_failed_run_leaves_it_available() {
+fn a_failed_run_holds_it_back() {
     let world = with_file(world(), DEFAULT);
     let mut app = world.app();
     let id = add(&mut app, SCRIPT_A);
     app.run(&id).unwrap();
     app.handle_event(exited(&world.launch_key(0), 1));
+    assert_eq!(app.installer_block(&id), Some(InstallerBlock::Failed));
+    assert!(app.launch_installer(&id).is_err());
+    app.run(&id).unwrap();
+    app.handle_event(exited(&world.launch_key(1), 0));
     assert_eq!(app.installer_block(&id), None);
 }
 

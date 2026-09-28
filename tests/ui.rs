@@ -286,6 +286,6 @@ fn launch_installer_says_why_it_is_held_back() {
     assert!(!held.can_install);
     assert_eq!(
         held.install_blocked,
-        "the last build was stopped; run it to the end first"
+        "the last build was stopped; run it to success first"
     );
 }

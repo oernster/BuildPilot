@@ -54,8 +54,9 @@ fn key(text: &str) -> String {
 }
 
 /// The installer Launch installer may start for a run in `state`, when `installer` is the one on
-/// disk; else why not (PKG-003, PKG-004). A run in progress comes first, then a stopped one,
-/// then a missing installer, so the reason given is the one the operator must see to first.
+/// disk; else why not (PKG-003, PKG-004). Launching is open before the first run and after one
+/// that succeeded; never otherwise. A run in progress comes first, then a stopped one, then a
+/// failed one, then a missing installer, so the reason given is the one to see to first.
 pub fn launchable<'a>(
     state: &RunState,
     installer: Option<&'a Path>,
@@ -63,7 +64,8 @@ pub fn launchable<'a>(
     match state {
         RunState::Running(_) => Err(InstallerBlock::Running),
         RunState::Stopped => Err(InstallerBlock::Stopped),
-        _ => installer.ok_or(InstallerBlock::NotFound),
+        RunState::Failed(_) => Err(InstallerBlock::Failed),
+        RunState::Idle | RunState::Succeeded => installer.ok_or(InstallerBlock::NotFound),
     }
 }
 
@@ -76,6 +78,8 @@ pub enum InstallerBlock {
     Running,
     /// The latest run was stopped before it finished, so its installer may be incomplete.
     Stopped,
+    /// The latest run failed, so its installer may be incomplete or stale.
+    Failed,
 }
 
 /// The reason as the tooltip and a refusal say it, after the control's name.
@@ -84,7 +88,8 @@ impl fmt::Display for InstallerBlock {
         f.write_str(match self {
             Self::NotFound => "no installer found; set one in Edit",
             Self::Running => "wait for the build to finish",
-            Self::Stopped => "the last build was stopped; run it to the end first",
+            Self::Stopped => "the last build was stopped; run it to success first",
+            Self::Failed => "the last build failed; run it to success first",
         })
     }
 }

@@ -935,10 +935,10 @@ to launch: none set and none found; else the one set is not on disk. Its tooltip
 `launch_installer_says_why_it_is_held_back`; Manual for the ring.
 
 **PKG-004 (M) Held back by a run.** Launch installer shall be disabled while the operation runs
-or stops. After a run the operator stopped, it stays disabled until a later run ends by itself. A run that
-failed does not hold it back. Rationale: a stopped build may have left a half written installer
-(owner, 2026-09-28). Verified by: `application::installer` tests
-`a_run_and_a_stop_hold_it_back` and `a_failed_run_leaves_it_available`.
+or stops. After a run that the operator stopped or that failed, it stays disabled until a later
+run succeeds. Rationale: a stopped or failed build may have left a half written or stale
+installer (owner, 2026-09-28). Verified by: `application::installer` tests
+`a_run_and_a_stop_hold_it_back` and `a_failed_run_holds_it_back`.
 
 **PKG-005 (M) Starting it.** When the operator activates Launch installer, BuildPilot shall look
 for the installer again, then start it as Explorer would, so Windows asks for administrator

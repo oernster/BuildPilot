@@ -88,17 +88,14 @@ fn nothing_found_leaves_it_unset() {
     assert_eq!(find_default_installer(Path::new(r"C:\"), &everything), None);
 }
 
-// PKG-003, PKG-004: running comes first, then a stopped run, then a missing installer.
+// PKG-003, PKG-004: running comes first, then a stopped run, then a failed one, then a missing
+// installer.
 #[test]
 fn launch_follows_the_run_state() {
     let installer = Path::new(r"C:\src\AudioDeck\dist\AudioDeckSetup.exe");
     let running = RunState::Idle.launched(1).unwrap();
     let stopping = running.stop_requested().unwrap();
-    for state in [
-        RunState::Idle,
-        RunState::Succeeded,
-        RunState::Failed(Failure::ExitCode(1)),
-    ] {
+    for state in [RunState::Idle, RunState::Succeeded] {
         assert_eq!(launchable(&state, Some(installer)), Ok(installer));
         assert_eq!(launchable(&state, None), Err(InstallerBlock::NotFound));
     }
@@ -113,6 +110,16 @@ fn launch_follows_the_run_state() {
         launchable(&RunState::Stopped, Some(installer)),
         Err(InstallerBlock::Stopped)
     );
+    // A failed run holds it back, whichever step failed.
+    for failure in [
+        Failure::ExitCode(1),
+        Failure::StepExitCode { step: 2, code: 3 },
+    ] {
+        assert_eq!(
+            launchable(&RunState::Failed(failure), Some(installer)),
+            Err(InstallerBlock::Failed)
+        );
+    }
 }
 
 // PKG-003, PKG-004: each reason in the words the tooltip shows.
@@ -128,7 +135,11 @@ fn every_reason_says_what_to_do() {
     );
     assert_eq!(
         InstallerBlock::Stopped.to_string(),
-        "the last build was stopped; run it to the end first"
+        "the last build was stopped; run it to success first"
+    );
+    assert_eq!(
+        InstallerBlock::Failed.to_string(),
+        "the last build failed; run it to success first"
     );
 }
 
