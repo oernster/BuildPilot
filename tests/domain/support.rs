@@ -20,6 +20,7 @@ pub fn spec(script: &str) -> OperationSpec {
         steps: vec![StepSpec::for_script(&script)],
         environment: None,
         icon: IconRef::Placeholder,
+        installer: None,
     }
 }
 

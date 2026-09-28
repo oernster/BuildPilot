@@ -26,8 +26,9 @@ pub struct ScannedFolder {
 /// What a scan of a chosen folder found.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FolderScan {
-    /// The folder itself is a project (SCAN-004).
-    One(ScannedFolder),
+    /// The folder itself is a project (SCAN-004). Boxed: one folder is far larger than the
+    /// other answers, which hold a list.
+    One(Box<ScannedFolder>),
     /// Folders directly inside it are projects, in name order (SCAN-005).
     Several(Vec<ScannedFolder>),
     /// Nothing was recognised; these are the file names looked for (SCAN-007).
@@ -42,7 +43,7 @@ impl App {
     /// Scans `folder`, then the folders directly inside it; never deeper (SCAN-008).
     pub fn scan_folder(&self, folder: &Path) -> FolderScan {
         if let Some(found) = self.scan_one(folder) {
-            return FolderScan::One(found);
+            return FolderScan::One(Box::new(found));
         }
         let inside: Vec<ScannedFolder> = self
             .ports
@@ -89,6 +90,8 @@ impl App {
                 .icons
                 .discover(folder)
                 .map_or(IconRef::Placeholder, IconRef::Discovered),
+            // Left unset: the installer is found where PKG-002 looks each time it is wanted.
+            installer: None,
         };
         let already_added = self.already_added(&spec);
         let unticked_because = if already_added {

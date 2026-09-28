@@ -60,6 +60,7 @@ export component OperationDialog inherits Modal {
     in-out property <string> script;
     in-out property <string> working-dir;
     in-out property <string> arguments;
+    in-out property <string> installer;
     in property <image> icon;
     in property <bool> icon-is-placeholder;
     in property <string> icon-note;
@@ -68,6 +69,7 @@ export component OperationDialog inherits Modal {
     in property <string> save-label: "Save";
     callback browse-script();
     callback browse-folder();
+    callback browse-installer();
     callback choose-icon();
     callback use-placeholder-icon();
     callback save();
@@ -128,6 +130,26 @@ export component OperationDialog inherits Modal {
             text <=> root.arguments;
             height: 76px;
             accessible-label: arguments-field.label;
+        }
+    }
+    // PKG-001: what Launch installer starts; found in dist-installer or dist when blank.
+    FieldLabel { text: installer-field.label; }
+    HorizontalLayout {
+        spacing: Theme.gap;
+        installer-field := Field {
+            focused: installer-edit.has-focus;
+            label: "Installer";
+            installer-edit := LineEdit {
+                text <=> root.installer;
+                placeholder-text: "None found in dist-installer or dist; browse for it";
+                accessible-label: installer-field.label;
+            }
+        }
+        TextButton {
+            text: "Browse";
+            label: "Browse for the installer";
+            in-dialog: true;
+            clicked => { root.browse-installer(); }
         }
     }
     FieldLabel { text: "Icon"; }

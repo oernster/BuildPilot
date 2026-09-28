@@ -12,6 +12,8 @@ use super::{MainWindow, StepEditor, Ui};
 
 /// Image types an icon may be (ICON-004).
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg", "ico"];
+/// What the installer picker offers (PKG-001).
+const INSTALLER_EXTENSIONS: &[&str] = &["exe"];
 
 /// Whether the dialog adds or edits; the icon and steps it currently holds.
 pub(super) struct DialogState {
@@ -47,6 +49,21 @@ pub(super) fn wire(ui: &Rc<Ui>, window: &MainWindow) {
                 w.set_field_working_dir(SharedString::from(folder.display().to_string()))
             });
             this.refresh_environment();
+        }
+    });
+    let this = ui.clone();
+    window.on_browse_installer(move || {
+        let folder = this.with_window_value(|w| PathBuf::from(w.get_field_working_dir().trim()));
+        let mut picker = rfd::FileDialog::new()
+            .set_title("Choose the installer")
+            .add_filter("Programs", INSTALLER_EXTENSIONS);
+        if let Some(folder) = folder.filter(|folder| folder.is_absolute()) {
+            picker = picker.set_directory(folder);
+        }
+        if let Some(installer) = picker.pick_file() {
+            this.with_window(|w| {
+                w.set_field_installer(SharedString::from(installer.display().to_string()))
+            });
         }
     });
     let this = ui.clone();
@@ -107,7 +124,15 @@ impl Ui {
         save_label: &str,
         note: String,
     ) {
+        // PKG-002: with none set, the dialog shows the one found; blank when none is.
+        let installer = spec
+            .installer
+            .clone()
+            .or_else(|| self.app.borrow().default_installer(&spec.working_dir))
+            .map(|installer| installer.display().to_string())
+            .unwrap_or_default();
         self.with_window(|w| {
+            w.set_field_installer(SharedString::from(installer));
             w.set_operation_heading(SharedString::from(heading));
             w.set_operation_save_label(SharedString::from(save_label));
             w.set_field_name(SharedString::from(spec.name.as_str()));
@@ -187,6 +212,7 @@ impl Ui {
             working_dir: PathBuf::from(window.get_field_working_dir().trim()),
             environment: self.chosen_environment(),
             icon,
+            installer: Some(PathBuf::from(window.get_field_installer().trim())),
         };
         let outcome = match &editing {
             None => self.app.borrow_mut().add(spec).map(|_| None),

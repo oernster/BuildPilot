@@ -67,7 +67,8 @@ fn the_selected_rows_controls_follow_the_list() {
                 "Build scripts",
                 "Select Alpha",
                 "Run Alpha",
-                // Stop Alpha is disabled (not running), so it is passed over.
+                // Stop Alpha is disabled (not running), so it is passed over; so is Launch
+                // installer, which has none (PKG-003).
                 "Edit Alpha",
                 "Open script",
                 "Show script in Explorer",

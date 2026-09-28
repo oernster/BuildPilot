@@ -25,6 +25,9 @@ export struct RowData {
     run-blocked: string,
     can-stop: bool,
     can-remove: bool,
+    can-install: bool,
+    // Why Launch installer is disabled, for its tooltip (PKG-003, PKG-004).
+    install-blocked: string,
 }
 
 export component OperationRow inherits Rectangle {
@@ -38,6 +41,7 @@ export component OperationRow inherits Rectangle {
     callback toggle-checked();
     callback run();
     callback stop();
+    callback launch-installer();
     callback edit();
     callback open-script();
     callback locate-script();
@@ -194,6 +198,17 @@ export component OperationRow inherits Rectangle {
                     disabled-reason: "not running";
                     on-ring: root.data.selected;
                     activated => { root.stop(); }
+                }
+            }
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: @image-url("../assets/ui/launch-installer.png");
+                    label: "Launch installer";
+                    enabled: root.data.can-install;
+                    disabled-reason: root.data.install-blocked;
+                    on-ring: root.data.selected;
+                    activated => { root.launch-installer(); }
                 }
             }
             VerticalLayout {

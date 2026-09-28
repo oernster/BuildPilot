@@ -78,6 +78,7 @@ impl Ui {
             elapsed: app.elapsed(id),
             overdue_pid,
             folder_busy_with: busy_with.as_deref(),
+            installer_block: app.installer_block(id),
             tick: self.tick.get(),
         });
         let (icon, icon_is_placeholder, icon_problem) = self.icon_for(&app.icon_status(id));
@@ -98,6 +99,8 @@ impl Ui {
             run_blocked: SharedString::from(text.run_blocked),
             can_stop: text.can_stop,
             can_remove: text.can_remove,
+            can_install: text.can_install,
+            install_blocked: SharedString::from(text.install_blocked),
         }
     }
 

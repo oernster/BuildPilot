@@ -63,6 +63,9 @@ pub struct OperationSpec {
     pub environment: Option<String>,
     /// The icon.
     pub icon: IconRef,
+    /// The installer Launch installer starts, where the operator set one (PKG-001). A relative
+    /// path is taken as inside the working directory.
+    pub installer: Option<PathBuf>,
 }
 
 /// An operation's fields after validation. Construct with `OperationConfig::try_from`.
@@ -73,6 +76,7 @@ pub struct OperationConfig {
     working_dir: PathBuf,
     environment: Option<String>,
     icon: IconRef,
+    installer: Option<PathBuf>,
 }
 
 impl OperationConfig {
@@ -99,6 +103,10 @@ impl OperationConfig {
     /// The icon.
     pub fn icon(&self) -> &IconRef {
         &self.icon
+    }
+    /// The installer the operator set, as a full path (PKG-001); `None` when none was set.
+    pub fn installer(&self) -> Option<&Path> {
+        self.installer.as_deref()
     }
     /// How much the steps depend on an environment, run by `hosts`: the most any one step
     /// needs. A step nothing runs needs nothing; Run refuses it on its own account.
@@ -131,6 +139,7 @@ impl OperationConfig {
             working_dir: self.working_dir.clone(),
             environment: self.environment.clone(),
             icon: self.icon.clone(),
+            installer: self.installer.clone(),
         }
     }
     /// True when `other` runs in the same working directory, compared as Windows does: without
@@ -169,6 +178,12 @@ impl TryFrom<OperationSpec> for OperationConfig {
         if !spec.working_dir.is_absolute() {
             return Err(OperationError::WorkingDirNotAbsolute(spec.working_dir));
         }
+        // PKG-001: a blank installer is none; a relative one sits inside the working directory,
+        // with any `.` parts dropped.
+        let installer = spec
+            .installer
+            .filter(|installer| !installer.as_os_str().is_empty())
+            .map(|installer| spec.working_dir.join(installer).components().collect());
         Ok(Self {
             name,
             steps,
@@ -177,6 +192,7 @@ impl TryFrom<OperationSpec> for OperationConfig {
                 .environment
                 .filter(|environment| !environment.trim().is_empty()),
             icon: spec.icon,
+            installer,
         })
     }
 }
@@ -221,6 +237,7 @@ pub fn draft_for_script(script: &Path, hosts: &HostTable) -> Result<OperationSpe
         working_dir: working_dir.to_path_buf(),
         environment: None,
         icon: IconRef::Placeholder,
+        installer: None,
     })
 }
 

@@ -13,6 +13,7 @@ pub mod elapsed;
 pub mod environment;
 pub mod follow;
 pub mod host;
+pub mod installer;
 pub mod launch_plan;
 pub mod lifecycle;
 pub mod line_assembler;

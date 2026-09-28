@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use crate::application::IconStatus;
 use crate::domain::elapsed::format_elapsed;
+use crate::domain::installer::InstallerBlock;
 use crate::domain::lifecycle::{Failure, RunState};
 
 /// Frames of the running indicator; one advances per UI tick (LIFE-005).
@@ -48,6 +49,8 @@ pub struct RowFacts<'a> {
     pub overdue_pid: Option<u32>,
     /// Another operation running in this one's folder, which holds its Run back (LCH-010).
     pub folder_busy_with: Option<&'a str>,
+    /// Why Launch installer is not available; `None` when it is (PKG-003, PKG-004).
+    pub installer_block: Option<InstallerBlock>,
     /// Which spinner frame to show.
     pub tick: usize,
 }
@@ -73,6 +76,10 @@ pub struct RowText {
     pub can_stop: bool,
     /// Remove is available (REM-003).
     pub can_remove: bool,
+    /// Launch installer is available (PKG-003, PKG-004).
+    pub can_install: bool,
+    /// Why it is not, for its tooltip.
+    pub install_blocked: String,
 }
 
 /// The row for `facts`.
@@ -99,6 +106,11 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
         run_blocked,
         can_stop: running,
         can_remove: !running,
+        can_install: facts.installer_block.is_none(),
+        install_blocked: facts
+            .installer_block
+            .map(|block| block.to_string())
+            .unwrap_or_default(),
     }
 }
 

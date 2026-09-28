@@ -76,6 +76,9 @@ fn the_operation_dialog_walks_fields_and_buttons() {
         "Working directory",
         "Browse for the working directory",
         "Arguments of step 1, one per line",
+        // PKG-001: the installer sits between the arguments and the icon.
+        "Installer",
+        "Browse for the installer",
         "Choose image",
         "Use placeholder",
         "Cancel",

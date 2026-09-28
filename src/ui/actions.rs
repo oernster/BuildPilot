@@ -119,6 +119,12 @@ fn wire_rows(ui: &Rc<Ui>, window: &MainWindow) {
         this.report(stopped);
     });
     let this = ui.clone();
+    window.on_launch_installer(move |row| {
+        let Some(id) = id(&row) else { return };
+        let launched = this.app.borrow_mut().launch_installer(&id);
+        this.report(launched);
+    });
+    let this = ui.clone();
     window.on_open_script(move |row| {
         let Some(id) = id(&row) else { return };
         let opened = this.app.borrow().open_script(&id);

@@ -9,6 +9,7 @@ mod domain {
     mod environment;
     mod follow;
     mod host;
+    mod installer;
     mod launch_plan;
     mod lifecycle;
     mod line_assembler;

@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use buildpilot::application::IconStatus;
+use buildpilot::domain::installer::InstallerBlock;
 use buildpilot::domain::lifecycle::{Failure, LaunchError, RunState};
 use buildpilot::ui::icon_image::load_scaled;
 use buildpilot::ui::rows::{
@@ -96,6 +97,7 @@ fn text_for(
         elapsed,
         overdue_pid,
         folder_busy_with: None,
+        installer_block: None,
         tick,
     })
 }
@@ -217,6 +219,7 @@ fn a_busy_folder_holds_run_back() {
         elapsed: None,
         overdue_pid: None,
         folder_busy_with: Some("app release"),
+        installer_block: None,
         tick: 0,
     });
     assert!(!text.can_run && !text.can_stop && text.can_remove);
@@ -260,4 +263,29 @@ fn icon_problem_only_for_missing_icons() {
 fn dropped_note_appears_only_after_drops() {
     assert!(dropped_note(0).is_empty());
     assert_eq!(dropped_note(12), "Oldest 12 lines not kept");
+}
+
+// PKG-003, PKG-004: Launch installer is enabled only with no block; its tooltip gives the block.
+#[test]
+fn launch_installer_says_why_it_is_held_back() {
+    let facts = |installer_block| RowFacts {
+        name: "app build",
+        script: Path::new(SCRIPT),
+        later_steps: 0,
+        state: &RunState::Stopped,
+        elapsed: None,
+        overdue_pid: None,
+        folder_busy_with: None,
+        installer_block,
+        tick: 0,
+    };
+    let open = row_text(&facts(None));
+    assert!(open.can_install);
+    assert_eq!(open.install_blocked, "");
+    let held = row_text(&facts(Some(InstallerBlock::Stopped)));
+    assert!(!held.can_install);
+    assert_eq!(
+        held.install_blocked,
+        "the last build was stopped; run it to the end first"
+    );
 }

@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 9.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 10.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -30,8 +30,9 @@ code. Tests name requirement IDs from this document.
 ### 1.3 Scope
 
 In scope for v1: configuring, remembering, ordering, launching, monitoring and stopping build
-operations; showing live output per operation; opening and revealing scripts; icons; light and
-dark themes; Help/About; a bespoke per-user Windows installer.
+operations; showing live output per operation; opening and revealing scripts; launching a
+project's installer (Amendment 10); icons; light and dark themes; Help/About; a bespoke per-user
+Windows installer.
 
 ### 1.4 Out of scope (v1)
 
@@ -86,7 +87,8 @@ BuildPilot v1 is none of the following; it gains no feature of any of them:
 A new, standalone, local-only desktop application. It depends on nothing networked: its one
 network request is the update check (UI-010), whose failure changes nothing. It interacts with
 the operating system in six ways only: launching processes, terminating process trees, opening
-a file with its associated application, revealing a file in Explorer, handing a web address to
+a file with its associated application (a script; an installer, which Windows runs, PKG-005),
+revealing a file in Explorer, handing a web address to
 Windows to open in the operator's browser (UI-010 Download, UI-014) and reading and writing its
 own data folder.
 
@@ -94,7 +96,9 @@ own data folder.
 
 One class: **the operator**, a developer on their own Windows machine who runs their own build
 scripts. There are no roles, accounts or permissions inside BuildPilot. BuildPilot runs with the
-operator's normal user rights and never requests elevation.
+operator's normal user rights and never requests elevation. An installer it launches (PKG-005)
+is started as Explorer would start it, so Windows, not BuildPilot, asks for rights the installer
+needs.
 
 ### 2.3 Operating environment
 
@@ -158,7 +162,8 @@ file intact. Verified by: `config_store` test `interrupted_write_keeps_previous_
 **CFG-003 (M) Persisted fields.** For each operation the config file shall hold: a stable ID
 (UUID, assigned at creation, never reused), display name, its steps in order (each a script path,
 absolute, plus arguments), working directory (absolute), the chosen environment's folder name
-where ENV-002 asked for one, icon reference, position in the flight deck. Globally it shall hold
+where ENV-002 asked for one, icon reference, the installer where the operator set one (PKG-001),
+position in the flight deck. Globally it shall hold
 the schema version, the theme preference and the operator's host table (HOST-001). Source: spec
 §12; amended by Amendment 4. An operation saved by an earlier schema migrates to one step (CFG-009).
 Verified by: `infrastructure::config_store` test `every_field_and_the_order_round_trip`.
@@ -266,8 +271,8 @@ matters. Verified by: Manual.
 
 **EDIT-001 (M) Edit fields.** When the operator activates Edit, BuildPilot shall open the
 operation dialog showing the name, the steps (each a script path with its arguments, STEP-008),
-the working directory, the environment where ENV-002 applies and the icon, all editable. Edit
-never touches a script. Source: spec §6; amended by Amendment 4.
+the working directory, the environment where ENV-002 applies, the installer (PKG-001) and the
+icon, all editable. Edit never touches a script. Source: spec §6; amended by Amendments 4 and 10.
 
 **EDIT-002 (M) Edit while running.** While an operation is running, the operation dialog shall
 state that changes to the script path, working directory and arguments take effect on the next
@@ -291,9 +296,10 @@ Verified by: `application::deck` test `remove_refused_while_running`.
 ### 3.6 Rows and ordering (ROW)
 
 **ROW-001 (M) Row contents.** Each row shall show, left to right: reorder handle, checkbox, icon,
-name, script file name with its folder, status, Run, Stop, Edit, Open Script, Locate Script,
-Remove. Source: spec §4.1. For an operation with several steps, the script shown, opened and
-located is the first step's, followed by `+N` for the rest (Amendment 4).
+name, script file name with its folder, status, Run, Stop, Launch installer (PKG-003), Edit,
+Open Script, Locate Script, Remove. Source: spec §4.1; amended by Amendment 10. For an operation
+with several steps, the script shown, opened and located is the first step's, followed by `+N`
+for the rest (Amendment 4).
 
 **ROW-002 (M) Stable layout.** The row shall keep every control in the same position in every
 state; controls that do not apply are disabled, never hidden. Source: spec §4.1, §19.
@@ -364,11 +370,11 @@ window. Verified by: Manual.
 
 **LCH-005 (M) One run per operation.** While an operation is running, its Run control shall be
 disabled and the run use case shall refuse a second launch of it. Source: spec §8.2.
-Verified by: `application::runner` test `second_run_is_refused`.
+Verified by: `application::run` test `second_run_is_refused`.
 
 **LCH-006 (M) Concurrent runs.** The run use case shall allow any number of different operations
 to run at once, with no queueing, subject to LCH-010. Source: spec §8.1. Verified by:
-`application::runner` test running three fake processes that finish in reverse order of launch.
+`application::run` test `concurrent_runs_finish_in_any_order`: three fake processes finishing in reverse order of launch.
 
 **LCH-010 (M) One build per folder.** While an operation is running, the run use case shall
 refuse to start another whose working directory is the same folder, compared as Windows compares
@@ -387,7 +393,7 @@ own Run would; one that Run refuses is named in a notice and the rest still run.
 **LCH-007 (M) Missing script.** If the script file does not exist when Run is activated, then the
 run use case shall not launch it; the row shall show Failed with the reason "Script not found"
 plus the path. The row shall offer Edit to repair it. Source: spec §7, §18.
-Verified by: `application::runner` test `missing_script_is_not_launched`.
+Verified by: `application::run` test `missing_script_is_not_launched`.
 
 **LCH-008 (M) Missing working directory.** If the working directory does not exist when Run is
 activated, then the run use case shall not launch it and the row shall name the directory.
@@ -459,14 +465,14 @@ append its stdout and stderr lines as they arrive. Source: spec §11.
 
 **OUT-002 (M) Attribution.** The output store shall keep each run's output keyed by operation ID,
 so no line is ever shown under another operation. Source: spec §11.1.
-Verified by: `application::output` test with two runs interleaving lines.
+Verified by: `application::run` test `output_is_attributed_to_its_operation`.
 
 **OUT-003 (M) Retained after the run.** The output store shall keep the latest run's output for
 each operation until that operation is run again or BuildPilot exits. Source: spec §11.1.
 
 **OUT-004 (M) Retention cap.** The output store shall keep at most the latest 100,000 lines per
 operation, dropping the oldest. The tray shall say when lines have been dropped. A single line
-longer than 16,384 characters shall be split. Verified by: `domain::output_buffer` tests.
+longer than 16,384 characters shall be split. Verified by: `domain::output` tests.
 
 **OUT-005 (M) Responsiveness under load.** While a run emits 50,000 lines within 5 seconds, the UI
 shall keep responding to a click within 100 ms. Reading the process pipes shall never wait on the
@@ -476,7 +482,9 @@ fixture script `tests\fixtures\flood.ps1`.
 **OUT-006 (M) Auto-follow.** While the tray is scrolled to its last line, it shall follow new
 output. When the operator scrolls up, it shall stop following and show a Jump to latest control.
 When the operator returns to the last line or activates Jump to latest, following shall resume.
-Source: spec §11. Verified by: `domain::follow` state tests; Manual.
+When a run ends while the tray follows, its closing line (OUT-007) shall be wholly in view.
+Source: spec §11; the closing line, owner 2026-09-28, since in 1.0 it stayed just out of sight.
+Verified by: `domain::follow` state tests; Manual (the headless backend never lays out the list).
 
 **OUT-007 (M) Outcome, not stream, is coloured.** The tray shall draw every output line in the
 plain text colour whichever stream it came on. When the run ends it shall add one closing line:
@@ -505,7 +513,7 @@ open Explorer with the script selected. Source: spec §7.
 
 **NAV-003 (M) Missing script.** If the script is missing when Open or Locate is activated, then
 BuildPilot shall say so, name the path and offer Edit. Locate shall open the nearest existing
-parent folder instead. Source: spec §7. Verified by: `application::navigate` tests with a fake
+parent folder instead. Source: spec §7. Verified by: `application::navigation` tests with a fake
 shell adapter.
 
 **NAV-004 (M) No association.** If Windows has no application associated with the script type,
@@ -643,7 +651,7 @@ release review.
 |---|---|---|
 | NFR-PERF-001 | The main window shall be visible within 1 second of launch with 50 configured operations. | Stopwatch on the reference machine, release build, 5 launches, worst case. |
 | NFR-PERF-002 | See LIFE-004 and OUT-005. | As stated there. |
-| NFR-CAP-001 | BuildPilot shall work with at least 50 configured operations and at least 8 concurrent runs. | `application::runner` test with 8 fake runs; Manual with 8 real scripts. |
+| NFR-CAP-001 | BuildPilot shall work with at least 50 configured operations and at least 8 concurrent runs. | `application::run` test `concurrent_runs_finish_in_any_order` (three fake runs); Manual with 8 real scripts. |
 | NFR-REL-001 | A panic on any thread BuildPilot owns shall be logged and shown to the operator, never end the application silently. | Test that panics a reader thread. |
 | NFR-REL-002 | Every error shown shall name what failed and what the operator can do. | Review of each error string against spec §18. |
 | NFR-OBS-001 | BuildPilot shall write a log file in the data folder, recording launches, exits, stops and errors, rotated at 1 MB with one previous file kept. | Inspection. |
@@ -705,7 +713,7 @@ Verified by: `application::run` test with step 2's script absent.
 
 **STEP-006 (M) One output per run.** The output store shall hold every step of a run as one
 output. Where an operation has more than one step, a line before each step shall name its number,
-its script and the program started. Verified by: `application::output` test.
+its script and the program started. Verified by: `application::steps` test `steps_run_in_order`.
 
 **STEP-007 (M) Step shown while running.** While an operation with more than one step is running,
 its row shall show which step is running as `step n of N`. Verified by: `ui` test.
@@ -772,7 +780,7 @@ names none of those commands.
 
 **ENV-008 (M) Environment named.** When a `.py` or `.ps1` step starts with an environment, the
 output tray's line for it shall name the environment folder (plus the interpreter path for `.py`),
-including for a single-step operation. Verified by: `application::output` test.
+including for a single-step operation. Verified by: `application::steps` tests `steps_run_in_order` and `powershell_is_activated_and_batch_is_not` (two-step operations); the single-step case by inspection, no test covers it yet.
 
 **ENV-009 (M) Deactivate first, every step.** Before the launcher gives any step its variables,
 activated or not, it shall undo an activation inherited from BuildPilot's own environment, as
@@ -894,6 +902,49 @@ token; Manual for the pulse.
 **SCAN-008 (M) Depth.** The folder scanner shall read only the chosen folder plus (for
 SCAN-005) the folders directly inside it; never deeper. Rationale: a deeper search would find build scripts
 of dependencies and tools inside a project. Verified by: `infrastructure` test.
+
+### 3.21 Launching a project's installer (PKG)
+
+Added by Amendment 10. Measured 2026-09-28 over the 23 operations on the owner's deck: 19 hold
+their setup program in `dist-installer`, 2 in `dist` (BuildPilot and HCS-Plugin-BridgeTalk). Of
+those 21, all but EDColonisationAsst (`EDColonisationAsstInstaller.exe`) are named after the
+folder plus `Setup.exe` once case and punctuation are set aside (`fulcrum` holds
+`FulcrumSetup.exe`, `postal-gambit` holds `PostalGambitSetup.exe`). CommandFixer and locus hold
+none.
+
+**PKG-001 (M) The installer field.** The operation dialog shall hold an optional installer path
+with a Browse button offering `.exe` files. A blank field means none is set; a relative path is
+taken as inside the working directory and stored in full. Source: owner, 2026-09-28.
+Verified by: `domain::installer` test `a_set_installer_is_held_in_full`;
+`infrastructure::config_store` test `every_field_and_the_order_round_trip`.
+
+**PKG-002 (M) The default.** Where no installer is set, BuildPilot shall use the first file found
+in `dist-installer`, then in `dist`, inside the working directory, whose name is the working
+directory's name followed by `Setup.exe`, compared by letters and digits alone without regard to
+case. Where neither holds one, none is used and the dialog's field is left blank for the operator
+to fill. The dialog shows the default found when it opens and Save stores what the field then
+holds, so an operation saved from the dialog keeps that path. BuildPilot looks at start, on add,
+edit and select and when a run ends; never on every redraw. Source: owner, 2026-09-28.
+Verified by: `domain::installer` tests; `application::installer` tests
+`dist_is_the_fallback` and `a_new_installer_is_found_after_a_run_or_on_select`.
+
+**PKG-003 (M) The control.** Each row shall carry Launch installer immediately right of Stop. It
+shall be disabled, with the red ring every disabled control wears, while there is no installer
+to launch: none set and none found; else the one set is not on disk. Its tooltip says why. Source: owner,
+2026-09-28. Verified by: `application::installer` test `nothing_found_is_refused`; `ui` test
+`launch_installer_says_why_it_is_held_back`; Manual for the ring.
+
+**PKG-004 (M) Held back by a run.** Launch installer shall be disabled while the operation runs
+or stops. After a run the operator stopped, it stays disabled until a later run ends by itself. A run that
+failed does not hold it back. Rationale: a stopped build may have left a half written installer
+(owner, 2026-09-28). Verified by: `application::installer` tests
+`a_run_and_a_stop_hold_it_back` and `a_failed_run_leaves_it_available`.
+
+**PKG-005 (M) Starting it.** When the operator activates Launch installer, BuildPilot shall look
+for the installer again, then start it as Explorer would, so Windows asks for administrator
+rights where the installer needs them. BuildPilot does not wait on it, show its output or stop
+it. A refusal names the reason in the notice area. Verified by: `application::installer` tests
+`the_default_installer_launches` and `refusals_name_the_cause`.
 
 ---
 
@@ -1078,4 +1129,14 @@ change breaking either of the first two carries a new major version.
 
 Reason: in the first release, opening the output tray shortened the row list without moving it,
 so a selected row near the foot of the list dropped out of sight just as its output appeared.
+
+**Amendment 10 (2026-09-28): launching a project's installer.** Changes §1.3, §2.1, §2.2,
+ROW-001, EDIT-001 and CFG-003; adds PKG-001 to PKG-005. Separately, OUT-006 now states that a
+finished run's closing line ends in view, which 1.0 failed to do.
+
+Reason: the owner builds a setup program for most projects on the deck and then runs it by hand
+from Explorer. The owner asked for a row control beside Stop that starts it, found by the
+convention the projects already follow (3.21) and set by hand where they do not. The installer is
+stored only once set, so the config file stays schema 2 and an earlier release still reads it
+(DATA-002).
 Found by the owner on the released build; reproduced by the ROW-009 geometry test before the fix.

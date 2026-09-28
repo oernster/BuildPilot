@@ -55,6 +55,7 @@ export component RowsList inherits Rectangle {
     callback toggle-checked(string);
     callback run(string);
     callback stop(string);
+    callback launch-installer(string);
     callback edit(string);
     callback open-script(string);
     callback locate-script(string);
@@ -214,6 +215,7 @@ export component RowsList inherits Rectangle {
             toggle-checked => { root.toggle-checked(row.id); }
             run => { root.run(row.id); }
             stop => { root.stop(row.id); }
+            launch-installer => { root.launch-installer(row.id); }
             edit => { root.edit(row.id); }
             open-script => { root.open-script(row.id); }
             locate-script => { root.locate-script(row.id); }

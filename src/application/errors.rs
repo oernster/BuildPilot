@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use crate::domain::deck::DeckError;
 use crate::domain::host::HostError;
+use crate::domain::installer::InstallerBlock;
 use crate::domain::lifecycle::TransitionError;
 use crate::domain::operation::OperationError;
 
@@ -45,6 +46,13 @@ pub enum AppError {
         /// The operation running there.
         by: String,
     },
+    /// Launch installer is not available (PKG-003, PKG-004).
+    Installer {
+        /// The operation's name.
+        name: String,
+        /// Why not.
+        block: InstallerBlock,
+    },
 }
 
 impl fmt::Display for AppError {
@@ -79,6 +87,9 @@ impl fmt::Display for AppError {
                  overwrite each other's files.",
                 folder.display()
             ),
+            Self::Installer { name, block } => {
+                write!(f, "The installer of {name} was not launched: {block}.")
+            }
         }
     }
 }

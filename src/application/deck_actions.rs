@@ -41,6 +41,7 @@ impl App {
         self.record_icon_status(&id, config.icon());
         self.deck
             .insert_by_name(Operation::new(id.clone(), config))?;
+        self.record_installer(&id);
         self.persist();
         Ok(id)
     }
@@ -60,6 +61,7 @@ impl App {
         let applies_next_run = self.is_running(id) && current.differs_in_execution(&config);
         self.record_icon_status(id, config.icon());
         self.deck.replace_config_at(index, config);
+        self.record_installer(id);
         self.persist();
         Ok(EditOutcome { applies_next_run })
     }
@@ -77,6 +79,7 @@ impl App {
         self.selection.forget(id);
         self.runtimes.remove(id);
         self.icon_status.remove(id);
+        self.installers.remove(id);
         self.persist();
         Ok(())
     }
@@ -106,12 +109,14 @@ impl App {
         Ok(moved)
     }
 
-    /// Makes operation `id` the selected row, whose output the tray shows (ROW-007).
+    /// Makes operation `id` the selected row, whose output the tray shows (ROW-007). Looks for
+    /// its installer again, so one built outside BuildPilot is found (PKG-002).
     pub fn select(&mut self, id: &OperationId) -> Result<(), AppError> {
         self.deck
             .get(id)
             .ok_or_else(|| DeckError::NotFound(id.clone()))?;
         self.selection.select(id.clone());
+        self.record_installer(id);
         Ok(())
     }
 

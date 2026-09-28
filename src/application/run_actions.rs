@@ -175,6 +175,8 @@ impl App {
         let stopped = next == RunState::Stopped;
         runtime.state = next;
         runtime.finished_at = Some(now);
+        // The run may have written the installer (PKG-002).
+        self.record_installer(&event.key.operation);
         let name = self.name_of(&event.key.operation);
         let line = if stopped {
             format!("{name} stopped (exit code {code})")

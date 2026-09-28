@@ -6,6 +6,7 @@ mod application {
     mod deck;
     mod fakes;
     mod hosts;
+    mod installer;
     mod log;
     mod navigation;
     mod run;

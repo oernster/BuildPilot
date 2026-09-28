@@ -77,6 +77,8 @@ fn every_field_and_the_order_round_trip() {
         r"C:\src\py\buildinstaller.py",
     )));
     python.environment = Some("venv_smoke".to_owned());
+    // PKG-001: a set installer survives too.
+    python.installer = Some(PathBuf::from(r"C:\src\py\dist-installer\PySetup.exe"));
     let operations = vec![
         operation("b", r"C:\src\beta\build.cmd"),
         operation("a", r"C:\src\alpha\build.ps1"),

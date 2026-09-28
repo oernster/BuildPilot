@@ -10,6 +10,7 @@
 
 mod deck_actions;
 mod errors;
+mod installer_actions;
 mod navigation;
 pub mod ports;
 mod run_actions;
@@ -98,6 +99,10 @@ pub struct App {
     preferences: Preferences,
     runtimes: HashMap<OperationId, OperationRuntime>,
     icon_status: HashMap<OperationId, IconStatus>,
+    /// Each operation's installer as last looked for (PKG-001, PKG-002). Looked for at start, on
+    /// add, edit and select and when a run ends, never on every redraw: the rows redraw four
+    /// times a second and a look reads two folders.
+    installers: HashMap<OperationId, Option<PathBuf>>,
     notices: Vec<Notice>,
     powershell: PowerShellHost,
     runs_started: u64,
@@ -115,6 +120,7 @@ impl App {
             preferences: loaded.preferences,
             runtimes: HashMap::new(),
             icon_status: HashMap::new(),
+            installers: HashMap::new(),
             notices: Vec::new(),
             powershell,
             runs_started: 0,
@@ -137,6 +143,7 @@ impl App {
             .collect();
         for (id, icon) in &icons {
             app.record_icon_status(id, icon);
+            app.record_installer(id);
         }
         app
     }

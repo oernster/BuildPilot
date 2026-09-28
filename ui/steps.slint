@@ -48,35 +48,43 @@ export component StepsField inherits HorizontalLayout {
             clicked => { StepEditor.select(index); }
         }
     }
+    // Two by two rather than a column of four, so the dialog fits a window of its preferred
+    // height (PKG-001 added a row to it). Declared in ring order: Add, Remove, Up, Down.
     VerticalLayout {
         alignment: start;
-        spacing: Theme.gap;
-        TextButton {
-            text: "Add step";
-            label: "Add a step after the last";
-            in-dialog: true;
-            clicked => { StepEditor.add(); }
-        }
-        TextButton {
-            text: "Remove";
-            label: "Remove the selected step";
-            enabled: StepEditor.labels.length > 1;
-            in-dialog: true;
-            clicked => { StepEditor.remove(); }
-        }
-        TextButton {
-            text: "Up";
-            label: "Run the selected step earlier";
-            enabled: StepEditor.selected > 0;
-            in-dialog: true;
-            clicked => { StepEditor.up(); }
-        }
-        TextButton {
-            text: "Down";
-            label: "Run the selected step later";
-            enabled: StepEditor.selected < StepEditor.labels.length - 1;
-            in-dialog: true;
-            clicked => { StepEditor.down(); }
+        GridLayout {
+            spacing: Theme.gap;
+            Row {
+                TextButton {
+                    text: "Add step";
+                    label: "Add a step after the last";
+                    in-dialog: true;
+                    clicked => { StepEditor.add(); }
+                }
+                TextButton {
+                    text: "Remove";
+                    label: "Remove the selected step";
+                    enabled: StepEditor.labels.length > 1;
+                    in-dialog: true;
+                    clicked => { StepEditor.remove(); }
+                }
+            }
+            Row {
+                TextButton {
+                    text: "Up";
+                    label: "Run the selected step earlier";
+                    enabled: StepEditor.selected > 0;
+                    in-dialog: true;
+                    clicked => { StepEditor.up(); }
+                }
+                TextButton {
+                    text: "Down";
+                    label: "Run the selected step later";
+                    enabled: StepEditor.selected < StepEditor.labels.length - 1;
+                    in-dialog: true;
+                    clicked => { StepEditor.down(); }
+                }
+            }
         }
     }
 }

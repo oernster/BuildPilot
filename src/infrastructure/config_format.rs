@@ -4,7 +4,7 @@
 //! stop the rest loading (CFG-005). An entry that cannot be read is kept as raw JSON and written
 //! back unchanged.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -107,6 +107,10 @@ struct OperationDto {
     environment: Option<String>,
     #[serde(default)]
     icon: IconDto,
+    // Written only once an installer is set (PKG-001), so the schema stays 2: an earlier
+    // BuildPilot reads the entry and ignores the field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    installer: Option<PathBuf>,
 }
 
 /// A config file as read.
@@ -200,6 +204,7 @@ fn operation_from_value(entry: &Value) -> Option<Operation> {
             IconDto::Discovered { path } => IconRef::Discovered(path),
             IconDto::Chosen { path } => IconRef::Chosen(path),
         },
+        installer: dto.installer,
     })
     .ok()?;
     Some(Operation::new(id, config))
@@ -227,6 +232,7 @@ fn operation_to_dto(operation: &Operation) -> OperationDto {
             IconRef::Discovered(path) => IconDto::Discovered { path: path.clone() },
             IconRef::Chosen(path) => IconDto::Chosen { path: path.clone() },
         },
+        installer: config.installer().map(Path::to_path_buf),
     }
 }
 
