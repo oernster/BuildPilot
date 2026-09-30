@@ -198,10 +198,10 @@ fn each_state_reads_in_words() {
     }
 }
 
-// LIFE-008: while running, the row says how long the build typically takes; at rest it does
-// not, since the status already carries the finished run's own time.
+// LIFE-008: in every state the row says how long the build typically takes, so it is there
+// after a restart or a stopped run; nothing is said before one has succeeded.
 #[test]
-fn typical_time_shows_only_while_running() {
+fn typical_time_shows_in_every_state() {
     let typical_for = |state: &RunState| {
         row_text(&RowFacts {
             name: "app build",
@@ -217,10 +217,16 @@ fn typical_time_shows_only_while_running() {
         })
         .typical
     };
-    assert_eq!(typical_for(&running(false)), "Typical build time: 3:12");
-    assert_eq!(typical_for(&RunState::Succeeded), "");
-    assert_eq!(typical_for(&RunState::Idle), "");
-    assert_eq!(text_for(&running(false), None, None, 0).typical, "");
+    for state in [
+        running(false),
+        RunState::Idle,
+        RunState::Succeeded,
+        RunState::Stopped,
+        RunState::Failed(Failure::ExitCode(3)),
+    ] {
+        assert_eq!(typical_for(&state), "Typical build time: 3:12", "{state:?}");
+    }
+    assert_eq!(text_for(&RunState::Idle, None, None, 0).typical, "");
 }
 
 // LCH-005, REM-003: the controls that apply; only those.

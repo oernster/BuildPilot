@@ -66,8 +66,8 @@ pub struct RowText {
     pub glyph: &'static str,
     /// The state in words.
     pub status: String,
-    /// Under the status while running, how long the build typically takes; empty otherwise
-    /// (LIFE-008).
+    /// Under the status in every state, how long the build typically takes; empty until one
+    /// has succeeded (LIFE-008).
     pub typical: String,
     /// The state class.
     pub class: StatusClass,
@@ -101,10 +101,10 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
         Some(other) => format!("{other} is building in this folder"),
         None => String::new(),
     };
-    let typical = match facts.typical {
-        Some(took) if running => format!("Typical build time: {}", format_elapsed(took)),
-        _ => String::new(),
-    };
+    let typical = facts
+        .typical
+        .map(|took| format!("Typical build time: {}", format_elapsed(took)))
+        .unwrap_or_default();
     RowText {
         detail: detail(facts.script, facts.later_steps),
         glyph,
