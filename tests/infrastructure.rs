@@ -16,6 +16,7 @@ mod infrastructure {
     mod reader_panic;
     #[cfg(windows)]
     mod releases;
+    mod run_times_store;
     #[cfg(windows)]
     mod setup_machine;
     mod system;

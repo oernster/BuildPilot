@@ -21,6 +21,7 @@ use buildpilot::infrastructure::locations::{
 use buildpilot::infrastructure::log_file::LogFile;
 use buildpilot::infrastructure::powershell::detect_powershell;
 use buildpilot::infrastructure::releases::{GitHubReleases, REPOSITORY};
+use buildpilot::infrastructure::run_times_store::JsonRunTimesStore;
 use buildpilot::infrastructure::shell::ExplorerShell;
 use buildpilot::infrastructure::system::{FsPaths, ProcessVariables, SystemClock, UuidIds};
 use buildpilot::infrastructure::win32::diagnostics::{hide_frame_counter, show_error};
@@ -79,6 +80,7 @@ fn run(data: PathBuf, log: LogFile) -> Result<(), slint::PlatformError> {
     let waker = Waker::new();
     let ports = Ports {
         store: Box::new(JsonConfigStore::new(data.clone())),
+        run_times: Box::new(JsonRunTimesStore::new(data.clone())),
         ids: Box::new(UuidIds),
         clock: Box::new(SystemClock),
         paths: Box::new(FsPaths),

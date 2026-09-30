@@ -20,6 +20,7 @@ pub mod line_assembler;
 pub mod operation;
 pub mod output;
 pub mod preferences;
+pub mod run_times;
 pub mod scan;
 pub mod selection;
 pub mod step;

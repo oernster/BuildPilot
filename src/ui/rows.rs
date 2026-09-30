@@ -45,6 +45,8 @@ pub struct RowFacts<'a> {
     pub state: &'a RunState,
     /// How long the latest run has run.
     pub elapsed: Option<Duration>,
+    /// How long its build typically takes (LIFE-008).
+    pub typical: Option<Duration>,
     /// The process still alive after a Stop that timed out (STOP-003).
     pub overdue_pid: Option<u32>,
     /// Another operation running in this one's folder, which holds its Run back (LCH-010).
@@ -64,6 +66,9 @@ pub struct RowText {
     pub glyph: &'static str,
     /// The state in words.
     pub status: String,
+    /// Under the status while running, how long the build typically takes; empty otherwise
+    /// (LIFE-008).
+    pub typical: String,
     /// The state class.
     pub class: StatusClass,
     /// Something wrong the operator can act on; empty when nothing is.
@@ -96,10 +101,15 @@ pub fn row_text(facts: &RowFacts<'_>) -> RowText {
         Some(other) => format!("{other} is building in this folder"),
         None => String::new(),
     };
+    let typical = match facts.typical {
+        Some(took) if running => format!("Typical build time: {}", format_elapsed(took)),
+        _ => String::new(),
+    };
     RowText {
         detail: detail(facts.script, facts.later_steps),
         glyph,
         status,
+        typical,
         class,
         problem,
         can_run: run_blocked.is_empty(),

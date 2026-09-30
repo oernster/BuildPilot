@@ -95,6 +95,7 @@ fn text_for(
         later_steps: 0,
         state,
         elapsed,
+        typical: None,
         overdue_pid,
         folder_busy_with: None,
         installer_block: None,
@@ -197,6 +198,31 @@ fn each_state_reads_in_words() {
     }
 }
 
+// LIFE-008: while running, the row says how long the build typically takes; at rest it does
+// not, since the status already carries the finished run's own time.
+#[test]
+fn typical_time_shows_only_while_running() {
+    let typical_for = |state: &RunState| {
+        row_text(&RowFacts {
+            name: "app build",
+            script: Path::new(SCRIPT),
+            later_steps: 0,
+            state,
+            elapsed: None,
+            typical: Some(Duration::from_secs(192)),
+            overdue_pid: None,
+            folder_busy_with: None,
+            installer_block: None,
+            tick: 0,
+        })
+        .typical
+    };
+    assert_eq!(typical_for(&running(false)), "Typical build time: 3:12");
+    assert_eq!(typical_for(&RunState::Succeeded), "");
+    assert_eq!(typical_for(&RunState::Idle), "");
+    assert_eq!(text_for(&running(false), None, None, 0).typical, "");
+}
+
 // LCH-005, REM-003: the controls that apply; only those.
 #[test]
 fn controls_follow_the_state() {
@@ -217,6 +243,7 @@ fn a_busy_folder_holds_run_back() {
         later_steps: 0,
         state: &RunState::Succeeded,
         elapsed: None,
+        typical: None,
         overdue_pid: None,
         folder_busy_with: Some("app release"),
         installer_block: None,
@@ -274,6 +301,7 @@ fn launch_installer_says_why_it_is_held_back() {
         later_steps: 0,
         state: &RunState::Stopped,
         elapsed: None,
+        typical: None,
         overdue_pid: None,
         folder_busy_with: None,
         installer_block,

@@ -16,6 +16,7 @@ mod domain {
     mod operation;
     mod output;
     mod preferences;
+    mod run_times;
     mod scan;
     mod selection;
     mod step;

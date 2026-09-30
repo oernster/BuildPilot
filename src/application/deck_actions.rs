@@ -81,6 +81,8 @@ impl App {
         self.icon_status.remove(id);
         self.installers.remove(id);
         self.persist();
+        self.run_times.forget(id);
+        self.persist_run_times();
         Ok(())
     }
 

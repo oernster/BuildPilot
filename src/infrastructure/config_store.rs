@@ -2,7 +2,7 @@
 
 use std::ffi::OsString;
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{self, ErrorKind};
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -114,18 +114,24 @@ impl ConfigStore for JsonConfigStore {
         if let Some(reason) = &self.frozen {
             return Err(failed(reason.clone()));
         }
-        fs::create_dir_all(&self.folder).map_err(|error| failed(error.to_string()))?;
-        let temporary = with_suffix(&file, TEMPORARY_SUFFIX);
         let text = render(operations, preferences, &self.unreadable);
-        fs::write(&temporary, text).map_err(|error| failed(error.to_string()))?;
-        // std::fs::rename replaces an existing file on Windows (MoveFileExW with
-        // MOVEFILE_REPLACE_EXISTING), so the old file is intact until the new one is whole.
-        fs::rename(&temporary, &file).map_err(|error| failed(error.to_string()))
+        write_atomically(&self.folder, &file, &text).map_err(|error| failed(error.to_string()))
     }
 
     fn data_folder(&self) -> PathBuf {
         self.folder.clone()
     }
+}
+
+/// Writes `text` to `file` inside `folder` (made if missing) by writing a temporary file beside
+/// it and renaming that over it (CFG-002). std::fs::rename replaces an existing file on Windows
+/// (MoveFileExW with MOVEFILE_REPLACE_EXISTING), so the old file is intact until the new one is
+/// whole.
+pub(super) fn write_atomically(folder: &Path, file: &Path, text: &str) -> io::Result<()> {
+    fs::create_dir_all(folder)?;
+    let temporary = with_suffix(file, TEMPORARY_SUFFIX);
+    fs::write(&temporary, text)?;
+    fs::rename(&temporary, file)
 }
 
 fn with_suffix(file: &Path, suffix: &str) -> PathBuf {

@@ -10,6 +10,7 @@ mod application {
     mod log;
     mod navigation;
     mod run;
+    mod run_times;
     mod scan;
     mod startup;
     mod steps;

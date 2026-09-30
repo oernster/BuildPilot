@@ -436,6 +436,15 @@ Verified by: inspection plus `domain::lifecycle` test.
 **LIFE-007 (M) Finish details.** When a run ends, its row shall show the final state, the exit
 code where there is one and the run's duration.
 
+**LIFE-008 (S) Typical build time.** While an operation runs, its row shall show beneath the
+status `Typical build time: m:ss`: the median of that operation's five most recent successful
+runs, once one has succeeded. A failed or stopped run does not count. The durations shall be
+kept across sessions in `run-times.json` in the data folder, written atomically as CFG-002
+describes, never in the config file (CFG-004). A run times file that cannot be read or written
+is logged and never stops BuildPilot; removing an operation forgets its times.
+Verified by: `domain::run_times`, `application::run_times`, `infrastructure::run_times_store`
+and `ui` tests.
+
 ### 3.9 Stopping (STOP)
 
 **STOP-001 (M) Stop the tree.** When the operator activates Stop on a running operation, the

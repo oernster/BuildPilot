@@ -173,8 +173,17 @@ impl App {
             return;
         }
         let stopped = next == RunState::Stopped;
+        // LIFE-008: only a success says how long the build takes.
+        let succeeded_in = (next == RunState::Succeeded)
+            .then_some(runtime.started_at)
+            .flatten()
+            .map(|started| now.saturating_duration_since(started));
         runtime.state = next;
         runtime.finished_at = Some(now);
+        if let Some(took) = succeeded_in {
+            self.run_times.record(&event.key.operation, took);
+            self.persist_run_times();
+        }
         // The run may have written the installer (PKG-002).
         self.record_installer(&event.key.operation);
         let name = self.name_of(&event.key.operation);
@@ -235,6 +244,12 @@ impl App {
             .finished_at
             .unwrap_or_else(|| self.ports.clock.now());
         Some(end.saturating_duration_since(started))
+    }
+
+    /// How long operation `id`'s build typically takes: the median of its recent successful
+    /// runs, remembered across sessions; `None` before any has succeeded (LIFE-008).
+    pub fn typical_duration(&self, id: &OperationId) -> Option<Duration> {
+        self.run_times.typical(id)
     }
 
     /// The latest run's output (OUT-003); `None` when the operation has not run.

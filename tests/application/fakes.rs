@@ -10,11 +10,12 @@ use std::time::{Duration, Instant};
 use buildpilot::application::ports::LoadedConfig;
 use buildpilot::application::{
     App, Clock, ConfigStore, IconLibrary, IdSource, Launcher, Log, PathProbe, Ports, ProcessHandle,
-    RunKey, Shell, StoreError, Variables,
+    RunKey, RunTimesStore, Shell, StoreError, Variables,
 };
 use buildpilot::domain::launch_plan::{LaunchPlan, PowerShellHost};
 use buildpilot::domain::operation::{Operation, OperationId};
 use buildpilot::domain::preferences::Preferences;
+use buildpilot::domain::run_times::RunTimes;
 
 /// Everything the fakes record and everything a test can arrange.
 #[derive(Default)]
@@ -38,6 +39,11 @@ pub struct WorldState {
     pub shell_error: Option<String>,
     pub log: Vec<String>,
     pub inherited: Vec<(String, String)>,
+    /// What the run times store hands `App` at start; an `Err` is an unreadable file.
+    pub run_times_to_load: Option<Result<RunTimes, String>>,
+    /// Every run times save, in order.
+    pub run_times_saves: Vec<RunTimes>,
+    pub run_times_save_error: Option<String>,
 }
 
 /// A test's whole world: shared state plus a clock the test moves.
@@ -97,6 +103,7 @@ impl World {
     pub fn app(&self) -> App {
         let ports = Ports {
             store: Box::new(FakeStore(self.state.clone())),
+            run_times: Box::new(FakeRunTimes(self.state.clone())),
             ids: Box::new(FakeIds(self.state.clone())),
             clock: Box::new(FakeClock(self.now.clone())),
             paths: Box::new(FakePaths(self.state.clone())),
@@ -147,6 +154,29 @@ impl ConfigStore for FakeStore {
     }
     fn data_folder(&self) -> PathBuf {
         PathBuf::from(DATA_FOLDER)
+    }
+}
+
+struct FakeRunTimes(Rc<RefCell<WorldState>>);
+
+impl RunTimesStore for FakeRunTimes {
+    fn load(&mut self) -> Result<RunTimes, String> {
+        self.0
+            .borrow_mut()
+            .run_times_to_load
+            .take()
+            .unwrap_or_else(|| Ok(RunTimes::default()))
+    }
+    fn save(&mut self, times: &RunTimes) -> Result<(), StoreError> {
+        let mut state = self.0.borrow_mut();
+        if let Some(message) = state.run_times_save_error.clone() {
+            return Err(StoreError {
+                path: PathBuf::from(DATA_FOLDER).join("run-times.json"),
+                message,
+            });
+        }
+        state.run_times_saves.push(times.clone());
+        Ok(())
     }
 }
 

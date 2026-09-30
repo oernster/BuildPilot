@@ -9,6 +9,7 @@ use crate::domain::launch_plan::LaunchPlan;
 use crate::domain::operation::{Operation, OperationId};
 use crate::domain::output::Stream;
 use crate::domain::preferences::Preferences;
+use crate::domain::run_times::RunTimes;
 
 /// Reads and writes the config file (SRS 3.1).
 pub trait ConfigStore {
@@ -23,6 +24,16 @@ pub trait ConfigStore {
     ) -> Result<(), StoreError>;
     /// The data folder, shown in Settings (UI-004).
     fn data_folder(&self) -> PathBuf;
+}
+
+/// Keeps each operation's recent successful run times between sessions (LIFE-008), in a file of
+/// its own: the config file holds no run data (CFG-004).
+pub trait RunTimesStore {
+    /// The stored run times; empty when there are none yet. `Err` carries why a file that
+    /// exists could not be read.
+    fn load(&mut self) -> Result<RunTimes, String>;
+    /// Writes `times` in place of whatever was stored.
+    fn save(&mut self, times: &RunTimes) -> Result<(), StoreError>;
 }
 
 /// What a load produced.

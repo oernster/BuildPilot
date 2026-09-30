@@ -26,6 +26,7 @@ use crate::domain::deck::FlightDeck;
 use crate::domain::launch_plan::PowerShellHost;
 use crate::domain::operation::{IconRef, OperationId};
 use crate::domain::preferences::Preferences;
+use crate::domain::run_times::RunTimes;
 use crate::domain::selection::DeckSelection;
 
 pub use deck_actions::EditOutcome;
@@ -33,8 +34,8 @@ pub use errors::AppError;
 pub use navigation::LocateOutcome;
 pub use ports::{
     Clock, ConfigStore, IconLibrary, IdSource, Launcher, LoadProblem, Log, PathProbe,
-    ProcessHandle, Release, ReleaseAsset, ReleaseSource, RunEvent, RunEventKind, RunKey, Shell,
-    StoreError, Variables,
+    ProcessHandle, Release, ReleaseAsset, ReleaseSource, RunEvent, RunEventKind, RunKey,
+    RunTimesStore, Shell, StoreError, Variables,
 };
 pub use run_actions::{OverdueStop, STOP_TIMEOUT};
 pub use scan_actions::{FolderScan, ScannedFolder};
@@ -45,6 +46,8 @@ use runtime::OperationRuntime;
 pub struct Ports {
     /// Config file.
     pub store: Box<dyn ConfigStore>,
+    /// Recent successful run times (LIFE-008).
+    pub run_times: Box<dyn RunTimesStore>,
     /// New identities.
     pub ids: Box<dyn IdSource>,
     /// The time.
@@ -98,6 +101,7 @@ pub struct App {
     selection: DeckSelection,
     preferences: Preferences,
     runtimes: HashMap<OperationId, OperationRuntime>,
+    run_times: RunTimes,
     icon_status: HashMap<OperationId, IconStatus>,
     /// Each operation's installer as last looked for (PKG-001, PKG-002). Looked for at start, on
     /// add, edit and select and when a run ends, never on every redraw: the rows redraw four
@@ -114,11 +118,13 @@ impl App {
     /// loading becomes a notice; it never stops BuildPilot starting.
     pub fn start(mut ports: Ports, powershell: PowerShellHost) -> Self {
         let loaded = ports.store.load();
+        let run_times = ports.run_times.load();
         let mut app = Self {
             deck: FlightDeck::default(),
             selection: DeckSelection::default(),
             preferences: loaded.preferences,
             runtimes: HashMap::new(),
+            run_times: RunTimes::default(),
             icon_status: HashMap::new(),
             installers: HashMap::new(),
             notices: Vec::new(),
@@ -145,7 +151,29 @@ impl App {
             app.record_icon_status(id, icon);
             app.record_installer(id);
         }
+        app.take_run_times(run_times);
         app
+    }
+
+    /// Adopts the stored run times for the operations on the deck. Unreadable run times are
+    /// logged and started afresh: they only inform, so they never warrant a notice (LIFE-008).
+    fn take_run_times(&mut self, loaded: Result<RunTimes, String>) {
+        match loaded {
+            Ok(mut times) => {
+                times.retain(|id| self.deck.get(id).is_some());
+                self.run_times = times;
+            }
+            Err(message) => self.ports.log.record(&format!(
+                "Run times could not be read ({message}); typical build times start afresh"
+            )),
+        }
+    }
+
+    /// Writes the run times; a failure is logged and the times stay in memory (LIFE-008).
+    fn persist_run_times(&mut self) {
+        if let Err(error) = self.ports.run_times.save(&self.run_times) {
+            self.ports.log.record(&error.to_string());
+        }
     }
 
     /// The flight deck.

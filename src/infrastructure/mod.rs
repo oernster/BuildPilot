@@ -15,6 +15,7 @@ pub mod log_file;
 pub mod powershell;
 #[cfg(windows)]
 pub mod releases;
+pub mod run_times_store;
 #[cfg(windows)]
 pub mod setup;
 #[cfg(windows)]
