@@ -70,7 +70,7 @@ pub const UNINSTALL_HEADING: &str = "Uninstall BuildPilot";
 pub const UNINSTALL_LEAD: &str =
     "The program files, the shortcuts and the Apps list entry are removed.";
 /// The uninstall screen's one option, ticked by default (INST-005).
-pub const KEEP_DATA: &str = "Keep my operations, settings and log";
+pub const KEEP_DATA: &str = "Keep my operations, settings, run times and log";
 /// The uninstall screen's go-ahead.
 pub const UNINSTALL_GO: &str = "Uninstall";
 
@@ -113,7 +113,7 @@ pub fn step_words(step: Step) -> &'static str {
         Step::RemoveShortcuts => "Removing the shortcuts",
         Step::Unregister => "Removing BuildPilot from the Apps list",
         Step::RemoveFiles => "Removing the program files",
-        Step::RemoveData => "Removing your operations, settings and log",
+        Step::RemoveData => "Removing your operations, settings, run times and log",
     }
 }
 

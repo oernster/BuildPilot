@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 10.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 11.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -8,7 +8,8 @@ Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions tak
 
 Priorities use MoSCoW: **M** Must, **S** Should, **C** Could. The Won't-this-time list is
 Appendix D. Every requirement names the test that will verify it, including tests not yet
-written. "Manual" means a check in TESTING.md that needs a real desktop and a real person.
+written. "Manual" means a check by hand in a real build, needing a real desktop and a real
+person.
 
 ---
 
@@ -285,9 +286,11 @@ Source: spec §6. Verified by: `application::deck` test `edit_during_run_does_no
 a confirmation naming the operation and stating that the script file is not deleted.
 Verified by: Manual.
 
-**REM-002 (M) Configuration only.** The remove use case shall delete the operation's config entry
-plus any icon copied for it under the data folder. It shall delete nothing else.
-Verified by: `application::deck` test `remove_leaves_script_on_disk`.
+**REM-002 (M) Configuration only.** The remove use case shall delete the operation's config entry,
+any icon copied for it under the data folder and its run times (LIFE-008). It shall delete
+nothing else.
+Verified by: `application::deck` test `remove_leaves_script_on_disk`; `application::run_times`
+test `remove_forgets_times`.
 
 **REM-003 (M) Not while running.** While an operation is running, its Remove control shall be
 disabled, with a tooltip saying to stop it first. Source: spec §13.
@@ -438,11 +441,11 @@ code where there is one and the run's duration.
 
 **LIFE-008 (S) Typical build time.** In every state, including Not run after a restart, an
 operation's row shall show beneath the status `Typical build time: m:ss`: the median of that
-operation's five most recent successful runs, once one has succeeded. A failed or stopped run does not count. The durations shall be
-kept across sessions in `run-times.json` in the data folder, written atomically as CFG-002
-describes, never in the config file (CFG-004). A run times file that cannot be read or written
-is logged and never stops BuildPilot; removing an operation forgets its times.
-Verified by: `domain::run_times`, `application::run_times`, `infrastructure::run_times_store`
+operation's five most recent successful runs, once one has succeeded. A failed or stopped run
+does not count. The durations shall be kept across sessions in `run-times.json` in the data
+folder, written atomically as CFG-002 describes, never in the config file (CFG-004). A run
+times file that cannot be read or written is logged and never stops BuildPilot; removing an
+operation forgets its times. Source: owner, Amendment 11. Verified by: `domain::run_times`, `application::run_times`, `infrastructure::run_times_store`
 and `ui` tests.
 
 ### 3.9 Stopping (STOP)
@@ -682,6 +685,11 @@ full rights. It does not verify that a script is safe. It does not encrypt its c
 The config file is `%APPDATA%\BuildPilot\buildpilot.json`, UTF-8 JSON, owned by BuildPilot alone.
 Operations are held as an array in flight-deck order; the order is the array order. BuildPilot is
 the single writer.
+
+Beside it, `%APPDATA%\BuildPilot\run-times.json` (UTF-8 JSON, BuildPilot the single writer) holds
+each operation's recent successful run durations in milliseconds, keyed by operation ID, with a
+schema version of its own (LIFE-008). It is not the config file: DATA-002 does not cover it; losing
+it loses only the typical build times.
 
 **DATA-001 (M) Single instance.** When BuildPilot is started while another instance is running for
 the same Windows user, the new process shall bring the running instance's window forward and exit.
@@ -1158,3 +1166,13 @@ from Explorer. The owner asked for a row control beside Stop that starts it, fou
 convention the projects already follow (3.21) and set by hand where they do not. An installer
 is stored only once saved from the dialog, so the config file stays schema 2 and an earlier
 release still reads it (DATA-002).
+
+**Amendment 11 (2026-09-30): the typical build time.** Adds LIFE-008. Changes REM-002 (removing
+an operation also forgets its run times) and §3.16 (the run times file).
+
+Reason: a row showed how long its last run took; pressing Run replaced that with the new run's
+time, so there was nothing to judge a running build against. The owner asked for a line
+beneath the status reading "Typical build time", remembered across restarts and shown whatever
+the row's state, since the last run may have been stopped before BuildPilot was closed. The
+median of the last five successes was chosen so one unusually slow build does not move it. The
+times live in a file of their own because CFG-004 keeps run data out of the config file.

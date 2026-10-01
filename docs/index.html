@@ -47,7 +47,7 @@
     <div class="wrap hero">
         <div>
             <p class="eyebrow">
-                <span class="pill">v<!--VERSION-->1.1.0<!--/VERSION--></span>
+                <span class="pill">v<!--VERSION-->1.2.0<!--/VERSION--></span>
                 <span class="pill">Windows</span>
                 <span class="pill">Free and open source</span>
             </p>
@@ -88,6 +88,10 @@
                     <li><strong>Runs several at once.</strong> Each run is its own process, with
                         its state shown by a glyph and in words, plus the elapsed time. Tick rows
                         to start them together. Two builds never share a folder.</li>
+                    <li><strong>Knows how long a build takes.</strong> Beneath each row's status
+                        sits its typical build time: the median of its last five successful
+                        runs, so one slow build does not skew it. It is remembered when
+                        BuildPilot restarts, so a running build always has a yardstick.</li>
                     <li><strong>Shows output live.</strong> The tray follows the latest line until
                         you scroll up. Lines are plain whatever stream they came on; the run's
                         outcome closes it in green, red or grey.</li>
@@ -114,7 +118,7 @@
                         script cannot be typed into.</li>
                     <li><strong>Touch your scripts.</strong> It never writes to, renames or
                         deletes one. Remove takes an operation off the deck along with any
-                        icon BuildPilot copied for it; nothing else.</li>
+                        icon BuildPilot copied for it and its run times; nothing else.</li>
                     <li><strong>Anything but Windows.</strong> Windows only, for good.</li>
                 </ul>
             </div>
@@ -151,7 +155,7 @@
         </div>
         <div class="stats">
             <div class="stat">
-                <span class="n">356</span>
+                <span class="n">371</span>
                 <p>Tests, from pure rules through real processes started and stopped to the
                     keyboard ring driven by real key events.</p>
             </div>
@@ -161,7 +165,7 @@
                     program's policy. The build refuses to run below it.</p>
             </div>
             <div class="stat">
-                <span class="n">1,151</span>
+                <span class="n">1,177</span>
                 <p>Lines of requirements, each tied to the test that proves it. Every change
                     of mind is a numbered amendment.</p>
             </div>
@@ -186,7 +190,7 @@
     <section class="wrap" id="download">
         <p class="kicker">Download</p>
         <h2>Install it once; add a project; press Run.</h2>
-        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.1.0<!--/VERSION--></span>
+        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.2.0<!--/VERSION--></span>
         <!--
             The button points at GitHub's releases/latest/download redirect, which always
             serves the newest release's file. The name carries no version, so the link

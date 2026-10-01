@@ -46,7 +46,9 @@ Every script stays runnable without it.
   in its working directory (a folder holding `pyvenv.cfg`), chosen in the dialog when there are
   several. Any environment BuildPilot inherited from your shell is undone first.
 - **Runs several at once.** Each run is its own process. Rows show the state (running, succeeded,
-  failed, stopped) with a glyph and in words, plus the elapsed time. Run the ticked builds starts
+  failed, stopped) with a glyph and in words, plus the elapsed time. Beneath it, once a build
+  has succeeded, is its typical build time: the median of its last five successful runs,
+  remembered when BuildPilot restarts. Run the ticked builds starts
   every ticked row. Two builds never run in the same folder at once, since they would overwrite
   each other's output.
 - **Shows output live.** The tray at the foot of the window shows the selected run's output as it
@@ -92,11 +94,12 @@ Every script stays runnable without it.
 | What | Where |
 |---|---|
 | Settings and operations | `%APPDATA%\BuildPilot\buildpilot.json` |
+| Recent successful run times | `%APPDATA%\BuildPilot\run-times.json` |
 | Chosen icons | `%APPDATA%\BuildPilot\icons\` |
 | Log | `%APPDATA%\BuildPilot\buildpilot.log`, with one previous file kept as `buildpilot.previous.log` |
 | The program | `%LOCALAPPDATA%\Programs\BuildPilot` |
 
-Settings shows the folder and opens it. The settings file is not encrypted.
+Settings shows the folder and opens it. Neither file is encrypted.
 
 ## Built with
 
@@ -106,7 +109,7 @@ Settings shows the folder and opens it. The settings file is not encrypted.
 | Interface | Slint, used under the GPLv3 |
 | Windows calls | `windows-sys` |
 | File pickers | `rfd` |
-| Settings file | `serde` and `serde_json` |
+| Settings and run times files | `serde` and `serde_json` |
 
 ## Getting it
 
@@ -115,7 +118,7 @@ Run `BuildPilotSetup.exe`. It installs BuildPilot for your own Windows account i
 Start menu shortcut, offers a desktop one and adds BuildPilot to the Apps list, where Modify,
 Repair and Uninstall all reopen it. Run it again to update, go back to an earlier version,
 repair or reinstall; it reads what is installed and offers the one that fits. Uninstalling
-keeps your operations, settings and log unless you untick that. Neither executable is signed.
+keeps your operations, settings, run times and log unless you untick that. Neither executable is signed.
 
 ## Testing
 

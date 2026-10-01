@@ -2,7 +2,8 @@
 
 BuildPilot is a Windows desktop application that remembers build scripts, starts them as child
 processes, shows their output and stops their process trees. It keeps everything on the local
-machine: one settings file, one icons folder and one log, all in the operator's own data folder.
+machine: one settings file, one run times file, one icons folder and one log, all in the
+operator's own data folder.
 Its one network request asks GitHub whether a newer release is published (UI-010).
 The requirements it answers to are in [SRS.md](SRS.md); requirement IDs below point there.
 
@@ -40,22 +41,23 @@ violation and watching the test fail.
   script, where a project's installer is found and when it may be launched, the operator's host
   table, finding a Python environment and the variables that deactivate and activate one, the
   folder-scan patterns and what a scan proposes, cutting output bytes into lines and decoding
-  them, the output buffer and its caps, the tray's follow state, selection and preferences,
+  them, the output buffer and its caps, each operation's recent successful run times and the
+  typical one among them (their median), the tray's follow state, selection and preferences,
   release versions, the open source credits and the self-reading cycle of a surface of text. No
   I/O, no clock, no framework.
 - **Application** (`src/application`). `App` owns all state and is driven from one thread. It
   offers one method per thing the operator can do and never waits on a process: a launch
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
-  from the machine is stated as traits in `ports.rs`: `ConfigStore`, `IdSource`, `Clock`,
-  `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and
+  from the machine is stated as traits in `ports.rs`: `ConfigStore`, `RunTimesStore`,
+  `IdSource`, `Clock`, `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and
   `ReleaseSource`. A folder scan reads the folder through `PathProbe` and proposes; nothing is
   added until the operator confirms through `App::add`.
   `updates.rs` decides what an update check found and what to say about it. Every refusal
   is an `AppError` whose message names the thing and what the operator can do; everything else
   worth saying is a `Notice`, worded once and shown and logged in the same words.
 - **Infrastructure** (`src/infrastructure`). The ports implemented against the real machine: the
-  JSON settings file, icons on disk, process launch, Explorer, the system clock, UUIDs and the
-  log file, plus the release source on GitHub and the credits the build script generated
+  JSON settings file, the JSON run times file, icons on disk, process launch, Explorer, the
+  system clock, UUIDs and the log file, plus the release source on GitHub and the credits the build script generated
   (`build_info.rs`). Every direct Windows call lives in `win32/`: job objects, the OEM code page,
   the shell, the theme, the single-instance event, the error box and the one HTTPS GET.
 - **UI** (`src/ui` and `ui/*.slint`). The Slint window over `App` and nothing below it. The
@@ -81,7 +83,8 @@ violation and watching the test fail.
    runs ride along. Measured in spike R-2: 50,000 lines in about 0.75 s produced roughly 4,000
    drains, none longer than 3.6 ms.
 5. `App::handle_event` appends lines to the run's buffer and moves the state machine on the
-   exit. Events for an earlier run of the same operation are ignored (OUT-002).
+   exit; a success's duration joins the operation's run times, which are saved at once
+   (LIFE-008). Events for an earlier run of the same operation are ignored (OUT-002).
 6. After the exit, the waiter gives the pipes two seconds to drain, since a background process
    the script left running can hold them open indefinitely.
 
@@ -171,6 +174,9 @@ The house model, applied to every surface (A11Y-002, A11Y-003).
   a Windows error box naming the log, then exits with a failure code.
 - **A settings file that cannot be read** is set aside; where it cannot even be moved, it is
   left alone and not saved over. The notice area says which.
+- **A run times file that cannot be read or written** is logged and nothing more: an unreadable
+  file means the typical times start afresh; a failed save leaves them in memory until the next. They only inform, so they never
+  warrant a notice.
 
 ## The setup program
 
@@ -201,6 +207,7 @@ built into it by `build.ps1` (INST-001 to INST-006).
 |---|---|
 | Settings and operations | `%APPDATA%\BuildPilot\buildpilot.json` |
 | A settings file that could not be read | `buildpilot.json.unreadable` beside it |
+| Each operation's recent successful run times (LIFE-008) | `%APPDATA%\BuildPilot\run-times.json` |
 | Chosen icons | `%APPDATA%\BuildPilot\icons\` |
 | Log | `%APPDATA%\BuildPilot\buildpilot.log` and `buildpilot.previous.log` |
 | The program and setup's copy of itself | `%LOCALAPPDATA%\Programs\BuildPilot` |
@@ -225,6 +232,8 @@ script or a launched installer writes is that program's own doing.
 | The instance keyed on the data folder | The default folder is per user, which is DATA-001; a test copy on its own folder runs alongside. | One instance per user whatever the folder. |
 | Notice wording in the application layer | The window and the log say the same words. | Wording in the UI, which the log cannot reach. |
 | An installer is stored only once saved from Edit | The dialog shows the default found and Save keeps what its field holds; until then an operation follows the project's own convention. The config file stays schema 2, so an earlier release still reads it (DATA-002). | Writing the default into every operation at load, which rewrites every entry unasked. |
+| Run times in a file of their own | The config file holds no run data (CFG-004); a damaged timings file can never put the operator's configuration at risk. Both files share one atomic write. | A field in `buildpilot.json`, which CFG-004 forbids. |
+| The typical time is the median of the last five successes | One cold-cache build does not move it; it follows a build that has grown quicker or slower. A failed or stopped run says nothing about how long a build takes. | The mean, which one outlier drags; the last run alone, which a stopped run would blank. |
 | The tray pins itself to the end while following | The list measures new rows only when it next lays out, so a scroll asked for as they arrive stopped short and hid the run's closing line (OUT-006). | Scrolling once from Rust after each drain. |
 
 See also [TESTING.md](TESTING.md) for how each layer is tested and [DEVELOPMENT.md](DEVELOPMENT.md)
