@@ -94,7 +94,9 @@ left running (a compiler server, a build daemon) is released rather than killed 
 
 **Output.** Bytes are cut into lines by `LineAssembler`. A line is decoded as UTF-8; one that is
 not valid UTF-8 is decoded in the OEM code page, which hidden console programs write in.
-Terminal escape sequences are removed rather than interpreted (OUT-008). A run keeps its latest
+Terminal escape sequences are removed rather than interpreted; a tab becomes the spaces reaching
+the next 8-column tab stop and any other control character is dropped, since the font would draw
+either as a box (OUT-008). A run keeps its latest
 100,000 lines and splits a longer line into pieces of 16,384 characters (OUT-004). The tray
 reads the buffer directly rather than a copy. Every line is drawn in the plain text colour
 whichever stream it came on; the run's outcome is one closing line in its own colour (OUT-007).

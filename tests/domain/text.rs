@@ -71,6 +71,27 @@ fn short_and_truncated_escapes_are_removed() {
     assert_eq!(strip_ansi("end\u{1b}]title"), "end");
 }
 
+// OUT-008: the tray's font draws a tab as a box. `go test` writes these exact bytes (measured
+// 2026-10-01), so each tab becomes the spaces that reach the next tab stop.
+#[test]
+fn tabs_are_expanded_to_tab_stops() {
+    assert_eq!(
+        decode(b"ok  \texample.com/x\t0.027s"),
+        "ok      example.com/x   0.027s"
+    );
+    assert_eq!(decode(b"\tindented"), "        indented");
+    assert_eq!(decode(b"12345678\tnext"), "12345678        next");
+}
+
+// OUT-008: any other control character would also be drawn as a box, so it is removed.
+#[test]
+fn other_control_characters_are_removed() {
+    assert_eq!(
+        decode(b"bell\x07 back\x08space \x00nul"),
+        "bell backspace nul"
+    );
+}
+
 #[test]
 fn escapes_are_removed_after_decoding() {
     assert_eq!(decode(b"\x1b[32mok\x1b[0m\r"), "ok");

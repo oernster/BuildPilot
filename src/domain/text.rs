@@ -11,6 +11,10 @@ const OSC_OPEN: char = ']';
 const STRING_TERMINATOR: char = '\\';
 /// A CSI sequence ends at the first character in this range.
 const CSI_FINAL: std::ops::RangeInclusive<char> = '@'..='~';
+const TAB: char = '\t';
+/// Columns from one tab stop to the next, as terminals set them and as tools such as `go test`
+/// assume when they line their output up with tabs.
+pub const TAB_STOP: usize = 8;
 
 /// Turns a line that is not valid UTF-8 into text. On Windows infrastructure supplies one that
 /// reads the OEM code page, which console programs write in (SRS Amendment 2).
@@ -24,7 +28,7 @@ pub fn lossy_utf8(bytes: &[u8]) -> String {
 /// One line of output bytes (without its `\n`) as text: UTF-8 when the bytes are valid UTF-8,
 /// otherwise whatever `fallback` makes of them. Then a trailing `\r` is removed, only the text
 /// after the last remaining `\r` is kept (so a progress counter that rewrites itself shows its
-/// final value) and ANSI escape sequences are removed.
+/// final value), ANSI escape sequences are removed and the rest made printable.
 pub fn decode_line(bytes: &[u8], fallback: FallbackDecoder) -> String {
     let text = match std::str::from_utf8(bytes) {
         Ok(text) => text.to_owned(),
@@ -35,7 +39,26 @@ pub fn decode_line(bytes: &[u8], fallback: FallbackDecoder) -> String {
         Some(index) => &text[index + 1..],
         None => text,
     };
-    strip_ansi(visible)
+    printable(&strip_ansi(visible))
+}
+
+/// `text` with each tab replaced by the spaces that reach the next tab stop and every other
+/// control character removed. The tray's font has no glyph for either, so it drew a box where
+/// `go test` lines up its columns with tabs.
+pub fn printable(text: &str) -> String {
+    let mut plain = String::with_capacity(text.len());
+    let mut column = 0;
+    for c in text.chars() {
+        if c == TAB {
+            let spaces = TAB_STOP - column % TAB_STOP;
+            plain.push_str(&" ".repeat(spaces));
+            column += spaces;
+        } else if !c.is_control() {
+            plain.push(c);
+            column += 1;
+        }
+    }
+    plain
 }
 
 /// `text` with ANSI escape sequences removed: CSI sequences (colours, cursor movement), OSC

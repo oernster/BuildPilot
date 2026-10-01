@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 11.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 12.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -510,7 +510,9 @@ Manual for the colours.
 
 **OUT-008 (M) Text decoding.** The output reader shall decode each line as UTF-8 when it is valid
 UTF-8; otherwise it shall decode the line in the Windows OEM code page (Amendment 2). It shall
-remove ANSI escape sequences. Verified by: `domain::text` tests; `infrastructure::process` tests
+remove ANSI escape sequences. It shall replace each tab with the spaces reaching the next tab
+stop (one every 8 columns) and remove every other control character (Amendment 12).
+Verified by: `domain::text` tests; `infrastructure::process` tests
 reading a folder name containing `é`.
 
 **OUT-009 (M) Collapse and resize.** The operator shall be able to collapse, expand and resize
@@ -1176,3 +1178,12 @@ beneath the status reading "Typical build time", remembered across restarts and 
 the row's state, since the last run may have been stopped before BuildPilot was closed. The
 median of the last five successes was chosen so one unusually slow build does not move it. The
 times live in a file of their own because CFG-004 keeps run data out of the config file.
+
+**Amendment 12 (2026-10-01): tabs and other control characters in output.** Changes OUT-008.
+
+Reason: the tray drew a box wherever a line held a tab, since its font has no glyph for one.
+Seen by the owner in a capture of a `go test` run; measured the same day, `go test` writes
+`ok`, two spaces, a tab, the package, a tab and the time, the boxes falling exactly on the two
+tabs. Each tab now becomes the spaces reaching the next 8-column tab stop, so columns a tool
+lines up still line up. Any other control character would be drawn as the same box, so it is
+removed, as escape sequences already were.
