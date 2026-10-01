@@ -48,9 +48,8 @@ Every script stays runnable without it.
 - **Runs several at once.** Each run is its own process. Rows show the state (running, succeeded,
   failed, stopped) with a glyph and in words, plus the elapsed time. Beneath it, once a build
   has succeeded, is its typical build time: the median of its last five successful runs,
-  remembered when BuildPilot restarts. Run the ticked builds starts
-  every ticked row. Two builds never run in the same folder at once, since they would overwrite
-  each other's output.
+  remembered when BuildPilot restarts. Run the ticked builds starts every ticked row. Two
+  builds never run in the same folder at once, since they would overwrite each other's output.
 - **Shows output live.** The tray at the foot of the window shows the selected run's output as it
   arrives, following the last line until you scroll up. It keeps the latest 100,000 lines of a
   run. Lines are drawn plainly whichever stream they came on; the run's outcome closes the output
@@ -118,7 +117,8 @@ Run `BuildPilotSetup.exe`. It installs BuildPilot for your own Windows account i
 Start menu shortcut, offers a desktop one and adds BuildPilot to the Apps list, where Modify,
 Repair and Uninstall all reopen it. Run it again to update, go back to an earlier version,
 repair or reinstall; it reads what is installed and offers the one that fits. Uninstalling
-keeps your operations, settings, run times and log unless you untick that. Neither executable is signed.
+keeps your operations, settings, run times and log unless you untick that. Neither executable
+is signed.
 
 ## Testing
 

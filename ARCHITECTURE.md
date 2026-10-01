@@ -49,16 +49,16 @@ violation and watching the test fail.
   offers one method per thing the operator can do and never waits on a process: a launch
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
   from the machine is stated as traits in `ports.rs`: `ConfigStore`, `RunTimesStore`,
-  `IdSource`, `Clock`, `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and `ProcessHandle`, `Shell`, `Log` and
-  `ReleaseSource`. A folder scan reads the folder through `PathProbe` and proposes; nothing is
+  `IdSource`, `Clock`, `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and
+  `ProcessHandle`, `Shell`, `Log` and `ReleaseSource`. A folder scan reads the folder through `PathProbe` and proposes; nothing is
   added until the operator confirms through `App::add`.
   `updates.rs` decides what an update check found and what to say about it. Every refusal
   is an `AppError` whose message names the thing and what the operator can do; everything else
   worth saying is a `Notice`, worded once and shown and logged in the same words.
 - **Infrastructure** (`src/infrastructure`). The ports implemented against the real machine: the
   JSON settings file, the JSON run times file, icons on disk, process launch, Explorer, the
-  system clock, UUIDs and the log file, plus the release source on GitHub and the credits the build script generated
-  (`build_info.rs`). Every direct Windows call lives in `win32/`: job objects, the OEM code page,
+  system clock, UUIDs and the log file, plus the release source on GitHub and the credits the
+  build script generated (`build_info.rs`). Every direct Windows call lives in `win32/`: job objects, the OEM code page,
   the shell, the theme, the single-instance event, the error box and the one HTTPS GET.
 - **UI** (`src/ui` and `ui/*.slint`). The Slint window over `App` and nothing below it. The
   wording rows and the tray show is worked out in `rows.rs`, which has no Slint types so it is
@@ -96,8 +96,8 @@ left running (a compiler server, a build daemon) is released rather than killed 
 not valid UTF-8 is decoded in the OEM code page, which hidden console programs write in.
 Terminal escape sequences are removed rather than interpreted; a tab becomes the spaces reaching
 the next 8-column tab stop and any other control character is dropped, since the font would draw
-either as a box (OUT-008). A run keeps its latest
-100,000 lines and splits a longer line into pieces of 16,384 characters (OUT-004). The tray
+either as a box (OUT-008). A run keeps its latest 100,000 lines and splits a longer line into
+pieces of 16,384 characters (OUT-004). The tray
 reads the buffer directly rather than a copy. Every line is drawn in the plain text colour
 whichever stream it came on; the run's outcome is one closing line in its own colour (OUT-007).
 
@@ -177,8 +177,8 @@ The house model, applied to every surface (A11Y-002, A11Y-003).
 - **A settings file that cannot be read** is set aside; where it cannot even be moved, it is
   left alone and not saved over. The notice area says which.
 - **A run times file that cannot be read or written** is logged and nothing more: an unreadable
-  file means the typical times start afresh; a failed save leaves them in memory until the next. They only inform, so they never
-  warrant a notice.
+  file means the typical times start afresh; a failed save leaves them in memory until the
+  next. They only inform, so they never warrant a notice.
 
 ## The setup program
 

@@ -445,8 +445,8 @@ operation's five most recent successful runs, once one has succeeded. A failed o
 does not count. The durations shall be kept across sessions in `run-times.json` in the data
 folder, written atomically as CFG-002 describes, never in the config file (CFG-004). A run
 times file that cannot be read or written is logged and never stops BuildPilot; removing an
-operation forgets its times. Source: owner, Amendment 11. Verified by: `domain::run_times`, `application::run_times`, `infrastructure::run_times_store`
-and `ui` tests.
+operation forgets its times. Source: owner, Amendment 11. Verified by: `domain::run_times`,
+`application::run_times`, `infrastructure::run_times_store` and `ui` tests.
 
 ### 3.9 Stopping (STOP)
 
@@ -512,8 +512,8 @@ Manual for the colours.
 UTF-8; otherwise it shall decode the line in the Windows OEM code page (Amendment 2). It shall
 remove ANSI escape sequences. It shall replace each tab with the spaces reaching the next tab
 stop (one every 8 columns) and remove every other control character (Amendment 12).
-Verified by: `domain::text` tests; `infrastructure::process` tests
-reading a folder name containing `é`.
+Verified by: `domain::text` tests; `infrastructure::process` tests reading a folder name
+containing `é`.
 
 **OUT-009 (M) Collapse and resize.** The operator shall be able to collapse, expand and resize
 the tray. Collapsing it shall not affect any run.
