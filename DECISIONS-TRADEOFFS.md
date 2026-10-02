@@ -57,9 +57,9 @@ Flatpak was ruled out.
 
 ### Specification before code
 
-Every behaviour is a numbered requirement in the SRS naming the test that
-verifies it. A change arrives as a numbered amendment with its reason, never
-as a silent edit.
+Every behaviour is a numbered requirement naming the test that verifies it. A
+change arrives as a numbered amendment with its reason, never as a silent
+edit.
 
 - **Rather than:** building first and describing afterwards.
 - **Gains:** a ruled-out idea stays ruled out; each test names the requirement
@@ -72,35 +72,29 @@ as a silent edit.
 
 The only network request BuildPilot makes asks GitHub for the latest
 published release. It names BuildPilot and its version and nothing about the
-operator or their scripts. It goes through WinHTTP, which is part of Windows.
+operator or their scripts. It goes through the HTTP client built into
+Windows.
 
 - **Rather than:** no update check at all; an HTTP and TLS library among the
   dependencies.
-- **Gains:** updates are found; no networking crate is compiled in.
+- **Gains:** updates are found; no networking library is compiled in.
 - **Costs:** GitHub learns which version is asking.
 
-### The update check: quiet unless there is news
+### The update check is quiet and distrusts its answer
 
-A check runs three seconds after the window opens and then once a day; an
-automatic check that fails or finds nothing says nothing. A check the
-operator asks for ignores any skipped release and always says what it found.
-A tag that is not a version is never newer. Each stage of the request waits
-at most five seconds and the request is never retried.
+A check runs shortly after the window opens and then once a day. An automatic
+check that fails or finds nothing says nothing. A check the operator asks for
+ignores any skipped release and always says what it found. Each stage of the
+request is bounded in time and nothing is retried. Every field of the answer
+is checked and its size is capped; a tag that is not a version is never
+newer.
 
-- **Rather than:** a check that reports every outcome; retries.
-- **Gains:** updates are found without nagging; a malformed release never
-  tells somebody their copy is stale.
+- **Rather than:** a check that reports every outcome; retries; trusting the
+  release service.
+- **Gains:** updates are found without nagging; a malformed or hostile answer
+  can neither crash the window nor tell somebody their copy is stale. The
+  operator's own check always gets a reply, even when the worker asking fails.
 - **Costs:** one unprompted request a day.
-
-### The answer is treated as foreign input
-
-Every field of GitHub's answer is checked and its size is capped at a
-megabyte. A panic on the worker that asks is still answered, as unreachable.
-
-- **Rather than:** trusting the release service.
-- **Gains:** a malformed or hostile answer cannot crash the window; the
-  operator's own check always gets a reply.
-- **Costs:** none recorded.
 
 ### Donations go through the browser
 
@@ -116,8 +110,7 @@ Nothing is held back behind a donation.
 
 The settings, the run times, chosen icons and the log are ordinary files in
 the operator's data folder. None is encrypted. The log records launches,
-exits, stops, notices and refusals, rotating at one megabyte with one
-previous file kept.
+exits, stops, notices and refusals; it rotates with one previous file kept.
 
 - **Rather than:** encrypted settings; no record at all.
 - **Gains:** inspectable files; a failure leaves a trail to read.
@@ -126,18 +119,18 @@ previous file kept.
 
 ## Running a build
 
-### A job object per run, joined before the first instruction
+### Every run is caught in a job before it starts
 
-Each run starts suspended with no console window, joins a job object of its
-own and only then resumes. Stop terminates the job. The job is set to kill
+Each run starts suspended with no console window, joins a Windows job object
+of its own and only then resumes. Stop ends the job. The job also ends
 everything in it if BuildPilot ends without stopping it, including a crash.
 
 - **Rather than:** killing the top process; joining the job after it starts.
 - **Gains:** nothing a script starts can escape before it is caught, so Stop
   ends the whole tree and a crash leaves no orphans.
 - **Costs:** a process that deliberately breaks away from its job survives
-  Stop. A tree still alive five seconds after Stop is reported on its row by
-  process id rather than hidden.
+  Stop. A tree that outlives Stop is reported on its row by process id rather
+  than hidden.
 
 ### Hard stop only
 
@@ -152,8 +145,8 @@ period.
 
 Once a script has exited by itself, anything it deliberately left running (a
 compiler server, a build daemon) is released from the job rather than killed
-with it. After the exit, the pipes are given two seconds to drain, since such
-a process can hold them open.
+with it. The output pipes then get a short time to drain, since such a
+process can hold them open.
 
 - **Rather than:** ending every process the run ever started; waiting for the
   pipes indefinitely.
@@ -197,67 +190,52 @@ environment are checked before step one starts.
   on a missing second.
 - **Costs:** no branching or condition between steps.
 
-### Batch files handed to the standard library
+### Each script type started as its own tools expect
 
-A batch file is given to Rust's process launcher as the program. It quotes
-the arguments by the rules of the Windows command interpreter and refuses one
-it cannot escape safely.
+A batch file is handed to Rust's process launcher, which quotes its arguments
+by the command interpreter's own rules and refuses one it cannot escape
+safely. A PowerShell script runs under PowerShell 7 where it is installed and
+Windows PowerShell otherwise, with no profile, no interaction and the
+execution policy bypassed.
 
 - **Rather than:** starting the command interpreter by hand, which would quote
-  by the wrong rules.
-- **Gains:** arguments with spaces and quotes arrive intact.
-- **Costs:** the behaviour belongs to the standard library, which documents
-  that it may change; a test with a real batch fixture watches for that.
-
-### PowerShell 7 when present, without profile or prompts
-
-A PowerShell script runs under PowerShell 7 when it is on PATH and Windows
-PowerShell otherwise, with no profile, no interaction and the execution
-policy bypassed.
-
-- **Rather than:** always Windows PowerShell; whatever the machine's profile
-  and policy say.
-- **Gains:** the newer host where it exists; the same behaviour on every
-  machine.
-- **Costs:** a script that relies on its profile does not get it.
+  by the wrong rules; whatever the machine's profile and policy say.
+- **Gains:** arguments with spaces and quotes arrive intact; the same
+  behaviour on every machine.
+- **Costs:** the batch behaviour belongs to the standard library, which
+  documents that it may change, so a test with a real batch file watches for
+  that. A script that relies on its profile does not get it.
 
 ## Python environments and other script types
 
 ### Use an environment that exists; never build one
 
 A Python step runs inside an environment already in its working directory.
-BuildPilot runs no command that creates, installs into or repairs one; a
-structural test refuses source that names such a command. A Python step with
-no environment is refused rather than run on whatever Python is on PATH.
+BuildPilot runs no command that creates, installs into or repairs one, which
+a test holds. A Python step with no environment is refused rather than run on
+whatever Python is on the path.
 
 - **Rather than:** creating environments; falling back to the system Python.
 - **Gains:** a build runs on the interpreter its project chose or not at all.
 - **Costs:** a project without an environment has to make one first.
 
-### Undo any inherited activation, every step
+### A clean activation for every step
 
 Before any step gets its variables, an activation BuildPilot inherited from
-the shell that started it is undone as deactivation would undo it. Any other
-environment's scripts folder is then taken off PATH.
+the shell that started it is undone and any other environment is taken off
+the path. A Python or PowerShell step with an environment then gets the
+variables the environment's own activation would set, with Python's output
+made unbuffered and UTF-8. Batch steps are not activated.
 
-- **Rather than:** passing BuildPilot's own environment straight through.
-- **Gains:** two environments never conflict inside one build.
-- **Costs:** a build that relied on an environment from the shell no longer
-  sees it.
-
-### Activated as the activation script would
-
-A Python or PowerShell step with an environment gets the same variables the
-environment's own activation script would set. Python output is also set
-unbuffered and UTF-8. Batch steps are not activated.
-
-- **Rather than:** activation only for Python scripts; Python's defaults.
-  Measured: a piped Python held three lines printed two seconds apart until
-  its exit at 4.06 seconds; unbuffered, they arrived at 0.04, 2.04 and 4.04.
+- **Rather than:** passing BuildPilot's own environment straight through;
+  Python's defaults. Measured: a piped Python held three lines printed two
+  seconds apart until its exit; unbuffered, each arrived as it was printed.
   Its accented letters arrived in the ANSI code page.
-- **Gains:** a PowerShell build that calls Python finds its environment;
-  Python output arrives live and readable.
-- **Costs:** a batch build that calls Python must activate the environment
+- **Gains:** two environments never conflict inside one build; a PowerShell
+  build that calls Python finds its environment; Python output arrives live
+  and readable.
+- **Costs:** a build that relied on an environment from the shell no longer
+  sees it; a batch build that calls Python must activate the environment
   itself.
 
 ### Other script types through one table in Settings
@@ -275,27 +253,28 @@ rule for that type.
 
 ### The readers never wait on the window
 
-Each run has a thread per pipe and one for the exit; none touches the
-application's state. The first event after a drain schedules one drain on the
-window's thread and anything arriving before it runs rides along.
+Each run's output and exit are watched on threads of their own, none of which
+touches the application's state. They hand their events to the window's
+thread in batches rather than one at a time.
 
 - **Rather than:** one window update per line.
 - **Gains:** the window stays responsive under a flood. Measured in the
-  spike: fifty thousand lines in about three quarters of a second gave about
-  four thousand drains, none longer than 3.6 milliseconds.
+  spike: fifty thousand lines in about three quarters of a second, with no
+  batch taking more than a few milliseconds to show.
 - **Costs:** none recorded.
 
-### UTF-8 where it is valid; the OEM code page otherwise
+### Output is shown as text, not as a terminal
 
-Each line is decoded as UTF-8 when it is valid UTF-8 and in the OEM code page
-when it is not. Terminal escape sequences are removed rather than
-interpreted.
+Each line is read as UTF-8 when it is valid UTF-8 and in the console's own
+code page when it is not. Terminal escape sequences are removed rather than
+interpreted; a tab becomes spaces to its tab stop and any other control
+character is dropped.
 
-- **Rather than:** UTF-8 alone. Measured: PowerShell, Windows PowerShell and
-  the command interpreter, started hidden, all wrote an accented letter as one
-  byte invalid in UTF-8.
+- **Rather than:** UTF-8 alone; a terminal emulator. Measured: PowerShell,
+  Windows PowerShell and the command interpreter, started hidden, all wrote
+  an accented letter as one byte invalid in UTF-8.
 - **Gains:** accented paths and messages read correctly from tools of either
-  kind.
+  kind; columns a tool lines up still line up; nothing is drawn as a box.
 - **Costs:** a line in some third encoding is still misread; no colour from
   the tools themselves.
 
@@ -312,72 +291,48 @@ same glyph and words as the row.
 
 ### Output is capped
 
-A run keeps its latest hundred thousand lines and splits a line longer than
-16,384 characters. Only the latest run of each operation is kept, until it
-runs again or BuildPilot closes.
+A run keeps a fixed number of its latest lines and splits a line too long to
+hold. Only the latest run of each operation is kept, until it runs again or
+BuildPilot closes.
 
 - **Rather than:** unbounded output; keeping earlier runs.
 - **Gains:** a runaway build cannot exhaust memory.
 - **Costs:** the start of a very long log is dropped (the tray says so);
   earlier runs' output is gone.
 
-### Tabs become spaces; other control characters go
+### The tray keeps every line in reach
 
-A tab becomes the spaces reaching the next eight-column stop. Any other
-control character is dropped.
-
-- **Rather than:** drawing them, which the font showed as boxes.
-- **Gains:** columns a tool lines up still line up.
-- **Costs:** none recorded.
-
-### Long lines wrap, with the scroll bar's strip always kept
-
-A line wider than the tray wraps, at a space where it can. The space for the
-scroll bar is kept whether or not the bar shows.
+A line wider than the tray wraps, at a space where it can, with room for the
+scroll bar kept whether or not the bar shows. While the tray follows, it pins
+itself to the last line; scrolling up stops following and returning to the
+end resumes it.
 
 - **Rather than:** cutting lines off; scrolling sideways; a width that follows
   the bar, which would loop, since the wrapped height decides whether the bar
-  shows.
-- **Gains:** every part of every line is in reach.
+  shows; scrolling once after each batch, which stopped short and hid the
+  run's closing line.
+- **Gains:** every part of every line is in reach; a finished run's outcome
+  is always in view.
 - **Costs:** a strip of the tray's width is always reserved.
-
-### Following pins the tray to the end
-
-While the tray follows, it pins itself to the last line whenever the end
-moves. Scrolling up stops following; returning to the end or Jump to latest
-resumes it.
-
-- **Rather than:** scrolling once after each drain, which stopped short before
-  new rows were measured and hid the closing line.
-- **Gains:** a finished run's outcome is always in view.
-- **Costs:** none recorded.
 
 ## Adding and remembering builds
 
 ### A folder is recognised, never added unseen
 
-Add takes a script or a folder. A folder is matched against an ordered list
-of two built-in patterns: a PowerShell build script; the two Python scripts
-in turn. A parent folder lists its projects with tick boxes. A
-partial match says which file is missing. Nothing is added until the operator
-confirms.
+Add takes a script or a folder. A folder is matched against two built-in
+patterns: a PowerShell build script; two Python scripts in turn. A parent
+folder lists its projects with tick boxes. A partial match says which file
+is missing. A scan looks only at the chosen folder and the folders directly
+inside it. Nothing is added until the operator confirms.
 
 - **Rather than:** assembling every operation by hand; adding what a scan
-  finds automatically. The patterns are the two measured across the owner's
-  projects: of thirty with a build script, twelve and fourteen.
-- **Gains:** a whole folder of projects joins the deck in one confirmation.
-- **Costs:** a project following neither pattern is added by choosing its
-  script.
-
-### Scans go one level deep
-
-A scan reads the chosen folder and the folders directly inside it, never
-deeper.
-
-- **Rather than:** a recursive search.
-- **Gains:** build scripts of dependencies and tools inside a project are
-  never proposed.
-- **Costs:** projects nested further down need choosing directly.
+  finds automatically; a recursive search. The patterns are the two measured
+  across the owner's projects: of thirty with a build script, twelve and
+  fourteen.
+- **Gains:** a whole folder of projects joins the deck in one confirmation;
+  the build scripts of dependencies inside a project are never proposed.
+- **Costs:** a project following neither pattern (or nested further down) is
+  added by choosing it directly.
 
 ### New rows slot in by name; arranged rows never move
 
@@ -416,7 +371,7 @@ Every write goes to a temporary file renamed over the old one.
 ### The settings file holds across a major version
 
 Every release of one major version reads a settings file any earlier release
-of it wrote and installs to the same folder under the same Apps list key.
+of it wrote and installs to the same folder under the same Apps list entry.
 An installer path is stored only once saved from Edit, so adding it did not
 change the file's schema.
 
@@ -480,8 +435,7 @@ not wait on it, read its output or stop it. It looks for the file at start,
 on add, edit and select, when a run ends and just before launching; never on
 each redraw.
 
-- **Rather than:** launching it as a tracked child; looking on every redraw,
-  four times a second, across two folders.
+- **Rather than:** launching it as a tracked child; looking on every redraw.
 - **Gains:** BuildPilot never asks for rights itself; the rows never read the
   disk.
 - **Costs:** an installer that appears by other means shows only at the next
@@ -502,9 +456,10 @@ time.
 
 ### One home for every colour, checked for contrast
 
-Every colour and every size shared between files lives in one theme file,
-in light and dark sets. A test reads it and requires text at 4.5 to one and
-rings at three to one against the surfaces they are drawn on.
+Every colour and every size shared between files lives in one theme, in
+light and dark sets. A test reads it and requires text and focus rings to
+reach the accessibility contrast ratios against the surfaces they are drawn
+on.
 
 - **Rather than:** colours written where they are used.
 - **Gains:** a colour that cannot be read fails the suite rather than
@@ -523,15 +478,26 @@ toolbar or Settings then holds for good.
 ### Its own controls, scroll bars and tooltips
 
 No standard Slint button or tick box is used; every control wears the house
-ring, which a structural test holds. Every scrolling surface has a bar at
-least twelve pixels wide. The row list counts the rows out of sight at each
-edge. The window draws one tooltip last, over everything.
+focus ring. Every scrolling surface has a bar wide enough to see and grab.
+The row list counts the rows out of sight at each edge. The window draws one
+tooltip last, over everything.
 
-- **Rather than:** the stock Fluent widgets. Their scroll bar is a two pixel
-  line until the pointer finds it, so twenty rows showed four with no sign of
-  the rest; each button's own tooltip was clipped by the list.
+- **Rather than:** the stock Fluent widgets. Their scroll bar is a hairline
+  until the pointer finds it, so twenty rows showed four with no sign of the
+  rest; each button's own tooltip was clipped by the list.
 - **Gains:** every scroll shows itself; no tooltip is cut off.
 - **Costs:** the controls are BuildPilot's own to maintain.
+
+### Images drawn at the size they are shown
+
+The interface draws only small copies of the artwork, made by a script and
+committed; operation icons are scaled once when they load.
+
+- **Rather than:** drawing the full-size masters. Measured: twenty rows
+  dragged at twenty frames a second from the masters and sixty from the
+  copies.
+- **Gains:** dragging stays smooth.
+- **Costs:** the copies must be regenerated when a master changes.
 
 ### The rows are one keyboard stop
 
@@ -545,18 +511,6 @@ ring is drawn on controls, never on a pane.
 - **Gains:** the whole application works without a mouse.
 - **Costs:** Escape closes a dialog under the headless tests but not on the
   real window; dialogs are closed with their own buttons.
-
-### Small copies of every image
-
-The interface draws only small copies of the artwork, made by a script and
-committed. A test refuses any image over 256 pixels. Operation icons are
-scaled once when they load.
-
-- **Rather than:** drawing the masters. Measured: twenty rows dragged at
-  twenty frames a second from the full-size masters and sixty from the
-  copies.
-- **Gains:** dragging stays smooth.
-- **Costs:** the copies must be regenerated when a master changes.
 
 ### Reading surfaces read themselves
 
@@ -603,9 +557,9 @@ shows an error box naming the log.
 
 ### The build runs the gate, with no way round it
 
-The build script stamps the version, runs the full gate and only then builds
-the application and the setup program carrying it. There is no switch to
-skip the gate.
+The build stamps the version, runs the full gate and only then builds the
+application and the setup program carrying it. There is no switch to skip
+the gate.
 
 - **Rather than:** a build that can skip the tests.
 - **Gains:** nothing ships that failed the gate.
@@ -624,34 +578,20 @@ user's half of the registry.
 
 Install, update, downgrade, repair and removal are one bespoke program in the
 same interface toolkit. It reads the machine once to choose its route, shows
-one screen at a time and ends in a verdict. Its policy is pure and tested;
-its progress bar is weighted by the time each step took on a real install.
-Removal keeps the operator's data unless asked otherwise.
+one screen at a time and ends in a verdict; its progress bar is weighted by
+the time each step took on a real install. It finds a running BuildPilot by
+its executable's name and offers to close it before touching anything. To
+remove its own folder it runs from a temporary copy of itself, which the next
+setup deletes. Removal keeps the operator's data unless asked otherwise.
 
-- **Rather than:** a generic installer.
-- **Gains:** one look throughout; every route is a test.
-- **Costs:** the setup program is BuildPilot's own to maintain.
-
-### BuildPilot is found by name, never by process tree
-
-Setup finds a running BuildPilot by its executable's name and offers to close
-it before touching anything.
-
-- **Rather than:** walking the process tree, which is judged from recorded
-  parent ids that Windows reuses.
-- **Gains:** setup can never end a stranger that inherited a dead parent's
-  number.
-- **Costs:** none recorded.
-
-### Removing itself through a temporary copy
-
-Started from the install folder, as the Apps list does, setup copies itself
-to the temporary folder and runs from there so the install folder can go.
-The next setup that is not that copy deletes it.
-
-- **Rather than:** leaving the install folder behind.
-- **Gains:** uninstall removes the whole folder.
-- **Costs:** a copy lingers in the temporary folder until the next setup.
+- **Rather than:** a generic installer; finding BuildPilot through the
+  process tree, which is judged from parent ids that Windows reuses; leaving
+  the install folder behind.
+- **Gains:** one look throughout; every route is a test; setup can never end
+  a stranger that inherited a dead parent's number; uninstall removes the
+  whole folder.
+- **Costs:** the setup program is BuildPilot's own to maintain; a copy
+  lingers in the temporary folder until the next setup.
 
 ### Unsigned executables
 
@@ -689,18 +629,22 @@ licence for BuildPilot's own code is offered separately.
 
 ## Engineering
 
-### Layers with ports and one composition root
+### Layers with ports, held by tests
 
 The code is split into domain, application, infrastructure and interface,
 each depending only inward. The application reaches the machine only through
-traits it declares; one composition root wires the real ones in. Structural
-tests hold the boundaries and the standard library parts each pure layer may
-name.
+traits it declares; one composition root wires the real ones in. Tests hold
+the boundaries, the parts of the standard library each pure layer may name,
+a ceiling on the length of every file and the one folder where unsafe code
+may live, each block with the reasoning that makes it sound.
 
-- **Rather than:** convention alone.
+- **Rather than:** convention alone; files left to grow; unsafe code wherever
+  a call needs it.
 - **Gains:** every use case runs in a test with no process, file, clock or
-  window.
-- **Costs:** more modules and explicit wiring.
+  window; files split at real seams; the code that can break memory safety
+  is in one place to review.
+- **Costs:** more modules, explicit wiring and a thin wrapper for every
+  Windows call.
 
 ### Complete coverage where it means something
 
@@ -715,29 +659,11 @@ measured but not floored.
   nobody made.
 - **Costs:** the machine-facing code relies on targeted integration tests.
 
-### Small files
-
-No Rust or Slint file may exceed four hundred lines or sit in the band from
-381 to 399; one that reaches the band is cut to 350 or below.
-
-- **Rather than:** letting files grow; trimming a line or two to fit.
-- **Gains:** files split at real seams.
-- **Costs:** many small files.
-
-### Unsafe code in one folder
-
-Every unsafe block lives with the Windows calls in one folder, each with the
-reasoning that makes it sound.
-
-- **Rather than:** unsafe code wherever a call needs it.
-- **Gains:** the code that can break memory safety is in one place to review.
-- **Costs:** a thin wrapper for every Windows call.
-
 ### Every value has one home
 
 The version lives in one file; the manifest and the website are stamped from
-it and tests fail when either differs. The website links its stylesheet and
-script by a hash of their content.
+it and tests fail when either differs. The website links its stylesheet by a
+hash of its content.
 
 - **Rather than:** copies written where they are needed.
 - **Gains:** a change is made once; a browser never pairs a new page with a

@@ -51,16 +51,17 @@ violation and watching the test fail.
   answers at once; output and the exit arrive later through `App::handle_event`. What it needs
   from the machine is stated as traits in `ports.rs`: `ConfigStore`, `RunTimesStore`,
   `IdSource`, `Clock`, `PathProbe`, `Variables`, `IconLibrary`, `Launcher` and
-  `ProcessHandle`, `Shell`, `Log` and `ReleaseSource`. A folder scan reads the folder through `PathProbe` and proposes; nothing is
-  added until the operator confirms through `App::add`.
+  `ProcessHandle`, `Shell`, `Log` and `ReleaseSource`. A folder scan reads the folder through
+  `PathProbe` and proposes; nothing is added until the operator confirms through `App::add`.
   `updates.rs` decides what an update check found and what to say about it. Every refusal
   is an `AppError` whose message names the thing and what the operator can do; everything else
   worth saying is a `Notice`, worded once and shown and logged in the same words.
 - **Infrastructure** (`src/infrastructure`). The ports implemented against the real machine: the
   JSON settings file, the JSON run times file, icons on disk, process launch, Explorer, the
   system clock, UUIDs and the log file, plus the release source on GitHub and the credits the
-  build script generated (`build_info.rs`). Every direct Windows call lives in `win32/`: job objects, the OEM code page,
-  the shell, the theme, the single-instance event, the error box and the one HTTPS GET.
+  build script generated (`build_info.rs`). Every direct Windows call lives in `win32/`: job
+  objects, the OEM code page, the shell, the theme, the single-instance event, the error box and
+  the one HTTPS GET.
 - **UI** (`src/ui` and `ui/*.slint`). The Slint window over `App` and nothing below it. The
   wording rows and the tray show is worked out in `rows.rs`, which has no Slint types so it is
   tested without a window.
