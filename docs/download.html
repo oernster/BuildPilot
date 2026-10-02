@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Download BuildPilot for Windows</title>
+    <meta name="description" content="Download BuildPilot for Windows 11. It installs for your account only, so Windows never asks for administrator rights. Free and open source.">
+    <meta name="theme-color" content="#1c1d20">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Download BuildPilot for Windows">
+    <meta property="og:description" content="Download BuildPilot for Windows 11. It installs for your account only, so Windows never asks for administrator rights. Free and open source.">
+    <meta property="og:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta property="og:url" content="https://ernster.dev/BuildPilot/download.html">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Download BuildPilot for Windows",
+        "description": "Download BuildPilot for Windows 11. It installs for your account only, so Windows never asks for administrator rights. Free and open source.",
+        "url": "https://ernster.dev/BuildPilot/download.html",
+        "isPartOf": {"@type": "WebSite", "name": "BuildPilot", "url": "https://ernster.dev/BuildPilot/"},
+        "about": {"@type": "SoftwareApplication", "name": "BuildPilot"},
+        "inLanguage": "en-GB"
+    }
+    </script>
+</head>
+<body>
+
+<header class="wrap site-head">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
+    <nav aria-label="Pages">
+        <a href="features.html">Features</a>
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/BuildPilot">GitHub</a>
+    </nav>
+</header>
+
+<main>
+
+    <section class="wrap" id="download">
+        <p class="kicker">Download</p>
+        <h2>Install it once; add a project; press Run.</h2>
+        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.2.1<!--/VERSION--></span>
+        <!--
+            The button points at GitHub's releases/latest/download redirect, which always
+            serves the newest release's file. The name carries no version, so the link
+            cannot go stale. The script at the foot adds the file size when it can reach
+            the API; without it the page still says everything that matters.
+        -->
+        <div class="downloads">
+            <div class="dl-card">
+                <div class="ico">&#x1FA9F;</div>
+                <h3>Windows</h3>
+                <p class="req">Windows 11 (Windows only)</p>
+                <a class="btn btn-primary" href="https://github.com/oernster/BuildPilot/releases/latest/download/BuildPilotSetup.exe">Download for Windows</a>
+                <p class="meta" data-asset="BuildPilotSetup.exe">Setup program (.exe)</p>
+                <p class="meta">Windows may show a SmartScreen warning when you run
+                    it: <a href="https://ernster.dev/windows-smartscreen.html">here is why</a>.</p>
+                <p class="how">Run it and choose Install. It installs for your account
+                    only, so Windows never asks for administrator rights. Then choose Add,
+                    pick a script or a folder and press Run. Run setup again to update,
+                    repair or go back a version; to remove it, uninstall from Settings, then
+                    Apps.</p>
+            </div>
+        </div>
+        <p class="dl-links">
+            <a id="dl-whats-new" href="https://github.com/oernster/BuildPilot/releases/latest">What is new in this release</a>
+            &nbsp;&middot;&nbsp;
+            <a href="https://github.com/oernster/BuildPilot/releases">All releases</a>
+            &nbsp;&middot;&nbsp;
+            <a href="https://github.com/oernster/BuildPilot">Source on GitHub</a>
+        </p>
+    </section>
+
+</main>
+
+<footer class="wrap site-foot">
+    <span>&copy; Oliver Ernster. GPL-3.0.
+        <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
+    <span><a href="./">Home</a> &middot;
+        <a href="features.html">Features</a> &middot;
+        <a href="why.html">Why</a> &middot;
+        <a href="download.html">Download</a> &middot;
+        <a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+        <a href="https://ernster.dev">ernster.dev</a></span>
+</footer>
+
+<script>
+    // The download button never goes stale: it points at GitHub's releases/latest/download
+    // redirect, which always serves the newest release's file. This script only decorates
+    // the page: the version chip, the notes link and the file's size, read from the GitHub
+    // API. Where the call fails, the static text stands on its own; the chip then carries
+    // the version stamped into this page from the VERSION file. No date is ever shown.
+    (function () {
+        var api = 'https://api.github.com/repos/oernster/BuildPilot/releases/latest';
+        fetch(api).then(function (r) {
+            if (!r.ok) { throw new Error('release lookup failed'); }
+            return r.json();
+        }).then(function (rel) {
+            var version = (rel.tag_name || '').replace(/^v/, '');
+            if (version) {
+                document.getElementById('dl-version').textContent = 'Version ' + version;
+            }
+            if (rel.html_url) {
+                document.getElementById('dl-whats-new').href = rel.html_url;
+            }
+            (rel.assets || []).forEach(function (asset) {
+                var meta = document.querySelector('[data-asset="' + asset.name + '"]');
+                if (meta && asset.size) {
+                    var mb = (asset.size / (1024 * 1024)).toFixed(1);
+                    meta.textContent = meta.textContent + ' · ' + mb + ' MB';
+                }
+            });
+        }).catch(function () { /* The static page already says everything essential. */ });
+    })();
+</script>
+
+</body>
+</html>

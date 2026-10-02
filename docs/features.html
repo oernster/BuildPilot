@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BuildPilot features: what it does</title>
+    <meta name="description" content="What BuildPilot does: it remembers your builds, finds them, runs several at once, shows output live, stops the whole tree and launches the installer it built. For Windows.">
+    <meta name="theme-color" content="#1c1d20">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BuildPilot features: what it does">
+    <meta property="og:description" content="What BuildPilot does: it remembers your builds, finds them, runs several at once, shows output live, stops the whole tree and launches the installer it built. For Windows.">
+    <meta property="og:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta property="og:url" content="https://ernster.dev/BuildPilot/features.html">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "BuildPilot features: what it does",
+        "description": "What BuildPilot does: it remembers your builds, finds them, runs several at once, shows output live, stops the whole tree and launches the installer it built.",
+        "url": "https://ernster.dev/BuildPilot/features.html",
+        "isPartOf": {"@type": "WebSite", "name": "BuildPilot", "url": "https://ernster.dev/BuildPilot/"},
+        "about": {"@type": "SoftwareApplication", "name": "BuildPilot"},
+        "inLanguage": "en-GB"
+    }
+    </script>
+</head>
+<body>
+
+<header class="wrap site-head">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
+    <nav aria-label="Pages">
+        <a href="features.html">Features</a>
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/BuildPilot">GitHub</a>
+    </nav>
+</header>
+
+<main>
+
+    <section class="wrap" id="what">
+        <p class="kicker">The feature list</p>
+        <h2>Your scripts, several at once, in one window.</h2>
+        <div class="prose">
+            <p>Everything BuildPilot does, in one list. What it leaves alone is on the
+                <a href="why.html">Why</a> page.</p>
+        </div>
+        <div class="card">
+            <h3>What it does</h3>
+            <ul>
+                <li><strong>Remembers your builds.</strong> An operation is one or more
+                    steps run in order, a working directory and a name. <code>.ps1</code>,
+                    <code>.bat</code>, <code>.cmd</code>, <code>.exe</code>,
+                    <code>.com</code> and <code>.py</code> run out of the box; Settings maps
+                    any other type to the program that runs it.</li>
+                <li><strong>Finds them for you.</strong> Point Add at a project folder (or a
+                    folder of projects) and it proposes the build it recognises:
+                    <code>build.ps1</code> alone, else <code>buildexe.py</code> then
+                    <code>buildinstaller.py</code>. Nothing is added until you confirm.</li>
+                <li><strong>Uses your Python environment.</strong> A <code>venv</code> in the
+                    project is found and activated for each step; an environment left active
+                    in your shell is undone first.</li>
+                <li><strong>Runs several at once.</strong> Each run is its own process, with
+                    its state shown by a glyph and in words, plus the elapsed time. Tick rows
+                    to start them together. Two builds never share a folder.</li>
+                <li><strong>Knows how long a build takes.</strong> Beneath each row's status
+                    sits its typical build time: the median of its last five successful
+                    runs, so one slow build does not skew it. It is remembered when
+                    BuildPilot restarts, so a running build always has a yardstick.</li>
+                <li><strong>Shows output live.</strong> The tray follows the latest line until
+                    you scroll up. Lines are plain whatever stream they came on; the run's
+                    outcome closes it in green, red or grey.</li>
+                <li><strong>Stops the whole tree.</strong> Stop ends the script and every
+                    process it started, through a Windows job object.</li>
+                <li><strong>Launches the installer it built.</strong> Beside Stop, Launch
+                    installer starts the project's setup program: the one set in Edit, else
+                    the folder's name plus <code>Setup.exe</code> in
+                    <code>dist-installer</code> or <code>dist</code>. It waits while the
+                    build runs and after one that was stopped or failed.</li>
+            </ul>
+        </div>
+    </section>
+
+</main>
+
+<footer class="wrap site-foot">
+    <span>&copy; Oliver Ernster. GPL-3.0.
+        <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
+    <span><a href="./">Home</a> &middot;
+        <a href="features.html">Features</a> &middot;
+        <a href="why.html">Why</a> &middot;
+        <a href="download.html">Download</a> &middot;
+        <a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+        <a href="https://ernster.dev">ernster.dev</a></span>
+</footer>
+
+</body>
+</html>

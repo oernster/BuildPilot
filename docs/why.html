@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Why BuildPilot: a small tool, held to a large standard</title>
+    <meta name="description" content="What BuildPilot leaves to your build system and to you, plus how it is built: Rust with a Slint interface, every number measured from the code.">
+    <meta name="theme-color" content="#1c1d20">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Why BuildPilot: a small tool, held to a large standard">
+    <meta property="og:description" content="What BuildPilot leaves to your build system and to you, plus how it is built: Rust with a Slint interface, every number measured from the code.">
+    <meta property="og:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta property="og:url" content="https://ernster.dev/BuildPilot/why.html">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Why BuildPilot: a small tool, held to a large standard",
+        "description": "What BuildPilot leaves to your build system and to you, plus how it is built: Rust with a Slint interface, every number measured from the code.",
+        "url": "https://ernster.dev/BuildPilot/why.html",
+        "isPartOf": {"@type": "WebSite", "name": "BuildPilot", "url": "https://ernster.dev/BuildPilot/"},
+        "about": {"@type": "SoftwareApplication", "name": "BuildPilot"},
+        "inLanguage": "en-GB"
+    }
+    </script>
+</head>
+<body>
+
+<header class="wrap site-head">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
+    <nav aria-label="Pages">
+        <a href="features.html">Features</a>
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/BuildPilot">GitHub</a>
+    </nav>
+</header>
+
+<main>
+
+    <section class="wrap" id="not">
+        <p class="kicker">What it is not</p>
+        <h2>What it leaves alone.</h2>
+        <div class="card">
+            <h3>What it does not do</h3>
+            <ul>
+                <li><strong>Replace your build system.</strong> PowerShell, Cargo, npm and
+                    the rest stay in charge. Every script stays runnable without
+                    BuildPilot.</li>
+                <li><strong>Pipelines.</strong> No dependency graph, no conditions and no
+                    Run All. The only sequence is an operation's own steps.</li>
+                <li><strong>Build environments.</strong> It uses a Python environment that
+                    exists; it never creates, installs into or repairs one.</li>
+                <li><strong>Terminals.</strong> Output is shown as it arrives; a running
+                    script cannot be typed into.</li>
+                <li><strong>Touch your scripts.</strong> It never writes to, renames or
+                    deletes one. Remove takes an operation off the deck along with any
+                    icon BuildPilot copied for it and its run times; nothing else.</li>
+                <li><strong>Anything but Windows.</strong> Windows only, for good.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="wrap" id="engineering">
+        <p class="kicker">How it is built</p>
+        <h2>A small tool, held to a large standard.</h2>
+        <div class="prose">
+            <p>BuildPilot is written in Rust with a Slint interface. Every number below was
+                measured from the code, not rounded up for the page.</p>
+        </div>
+        <div class="stats">
+            <div class="stat">
+                <span class="n">373</span>
+                <p>Tests, from pure rules through real processes started and stopped to the
+                    keyboard ring driven by real key events.</p>
+            </div>
+            <div class="stat">
+                <span class="n">100%</span>
+                <p>Of lines and of branches covered in the rules, the use cases and the setup
+                    program's policy. The build refuses to run below it.</p>
+            </div>
+            <div class="stat">
+                <span class="n">1,189</span>
+                <p>Lines of requirements, each tied to the test that proves it. Every change
+                    of mind is a numbered amendment.</p>
+            </div>
+            <div class="stat">
+                <span class="n">1</span>
+                <p>Network request: asking GitHub whether a newer release is out. It carries
+                    nothing about you or your scripts.</p>
+            </div>
+            <div class="stat">
+                <span class="n">0</span>
+                <p>Administrator prompts of its own. It installs for your own account and runs
+                    with your normal rights; only an installer you launch may ask.</p>
+            </div>
+            <div class="stat">
+                <span class="n">4.5 : 1</span>
+                <p>The least contrast of any text against its background, in light and dark,
+                    checked by a test.</p>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<footer class="wrap site-foot">
+    <span>&copy; Oliver Ernster. GPL-3.0.
+        <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
+    <span><a href="./">Home</a> &middot;
+        <a href="features.html">Features</a> &middot;
+        <a href="why.html">Why</a> &middot;
+        <a href="download.html">Download</a> &middot;
+        <a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+        <a href="https://ernster.dev">ernster.dev</a></span>
+</footer>
+
+</body>
+</html>

@@ -33,11 +33,10 @@
 
 <header class="wrap site-head">
     <a class="brand" href="#top"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
-    <nav aria-label="Sections">
-        <a href="#what">What it does</a>
-        <a href="#screens" class="hide-sm">Screens</a>
-        <a href="#engineering" class="hide-sm">Engineering</a>
-        <a href="#download">Download</a>
+    <nav aria-label="Pages">
+        <a href="features.html">Features</a>
+        <a href="why.html">Why</a>
+        <a href="download.html">Download</a>
         <a href="https://github.com/oernster/BuildPilot">GitHub</a>
     </nav>
 </header>
@@ -57,7 +56,7 @@
                 <strong>with everything they started</strong>. It runs the commands you already
                 have; it never becomes the build system.</p>
             <div class="cta">
-                <a class="btn btn-primary" href="#download">Download</a>
+                <a class="btn btn-primary" href="download.html">Download</a>
                 <a class="btn" href="#screens">Take a look</a>
             </div>
         </div>
@@ -65,65 +64,6 @@
             <img src="screenshots/screenshot.png" alt="The BuildPilot window scrolled to the foot of a long list, a pill at the top counting the 18 rows above. SymDiary is running at 0:17 with its typical build time of 0:33 beneath. TimeRibbon is selected: it succeeded after 0:38, its typical time. Stellody has not run since BuildPilot started, yet still shows its typical build time of 6:09. TimeRibbon's Go test results fill the tray below in aligned columns. Run, Launch installer and Remove are greyed out with a red ring on the running row; Stop is on the rows at rest.">
         </figure>
     </div>
-
-    <section class="wrap" id="what">
-        <p class="kicker">The feature list</p>
-        <h2>Your scripts, several at once, in one window.</h2>
-        <div class="two-col">
-            <div class="card">
-                <h3>What it does</h3>
-                <ul>
-                    <li><strong>Remembers your builds.</strong> An operation is one or more
-                        steps run in order, a working directory and a name. <code>.ps1</code>,
-                        <code>.bat</code>, <code>.cmd</code>, <code>.exe</code>,
-                        <code>.com</code> and <code>.py</code> run out of the box; Settings maps
-                        any other type to the program that runs it.</li>
-                    <li><strong>Finds them for you.</strong> Point Add at a project folder (or a
-                        folder of projects) and it proposes the build it recognises:
-                        <code>build.ps1</code> alone, else <code>buildexe.py</code> then
-                        <code>buildinstaller.py</code>. Nothing is added until you confirm.</li>
-                    <li><strong>Uses your Python environment.</strong> A <code>venv</code> in the
-                        project is found and activated for each step; an environment left active
-                        in your shell is undone first.</li>
-                    <li><strong>Runs several at once.</strong> Each run is its own process, with
-                        its state shown by a glyph and in words, plus the elapsed time. Tick rows
-                        to start them together. Two builds never share a folder.</li>
-                    <li><strong>Knows how long a build takes.</strong> Beneath each row's status
-                        sits its typical build time: the median of its last five successful
-                        runs, so one slow build does not skew it. It is remembered when
-                        BuildPilot restarts, so a running build always has a yardstick.</li>
-                    <li><strong>Shows output live.</strong> The tray follows the latest line until
-                        you scroll up. Lines are plain whatever stream they came on; the run's
-                        outcome closes it in green, red or grey.</li>
-                    <li><strong>Stops the whole tree.</strong> Stop ends the script and every
-                        process it started, through a Windows job object.</li>
-                    <li><strong>Launches the installer it built.</strong> Beside Stop, Launch
-                        installer starts the project's setup program: the one set in Edit, else
-                        the folder's name plus <code>Setup.exe</code> in
-                        <code>dist-installer</code> or <code>dist</code>. It waits while the
-                        build runs and after one that was stopped or failed.</li>
-                </ul>
-            </div>
-            <div class="card">
-                <h3>What it does not do</h3>
-                <ul>
-                    <li><strong>Replace your build system.</strong> PowerShell, Cargo, npm and
-                        the rest stay in charge. Every script stays runnable without
-                        BuildPilot.</li>
-                    <li><strong>Pipelines.</strong> No dependency graph, no conditions and no
-                        Run All. The only sequence is an operation's own steps.</li>
-                    <li><strong>Build environments.</strong> It uses a Python environment that
-                        exists; it never creates, installs into or repairs one.</li>
-                    <li><strong>Terminals.</strong> Output is shown as it arrives; a running
-                        script cannot be typed into.</li>
-                    <li><strong>Touch your scripts.</strong> It never writes to, renames or
-                        deletes one. Remove takes an operation off the deck along with any
-                        icon BuildPilot copied for it and its run times; nothing else.</li>
-                    <li><strong>Anything but Windows.</strong> Windows only, for good.</li>
-                </ul>
-            </div>
-        </div>
-    </section>
 
     <section class="wrap" id="screens">
         <p class="kicker">A closer look</p>
@@ -144,82 +84,6 @@
                     <code>ruby.exe</code>.</figcaption>
             </figure>
         </div>
-    </section>
-
-    <section class="wrap" id="engineering">
-        <p class="kicker">How it is built</p>
-        <h2>A small tool, held to a large standard.</h2>
-        <div class="prose">
-            <p>BuildPilot is written in Rust with a Slint interface. Every number below was
-                measured from the code, not rounded up for the page.</p>
-        </div>
-        <div class="stats">
-            <div class="stat">
-                <span class="n">373</span>
-                <p>Tests, from pure rules through real processes started and stopped to the
-                    keyboard ring driven by real key events.</p>
-            </div>
-            <div class="stat">
-                <span class="n">100%</span>
-                <p>Of lines and of branches covered in the rules, the use cases and the setup
-                    program's policy. The build refuses to run below it.</p>
-            </div>
-            <div class="stat">
-                <span class="n">1,189</span>
-                <p>Lines of requirements, each tied to the test that proves it. Every change
-                    of mind is a numbered amendment.</p>
-            </div>
-            <div class="stat">
-                <span class="n">1</span>
-                <p>Network request: asking GitHub whether a newer release is out. It carries
-                    nothing about you or your scripts.</p>
-            </div>
-            <div class="stat">
-                <span class="n">0</span>
-                <p>Administrator prompts of its own. It installs for your own account and runs
-                    with your normal rights; only an installer you launch may ask.</p>
-            </div>
-            <div class="stat">
-                <span class="n">4.5 : 1</span>
-                <p>The least contrast of any text against its background, in light and dark,
-                    checked by a test.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="wrap" id="download">
-        <p class="kicker">Download</p>
-        <h2>Install it once; add a project; press Run.</h2>
-        <span class="dl-version" id="dl-version">Version <!--VERSION-->1.2.1<!--/VERSION--></span>
-        <!--
-            The button points at GitHub's releases/latest/download redirect, which always
-            serves the newest release's file. The name carries no version, so the link
-            cannot go stale. The script at the foot adds the file size when it can reach
-            the API; without it the page still says everything that matters.
-        -->
-        <div class="downloads">
-            <div class="dl-card">
-                <div class="ico">&#x1FA9F;</div>
-                <h3>Windows</h3>
-                <p class="req">Windows 11 (Windows only)</p>
-                <a class="btn btn-primary" href="https://github.com/oernster/BuildPilot/releases/latest/download/BuildPilotSetup.exe">Download for Windows</a>
-                <p class="meta" data-asset="BuildPilotSetup.exe">Setup program (.exe)</p>
-                <p class="meta">Windows may show a SmartScreen warning when you run
-                    it: <a href="https://ernster.dev/windows-smartscreen.html">here is why</a>.</p>
-                <p class="how">Run it and choose Install. It installs for your account
-                    only, so Windows never asks for administrator rights. Then choose Add,
-                    pick a script or a folder and press Run. Run setup again to update,
-                    repair or go back a version; to remove it, uninstall from Settings, then
-                    Apps.</p>
-            </div>
-        </div>
-        <p class="dl-links">
-            <a id="dl-whats-new" href="https://github.com/oernster/BuildPilot/releases/latest">What is new in this release</a>
-            &nbsp;&middot;&nbsp;
-            <a href="https://github.com/oernster/BuildPilot/releases">All releases</a>
-            &nbsp;&middot;&nbsp;
-            <a href="https://github.com/oernster/BuildPilot">Source on GitHub</a>
-        </p>
     </section>
 
     <section class="wrap support" id="support">
@@ -243,39 +107,13 @@
 <footer class="wrap site-foot">
     <span>&copy; Oliver Ernster. GPL-3.0.
         <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
-    <span><a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+    <span><a href="./">Home</a> &middot;
+        <a href="features.html">Features</a> &middot;
+        <a href="why.html">Why</a> &middot;
+        <a href="download.html">Download</a> &middot;
+        <a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
         <a href="https://ernster.dev">ernster.dev</a></span>
 </footer>
-
-<script>
-    // The download button never goes stale: it points at GitHub's releases/latest/download
-    // redirect, which always serves the newest release's file. This script only decorates
-    // the page: the version chip, the notes link and the file's size, read from the GitHub
-    // API. Where the call fails, the static text stands on its own; the chip then carries
-    // the version stamped into this page from the VERSION file. No date is ever shown.
-    (function () {
-        var api = 'https://api.github.com/repos/oernster/BuildPilot/releases/latest';
-        fetch(api).then(function (r) {
-            if (!r.ok) { throw new Error('release lookup failed'); }
-            return r.json();
-        }).then(function (rel) {
-            var version = (rel.tag_name || '').replace(/^v/, '');
-            if (version) {
-                document.getElementById('dl-version').textContent = 'Version ' + version;
-            }
-            if (rel.html_url) {
-                document.getElementById('dl-whats-new').href = rel.html_url;
-            }
-            (rel.assets || []).forEach(function (asset) {
-                var meta = document.querySelector('[data-asset="' + asset.name + '"]');
-                if (meta && asset.size) {
-                    var mb = (asset.size / (1024 * 1024)).toFixed(1);
-                    meta.textContent = meta.textContent + ' · ' + mb + ' MB';
-                }
-            });
-        }).catch(function () { /* The static page already says everything essential. */ });
-    })();
-</script>
 
 </body>
 </html>
