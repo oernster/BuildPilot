@@ -122,9 +122,12 @@ export component OutputTray inherits Rectangle {
                     return accept;
                 }
             }
+            // The bar's strip is always kept: a line wider than the tray wraps rather than being
+            // cut off, so the rows' height follows the list's width; a width that followed the bar
+            // would be a loop.
             list := ListView {
                 x: 0px;
-                width: parent.width - (output-bar.visible ? output-bar.width : 0px);
+                width: parent.width - output-bar.width;
                 vertical-scrollbar-policy: always-off;
                 scrolled => {
                     root.scrolled(self.content-y <= root.lowest + 2px);
@@ -140,6 +143,7 @@ export component OutputTray inherits Rectangle {
                         font-weight: line.kind == LineKind.plain ? 400 : 600;
                         font-family: "Consolas";
                         font-size: Theme.mono-size;
+                        wrap: word-wrap;
                     }
                 }
             }
