@@ -83,10 +83,10 @@ Every script stays runnable without it.
   you scroll it.
 - **Makes one request, to ask about updates.** Shortly after it opens and once a day, BuildPilot
   asks GitHub whether a newer release is published; Help > Check for Updates asks on demand. The
-  request carries nothing about you or your scripts and a release can be skipped. An automatic
-  check that fails says nothing; one you ask for always says what it found. It goes through
-  WinHTTP, which is part of Windows, so no HTTP or TLS library is among BuildPilot's
-  dependencies. Nothing else it does touches the network.
+  request names BuildPilot and its version and nothing about you or your scripts. A release can be
+  skipped. An automatic check that fails says nothing; one you ask for always says what it found.
+  It goes through WinHTTP, which is part of Windows, so no HTTP or TLS library is among
+  BuildPilot's dependencies. Nothing else it does touches the network.
 
 ## Where it keeps things
 

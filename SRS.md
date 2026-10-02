@@ -677,7 +677,7 @@ release review.
 | NFR-REL-001 | A panic on any thread BuildPilot owns shall be logged and shown to the operator, never end the application silently. | Test that panics a reader thread. |
 | NFR-REL-002 | Every error shown shall name what failed and what the operator can do. | Review of each error string against spec §18. |
 | NFR-OBS-001 | BuildPilot shall write a log file in the data folder, recording launches, exits, stops and errors, rotated at 1 MB with one previous file kept. | Inspection. |
-| NFR-SEC-001 | BuildPilot shall make no network connection except the update check of UI-010, a single HTTPS GET to api.github.com carrying nothing about the operator or their operations. It shall use the HTTP client built into Windows (WinHTTP), adding no HTTP or TLS crate. Amended by Amendment 3. | Inspection of dependencies; Manual with a network monitor. |
+| NFR-SEC-001 | BuildPilot shall make no network connection except the update check of UI-010, a single HTTPS GET to api.github.com naming BuildPilot and its version as its user agent and nothing about the operator or their operations. It shall use the HTTP client built into Windows (WinHTTP), adding no HTTP or TLS crate. Amended by Amendment 3. | Inspection of dependencies; Manual with a network monitor. |
 | NFR-SEC-002 | BuildPilot shall never write to, rename or delete a script. | Inspection: the shell and process adapters expose no write operation on scripts. |
 | NFR-MAINT-001 | Domain and application code shall hold 100% line and region coverage (`cargo llvm-cov`), with the gate failing the build below either. | `test.ps1`. |
 | NFR-MAINT-002 | `cargo fmt --check` and `cargo clippy -- -D warnings` shall pass. | `test.ps1`. |
