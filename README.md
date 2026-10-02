@@ -142,6 +142,8 @@ It runs the gate, then writes the application to `target\release\buildpilot.exe`
 program to `dist\BuildPilotSetup.exe`.
 [DEVELOPMENT.md](DEVELOPMENT.md) sets up a machine to build it;
 [ARCHITECTURE.md](ARCHITECTURE.md) explains how it is put together and why.
+[`DECISIONS-TRADEOFFS.md`](DECISIONS-TRADEOFFS.md) sets out the decisions BuildPilot rests on,
+with what each one gains and what it costs.
 
 ## Supporting the project
 
