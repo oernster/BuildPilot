@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 12.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 13.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -517,6 +517,12 @@ containing `é`.
 
 **OUT-009 (M) Collapse and resize.** The operator shall be able to collapse, expand and resize
 the tray. Collapsing it shall not affect any run.
+
+**OUT-010 (M) Long lines wrap.** The tray shall wrap a line wider than its width onto as many
+lines as it needs, at a space where it can and anywhere in a word too long for one line, so no
+part of a line is out of reach. The space for the tray's scroll bar shall be kept whether or not
+the bar shows, so the width lines wrap at never changes as output arrives (Amendment 13).
+Verified by: Manual (the headless backend never lays out the list).
 
 ### 3.11 Script navigation (NAV)
 
@@ -1187,3 +1193,12 @@ Seen by the owner in a capture of a `go test` run; measured the same day, `go te
 tabs. Each tab now becomes the spaces reaching the next 8-column tab stop, so columns a tool
 lines up still line up. Any other control character would be drawn as the same box, so it is
 removed, as escape sequences already were.
+
+**Amendment 13 (2026-10-02): long output lines wrap.** Adds OUT-010.
+
+Reason: the tray drew each line on one line and cut it off at its right edge, with no way to
+scroll sideways to the rest. Seen by the owner in a capture of a Stellody build, where Nuitka's
+messages ran past the edge mid-sentence. Read in the source the same day: each line was a `Text`
+with no wrap. The tray now wraps instead, as every other surface of text in BuildPilot does. The
+bar's space is kept for good because wrapped lines change the list's height, the height decides
+whether the bar shows and a width that followed the bar would go round in a loop.

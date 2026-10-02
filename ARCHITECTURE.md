@@ -28,6 +28,7 @@ violation and watching the test fail.
 | `Cargo.toml` carries the version in `VERSION` and no other. | `cargo_version_matches_the_version_file` |
 | Slint's frame counter never shows: each executable's `main` first removes `SLINT_DEBUG_PERFORMANCE`, before any window exists. | `every_main_hides_the_frame_counter_first` in `tests/frame_counter.rs` |
 | The site under `docs/` names the version in `VERSION` and no other. | `the_site_names_the_version_file` in `tests/site.rs` |
+| Every site page links its stylesheet and scripts by their content hash, so a changed file is never served from a stale cache. | `the_site_links_each_asset_by_its_content` in `tests/site.rs` |
 | Every control wears the house ring: no standard Slint `Button` or `CheckBox`, no border in the accent colour. | `every_control_follows_the_ring_model` |
 | Every text colour reaches 4.5:1 and every ring 3:1 against the surfaces it is drawn on, in both themes. | `tests/contrast.rs` |
 | Every toolbar and row control is named in the Guide; a label that changes with state needs an entry for each state. | `the_guide_names_every_control` in `tests/guide.rs` |
@@ -100,6 +101,7 @@ either as a box (OUT-008). A run keeps its latest 100,000 lines and splits a lon
 pieces of 16,384 characters (OUT-004). The tray
 reads the buffer directly rather than a copy. Every line is drawn in the plain text colour
 whichever stream it came on; the run's outcome is one closing line in its own colour (OUT-007).
+A line wider than the tray wraps rather than being cut off (OUT-010).
 
 ## Launching an installer
 
@@ -237,6 +239,7 @@ script or a launched installer writes is that program's own doing.
 | Run times in a file of their own | The config file holds no run data (CFG-004); a damaged timings file can never put the operator's configuration at risk. Both files share one atomic write. | A field in `buildpilot.json`, which CFG-004 forbids. |
 | The typical time is the median of the last five successes | One cold-cache build does not move it; it follows a build that has grown quicker or slower. A failed or stopped run says nothing about how long a build takes. | The mean, which one outlier drags; the last run alone, which a stopped run would blank. |
 | The tray pins itself to the end while following | The list measures new rows only when it next lays out, so a scroll asked for as they arrive stopped short and hid the run's closing line (OUT-006). | Scrolling once from Rust after each drain. |
+| Long output lines wrap, with the scroll bar's space always kept | Every part of a line is in reach. A fixed width means the wrapped height can never move the bar that would move the width (OUT-010). | Scrolling sideways, which hides the end of every long line until asked for. |
 
 See also [TESTING.md](TESTING.md) for how each layer is tested and [DEVELOPMENT.md](DEVELOPMENT.md)
 for building it.

@@ -124,7 +124,7 @@ export component OutputTray inherits Rectangle {
             }
             // The bar's strip is always kept: a line wider than the tray wraps rather than being
             // cut off, so the rows' height follows the list's width; a width that followed the bar
-            // would be a loop.
+            // would be a loop (OUT-010).
             list := ListView {
                 x: 0px;
                 width: parent.width - output-bar.width;

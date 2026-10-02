@@ -161,9 +161,10 @@ links with each file's content hash, which `tests/site.rs` checks too.
 
 ## The website
 
-`docs/` is the GitHub Pages site: `index.html`, `styles.css`, the icon, the donate artwork and
-three captures in `screenshots/` (the window, the Edit dialog and Settings). It carries no
-dates. Its colours are the application's tokens from `ui/theme.slint`, light or dark as the
+`docs/` is the GitHub Pages site: four pages (`index.html` the home page with the captures,
+`features.html`, `why.html` and `download.html`), one shared `styles.css`, the icon, the donate
+artwork and three captures in `screenshots/` (the window, the Edit dialog and Settings). It
+carries no dates. Its colours are the application's tokens from `ui/theme.slint`, light or dark as the
 reader's system is set.
 
 ## Where things live
@@ -179,7 +180,7 @@ reader's system is set.
 | `src/bin/buildpilotsetup.rs` | The setup program's composition root |
 | `src/infrastructure/locations.rs` | Every name and folder the application and setup share, plus the author and copyright |
 | `build_credits.rs` | Part of the build script: generates the credits and the third-party notices |
-| `stamp_version.ps1` | Writes `VERSION` into `Cargo.toml` and the site |
+| `stamp_version.ps1` | Writes `VERSION` into `Cargo.toml` and the site; versions the site's stylesheet and script links by content |
 | `tools/genicons.py` | Makes the `.ico` from the PNG master |
 | `tools/uiicons.py` | Makes the small copies in `assets/ui` the interface draws |
 | `ui/` | The Slint interface: `theme.slint` holds every colour and the sizes shared between files |

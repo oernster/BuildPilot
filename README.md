@@ -51,8 +51,8 @@ Every script stays runnable without it.
   remembered when BuildPilot restarts. Run the ticked builds starts every ticked row. Two
   builds never run in the same folder at once, since they would overwrite each other's output.
 - **Shows output live.** The tray at the foot of the window shows the selected run's output as it
-  arrives, following the last line until you scroll up. It keeps the latest 100,000 lines of a
-  run. Lines are drawn plainly whichever stream they came on; the run's outcome closes the output
+  arrives, following the last line until you scroll up. A line wider than the tray wraps rather
+  than being cut off. It keeps the latest 100,000 lines of a run. Lines are drawn plainly whichever stream they came on; the run's outcome closes the output
   in green, red or muted grey.
 - **Stops the whole tree.** Stop ends the script and everything it started, through a Windows job
   object. A tree still alive five seconds after Stop is reported by process id.

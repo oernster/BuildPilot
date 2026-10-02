@@ -3,7 +3,7 @@
 What is tested, what is not and why the line falls where it does.
 
 This document exists because a coverage figure on its own is a number without a claim behind it.
-Every figure here was measured on 2026-10-01, when it was last revised.
+Every figure here was measured on 2026-10-02, when it was last revised.
 
 ## The standard
 
@@ -48,7 +48,7 @@ refusal repeated after it had already been made). The region floor was proved by
 
 ## What the suites prove
 
-373 tests, counted from the gate's own run.
+374 tests, counted by `cargo test -- --list`.
 
 | Suite | Tests | What it proves |
 |---|---|---|
@@ -64,7 +64,7 @@ refusal repeated after it had already been made). The region floor was proved by
 | `tests/contrast.rs` | 3 | Text at 4.5:1 and rings at 3:1 against their surfaces, in both themes, read from `ui/theme.slint`. |
 | `tests/assets.rs` | 1 | Every image a Slint file names is a small copy in `assets/ui`, none over 256 pixels. |
 | `tests/frame_counter.rs` | 1 | Each executable removes Slint's frame counter variable before anything else. |
-| `tests/site.rs` | 1 | The site under `docs/` names the version in `VERSION` and no other. |
+| `tests/site.rs` | 2 | The site under `docs/` names the version in `VERSION` and no other; every page links its stylesheet and scripts by their content hash. |
 
 ## How each layer is tested
 
