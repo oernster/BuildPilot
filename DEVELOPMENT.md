@@ -156,7 +156,8 @@ version. After changing `VERSION`, stamp before running the tests:
 ./stamp_version.ps1
 ```
 
-It is idempotent: a second run writes nothing.
+It is idempotent: a second run writes nothing. It also versions the site's stylesheet and script
+links with each file's content hash, which `tests/site.rs` checks too.
 
 ## The website
 

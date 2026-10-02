@@ -47,6 +47,8 @@ winresource = "0.1.31"
 [dev-dependencies]
 # Slint's headless backend, pinned to the Slint in use, for driving the keyboard ring in tests.
 i-slint-backend-testing = "=1.18.1"
+# Hashes the site's stylesheets for tests/site.rs, as stamp_version.ps1 does.
+sha2 = "0.10"
 tempfile = "3"
 
 [lints.rust]
