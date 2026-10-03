@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 13.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 14.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -681,7 +681,7 @@ release review.
 | NFR-SEC-002 | BuildPilot shall never write to, rename or delete a script. | Inspection: the shell and process adapters expose no write operation on scripts. |
 | NFR-MAINT-001 | Domain and application code shall hold 100% line and region coverage (`cargo llvm-cov`), with the gate failing the build below either. | `test.ps1`. |
 | NFR-MAINT-002 | `cargo fmt --check` and `cargo clippy -- -D warnings` shall pass. | `test.ps1`. |
-| NFR-MAINT-003 | No Rust source or test file and no Slint file shall exceed 400 lines or sit in the danger band of 381 to 399; build scripts are excluded. | Structural test. |
+| NFR-MAINT-003 | No Rust source or test file and no Slint file shall exceed 400 lines or sit in the danger band of 381 to 400; build scripts are excluded. Amended by Amendment 14. | Structural test. |
 | NFR-MAINT-004 | README.md, ARCHITECTURE.md, TESTING.md and DEVELOPMENT.md shall exist and match the tree. | Handover gate. |
 | NFR-PORT-001 | OS integration (process launch, tree termination, file association, Explorer reveal, paths) shall sit behind interfaces in infrastructure, so another platform means new adapters only. | Structural test on imports. |
 
@@ -1202,3 +1202,10 @@ messages ran past the edge mid-sentence. Read in the source the same day: each l
 with no wrap. The tray now wraps instead, as every other surface of text in BuildPilot does. The
 bar's space is kept for good because wrapped lines change the list's height, the height decides
 whether the bar shows and a width that followed the bar would go round in a loop.
+
+**Amendment 14 (2026-10-03): the danger band ends at 400.** Changes NFR-MAINT-003.
+
+Reason: the requirement put the danger band at 381 to 399, which left a file of exactly 400
+lines outside it. Read in `tests/structural.rs` the same day: the band starts at 380 (5% below
+the 400-line cap) and the test flags any file over 380 lines that is not over 400, so a 400-line
+file is in the band. The requirement now says 381 to 400, matching the test that verifies it.

@@ -1,7 +1,8 @@
 # The gate. Checks formatting, runs clippy with warnings as errors, then runs every test under
-# coverage and fails below 100% line or region coverage of the correctness core: src/domain, plus
-# src/application once it exists. Infrastructure and UI are measured but sit outside the floor: they
-# need a real desktop, processes and files, so a number over them would mean little.
+# coverage and fails below 100% line or region coverage of the correctness core: src/domain,
+# src/application and src/setup. Infrastructure, UI, src/bin and src/main.rs are measured but sit
+# outside the floor: they need a real desktop, processes and files, so a number over them would
+# mean little.
 #
 #   ./test.ps1          run the whole gate
 #   ./test.ps1 -Html    also open the HTML coverage report
@@ -18,7 +19,7 @@ Set-Location $root
 
 # Line and region floor over the correctness core (NFR-MAINT-001).
 $coverageFloor = 100
-# Files outside the floor: everything that is not domain or application code.
+# Files outside the floor: infrastructure, UI, src/bin, src/main.rs and the tests themselves.
 $outsideFloor = '(src[\\/](infrastructure|ui|bin)[\\/]|src[\\/]main\.rs|tests[\\/])'
 
 function Invoke-Step([string]$name, [scriptblock]$step) {
