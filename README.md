@@ -79,8 +79,8 @@ Every script stays runnable without it.
 - **Keeps a log.** Launches, exits, stops and errors go to `buildpilot.log`. A crash is recorded
   there too and never ends the application silently.
 - **Explains itself.** Help holds a Guide to every control, About with the open source credits,
-  the licence and Check for Updates. Long text in them reads itself slowly and stops the moment
-  you scroll it.
+  the licence and Check for Updates. Long text in them reads itself slowly; it pauses the moment
+  you scroll it, then carries on from where you left it.
 - **Makes one request, to ask about updates.** Shortly after it opens and once a day, BuildPilot
   asks GitHub whether a newer release is published; Help > Check for Updates asks on demand. The
   request names BuildPilot and its version and nothing about you or your scripts. A release can be

@@ -3,7 +3,7 @@
 What is tested, what is not and why the line falls where it does.
 
 This document exists because a coverage figure on its own is a number without a claim behind it.
-Every figure here was measured on 2026-10-02, when it was last revised.
+Every figure here was measured on 2026-10-03, when it was last revised.
 
 ## The standard
 

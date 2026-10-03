@@ -196,8 +196,8 @@ reader's system is set.
 
 - **Layers depend inwards.** `UI -> Application -> Domain <- Infrastructure`, checked by the
   structural tests.
-- **400 lines per file at most.** A file in the band from 381 to 399 is cut to 350 or below, not
-  trimmed to fit.
+- **400 lines per file at most.** A file in the band from 381 to 400 fails the structural test;
+  it is cut to 350 or below, not trimmed to fit.
 - **No magic numbers.** A literal that needs a comment to say what it represents is a named
   constant or derived from data.
 - **One home for everything.** Colours and the sizes several files share live in

@@ -17,11 +17,11 @@ violation and watching the test fail.
 | Invariant | Enforced by |
 |---|---|
 | The domain names only `std::collections`, `error`, `fmt`, `ops`, `path`, `str` and `time::Duration`: no files, processes, threads, environment or clock. | `pure_layers_use_only_allowed_std` in `tests/structural.rs` |
-| The application adds `iter`, `mem` and `time::Instant`; it gets every instant from its `Clock` port. | `pure_layers_use_only_allowed_std` |
+| The application names only `std::collections`, `error`, `fmt`, `iter`, `mem`, `path`, `time::Duration` and `time::Instant`; it gets every instant from its `Clock` port. | `pure_layers_use_only_allowed_std` |
 | The setup program's policy (`src/setup`) names only `std::fmt` plus one layer: the domain (for `Version`). | `pure_layers_use_only_allowed_std`, `layers_depend_inwards_only` |
 | No pure layer names an external crate. | `pure_layers_use_no_external_crates` |
 | Layers depend inwards only: the domain names no other layer, the application names neither infrastructure nor UI, infrastructure never names the UI. | `layers_depend_inwards_only` |
-| No Rust source or test file and no Slint file exceeds 400 lines; none sits in the danger band of 381 to 399. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
+| No Rust source or test file and no Slint file exceeds 400 lines; none sits in the danger band of 381 to 400. | `no_module_exceeds_the_line_limit_or_sits_in_the_danger_band` |
 | No source names a command that builds a Python environment (`venv`, `virtualenv`, `pip`, `uv`, `poetry`, `conda`; ENV-007). | `no_source_builds_an_environment` |
 | The interface draws only the small copies in `assets/ui`, none over 256 pixels (UI-013). | `the_interface_draws_only_small_copies` in `tests/assets.rs` |
 | `unsafe` appears only under `src/infrastructure/win32`, each block with its SAFETY reasoning. | `unsafe_code_lives_only_in_win32` |
