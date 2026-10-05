@@ -72,14 +72,14 @@ export component StepsField inherits HorizontalLayout {
             Row {
                 TextButton {
                     text: "Up";
-                    label: "Run the selected step earlier";
+                    label: "Move the selected step up";
                     enabled: StepEditor.selected > 0;
                     in-dialog: true;
                     clicked => { StepEditor.up(); }
                 }
                 TextButton {
                     text: "Down";
-                    label: "Run the selected step later";
+                    label: "Move the selected step down";
                     enabled: StepEditor.selected < StepEditor.labels.length - 1;
                     in-dialog: true;
                     clicked => { StepEditor.down(); }

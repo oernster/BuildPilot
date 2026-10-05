@@ -70,7 +70,7 @@ fn the_operation_dialog_walks_fields_and_buttons() {
         "Step 2. buildinstaller.py",
         "Add a step after the last",
         "Remove the selected step",
-        "Run the selected step later",
+        "Move the selected step down",
         "Script of step 1",
         "Browse for the script",
         "Working directory",
