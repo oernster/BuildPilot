@@ -1,6 +1,6 @@
 # BuildPilot: Software Requirements Specification
 
-Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 14.** Every question in Appendix B is
+Status: **Baseline 1.0, 2026-09-27, with Amendments 1 to 15.** Every question in Appendix B is
 closed. From here, changes arrive as numbered amendments with a reason, never as silent edits.
 
 Source: `BuildPilot-SPEC.md` (initial product specification), plus decisions taken on
@@ -299,7 +299,7 @@ Verified by: `application::deck` test `remove_refused_while_running`.
 ### 3.6 Rows and ordering (ROW)
 
 **ROW-001 (M) Row contents.** Each row shall show, left to right: reorder handle, checkbox, icon,
-name, script file name with its folder, status, Run, Stop, Launch installer (PKG-003), Edit,
+name, script file name with its folder, status, Build, Stop, Launch installer (PKG-003), Edit,
 Open Script, Locate Script, Remove. Source: spec §4.1; amended by Amendment 10. For an operation
 with several steps, the script shown, opened and located is the first step's, followed by `+N`
 for the rest (Amendment 4).
@@ -358,7 +358,7 @@ A file of any other type is refused at Add with a message listing the supported 
 operator's own included.
 Verified by: `domain::launch_plan` table tests (one per row, plus the pwsh-absent case).
 
-**LCH-002 (M) Launch.** When the operator activates Run on an idle, succeeded, failed or stopped
+**LCH-002 (M) Launch.** When the operator activates Build on an idle, succeeded, failed or stopped
 operation, the launcher shall start the host as a child process with the configured working
 directory and arguments, with stdout and stderr captured and stdin closed. Source: spec §8.
 
@@ -371,7 +371,7 @@ echoes each argument it receives, with paths under a folder named `with space é
 **LCH-004 (M) No console window.** The launcher shall start the host without opening a console
 window. Verified by: Manual.
 
-**LCH-005 (M) One run per operation.** While an operation is running, its Run control shall be
+**LCH-005 (M) One run per operation.** While an operation is running, its Build control shall be
 disabled and the run use case shall refuse a second launch of it. Source: spec §8.2.
 Verified by: `application::run` test `second_run_is_refused`.
 
@@ -383,7 +383,7 @@ reverse order of launch.
 **LCH-010 (M) One build per folder.** While an operation is running, the run use case shall
 refuse to start another whose working directory is the same folder, compared as Windows compares
 folders (letter case, a trailing separator and `.` parts ignored). The refusal names the running
-operation; the waiting row's Run is disabled with that reason as its tooltip. The running
+operation; the waiting row's Build is disabled with that reason as its tooltip. The running
 operation is judged by the folder its run started in. Rationale: two builds in one folder
 overwrite each other's `build` and `dist` output; ADD-006 lets the same project be added twice
 (owner, 2026-09-27). Verified by: `application::concurrency` tests; `domain::operation` test
@@ -391,15 +391,15 @@ overwrite each other's `build` and `dist` output; ADD-006 lets the same project 
 
 **LCH-011 (S) Run ticked.** The toolbar shall carry Run the ticked builds, disabled while no row
 is ticked. When activated, BuildPilot shall run every ticked operation in row order, each as its
-own Run would; one that Run refuses is named in a notice and the rest still run. Source: owner,
+own Build would; one that is refused is named in a notice and the rest still run. Source: owner,
 2026-09-27. Verified by: `application::concurrency` test `run_ticked_starts_every_ticked_row`.
 
-**LCH-007 (M) Missing script.** If the script file does not exist when Run is activated, then the
+**LCH-007 (M) Missing script.** If the script file does not exist when Build is activated, then the
 run use case shall not launch it; the row shall show Failed with the reason "Script not found"
 plus the path. The row shall offer Edit to repair it. Source: spec §7, §18.
 Verified by: `application::run` test `missing_script_is_not_launched`.
 
-**LCH-008 (M) Missing working directory.** If the working directory does not exist when Run is
+**LCH-008 (M) Missing working directory.** If the working directory does not exist when Build is
 activated, then the run use case shall not launch it and the row shall name the directory.
 
 **LCH-009 (M) Launch failure.** If the operating system refuses to start the host (including
@@ -424,7 +424,7 @@ exiting 0 and 3.
 run state machine shall move to Stopped whatever exit code the process reports.
 Source: spec §9.
 
-**LIFE-004 (M) Visible promptly.** When Run is activated, the row shall show Running within
+**LIFE-004 (M) Visible promptly.** When Build is activated, the row shall show Running within
 100 ms, measured from the click event to the state change reaching the UI in a debug build.
 Source: spec §8, "update the row immediately".
 
@@ -733,7 +733,7 @@ with code 3". Verified by: `application::steps` test `a_failing_step_ends_the_ru
 use case shall stop that step's process tree (STOP-001) and start no further step; the run
 shall end Stopped. Verified by: `application::steps` test `stop_ends_the_sequence`.
 
-**STEP-005 (M) Checked before any step starts.** When Run is activated, the run use case shall
+**STEP-005 (M) Checked before any step starts.** When Build is activated, the run use case shall
 check every step's script (LCH-007) and resolve the environment (ENV-003) before step 1 starts.
 If any check fails, then no step starts; the row shall name the failing step. Rationale: a
 missing second script found only after a ten minute first step wastes the first.
@@ -770,19 +770,19 @@ until one is chosen. Where exactly one is named `venv` or `.venv`, the dialog sh
 The choice is saved by folder name. Measured case: AxisDB holds `venv` and `venv_smoke`. Verified
 by: `domain` test for the preselection; Manual for the dialog.
 
-**ENV-003 (M) Resolution at Run.** When a run of an operation with a `.py` or `.ps1` step starts,
+**ENV-003 (M) Resolution at launch.** When a run of an operation with a `.py` or `.ps1` step starts,
 the run use case shall use the environment the operation names; where it names none, the only
 one found.
 Verified by: `application::steps` tests.
 
-**ENV-004 (M) No environment.** If a `.py` step has no environment at Run (none found; the named
+**ENV-004 (M) No environment.** If a `.py` step has no environment at launch (none found; the named
 one gone), then no step shall start; the row shall show Failed naming the working directory
 searched and saying BuildPilot uses an existing environment and does not create one. A `.ps1`
 step with no environment found runs without one (deactivated as ENV-009 states), so a
 PowerShell build with no Python keeps working. Verified by: `application::steps` tests for both
 kinds.
 
-**ENV-005 (M) Several found, none chosen.** If Run finds several environments where the operation
+**ENV-005 (M) Several found, none chosen.** If a launch finds several environments where the operation
 names none (one appeared after it was saved), then no step shall start; the row shall name the
 environments found and say to choose one in Edit. Verified by: `application::steps` test.
 
@@ -999,7 +999,7 @@ Personal developer utility: a full FMEA is judged disproportionate. Named risks,
 | ID | Risk | Mitigation |
 |---|---|---|
 | R-1 | Slint has no ready-made drag reordering for list rows. | **Retired 2026-09-27 by a throwaway spike (since removed).** A `TouchArea` on the handle keeps receiving `moved` after the pointer leaves it in any direction and receives the release, so the drag is built from it. Measured flaw to design out: a twitch of a few pixels retargeted the row; the target must change only when the pointer passes the middle of the next row. |
-| R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Run is clicked. |
+| R-2 | A plain Slint text view may not cope with 100,000 lines. | **Retired 2026-09-27 by a throwaway spike (since removed)**, on `ListView` (which instantiates only visible rows). Real launcher, `flood.ps1`, 50,000 lines in 0.73 to 0.78 s (faster than OUT-005's load): all shown, worst drain under 3.6 ms, no event-loop gap of 50 ms once output flowed. Open: one gap of 76 to 84 ms about 140 ms after each launch, before any output, cause not found (under the 100 ms target); 352 ms on the very first run, not reproduced. `spawn` measured at 48 to 51 ms, which counts against LIFE-004 when Build is clicked. |
 | R-3 | `.bat`/`.cmd` argument quoting through `cmd.exe` is error-prone. | **Settled by Amendment 1:** the standard library quotes batch arguments by `cmd.exe` rules and refuses one it cannot escape. The LCH-003 fixture test covers `.cmd`; a refusal is a launch failure. |
 | R-4 | A script that breaks away from its Job Object would survive Stop. | Accept for v1; STOP-003 reports survivors by PID. |
 | R-5 | Python writing to a pipe holds its output back and encodes it in the ANSI code page. | **Retired 2026-09-27 by measurement.** A venv's Python 3 started with piped output and no window printed three lines 2 s apart: all three arrived together at 4.06 s; with `PYTHONUNBUFFERED=1` at 0.04, 2.04 and 4.04 s. `é` arrived as the single byte 0xE9 (stdout encoding cp1252), which OUT-008's OEM fallback (code page 850) reads as `Ú`; with `PYTHONIOENCODING=utf-8` it arrived as C3 A9. ENV-006 sets both. |
@@ -1209,3 +1209,14 @@ Reason: the requirement put the danger band at 381 to 399, which left a file of 
 lines outside it. Read in `tests/structural.rs` the same day: the band starts at 380 (5% below
 the 400-line cap) and the test flags any file over 380 lines that is not over 400, so a 400-line
 file is in the band. The requirement now says 381 to 400, matching the test that verifies it.
+
+**Amendment 15 (2026-10-05): the row's Run control is named Build.** Changes ROW-001, LCH-002,
+LCH-005, LCH-007, LCH-008, LCH-010, LCH-011, LIFE-004, STEP-005, ENV-003 to ENV-005 and R-2.
+No behaviour changes.
+
+Reason: the owner found the row's play button tooltipped "Run" followed by the row's name, which
+reads as running an item when the control performs the operation's build steps. The control and
+its Guide entry are now named Build, so its tooltip reads "Build" followed by the name. A run
+(1.5) is still what it starts. In the same pass the operation dialog's Up and Down buttons, named
+"Run the selected step earlier" and "later" though they only move a step (STEP-008), became
+"Move the selected step up" and "down".
