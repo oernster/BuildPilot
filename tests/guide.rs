@@ -1,7 +1,7 @@
 //! UI-007: every toolbar and row control is named in the Guide, so a new control cannot ship
 //! unexplained.
 //!
-//! A label built from a row's name ("Run " + name) passes when one of its words is a Guide
+//! A label built from a row's name ("Build " + name) passes when one of its words is a Guide
 //! entry's name. A label that changes with state (the theme toggle's "Switch to light theme" or
 //! "Switch to dark theme") is several controls in one place, so every alternative needs its own
 //! entry.

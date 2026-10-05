@@ -80,7 +80,7 @@ export component GuideDialog inherits Modal {
           text: "drag a row by its handle to move it; the order is saved at once and never touches a run." },
         { icon: @image-url("../assets/ui/application-icon.png"), name: "Select",
           text: "the checkbox ticks a row for Run the ticked builds; click the row itself to show its output." },
-        { icon: @image-url("../assets/ui/run.png"), name: "Run",
+        { icon: @image-url("../assets/ui/run.png"), name: "Build",
           text: "starts the row's steps in order, in its working directory with no console window; a .py or .ps1 step runs inside the project's Python environment when it has one. Greyed out while it is running and while another build is running in the same folder." },
         { icon: @image-url("../assets/ui/stop.png"), name: "Stop",
           text: "ends the running step and every process it started; no later step starts. Every other run is left alone." },

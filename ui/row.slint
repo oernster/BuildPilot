@@ -191,7 +191,7 @@ export component OperationRow inherits Rectangle {
                 alignment: center;
                 IconButton {
                     icon: @image-url("../assets/ui/run.png");
-                    label: "Run " + root.data.name;
+                    label: "Build " + root.data.name;
                     enabled: root.data.can-run;
                     disabled-reason: root.data.run-blocked;
                     on-ring: root.data.selected;
