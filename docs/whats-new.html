@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>What's new in BuildPilot: release history</title>
+    <meta name="description" content="BuildPilot's release history: buttons named for what they do, an update check described exactly, output that wraps and lines up, a typical build time on every row, Launch installer and the first release's flight deck for your build scripts.">
+    <meta name="theme-color" content="#1c1d20">
+    <link rel="icon" type="image/png" href="icon.png">
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="What's new in BuildPilot: release history">
+    <meta property="og:description" content="BuildPilot's release history: buttons named for what they do, an update check described exactly, output that wraps and lines up, a typical build time on every row, Launch installer and the first release's flight deck for your build scripts.">
+    <meta property="og:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta property="og:url" content="https://ernster.dev/BuildPilot/whats-new.html">
+    <link rel="canonical" href="https://ernster.dev/BuildPilot/whats-new.html">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <meta property="og:site_name" content="BuildPilot">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="256">
+    <meta property="og:image:height" content="256">
+    <meta property="og:image:alt" content="BuildPilot app icon">
+    <meta property="og:locale" content="en_GB">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="What's new in BuildPilot: release history">
+    <meta name="twitter:description" content="BuildPilot's release history: buttons named for what they do, an update check described exactly, output that wraps and lines up, a typical build time on every row, Launch installer and the first release's flight deck for your build scripts.">
+    <meta name="twitter:image" content="https://ernster.dev/BuildPilot/icon.png">
+    <meta name="twitter:image:alt" content="BuildPilot app icon">
+    <link rel="stylesheet" href="styles.css?v=09e41c9068">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "What's new in BuildPilot: release history",
+        "description": "BuildPilot's release history: buttons named for what they do, an update check described exactly, output that wraps and lines up, a typical build time on every row, Launch installer and the first release's flight deck for your build scripts.",
+        "url": "https://ernster.dev/BuildPilot/whats-new.html",
+        "isPartOf": {"@type": "WebSite", "name": "BuildPilot", "url": "https://ernster.dev/BuildPilot/"},
+        "about": {"@type": "SoftwareApplication", "name": "BuildPilot"},
+        "inLanguage": "en-GB"
+    }
+    </script>
+<script>window.goatcounter = {path: function (p) { return location.host + p }}</script>
+<script data-goatcounter="https://oernster.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</head>
+<body>
+
+<header class="wrap site-head">
+    <a class="brand" href="./"><img src="icon.png" alt="" width="34" height="34"> BuildPilot</a>
+    <nav aria-label="Pages">
+        <a href="features.html">Features</a>
+        <a href="why.html">Why</a>
+        <a href="whats-new.html" aria-current="page">What's New</a>
+        <a href="download.html">Download</a>
+        <a href="https://github.com/oernster/BuildPilot">GitHub</a>
+    </nav>
+</header>
+
+<main id="top">
+
+    <section class="wrap" id="whats-new">
+        <p class="kicker">Changelog</p>
+        <h2>What's new</h2>
+        <div class="prose">
+            <p>Recent releases have made the window say what it means: long output lines wrap, tabs
+                line up, the update check is described exactly and each button is named for what it
+                does. Before that came a typical build time on every row and a Launch installer
+                button that finds the setup program a build produced. The first release brought the
+                deck itself: builds remembered, run side by side, watched live and stopped with
+                everything they started.</p>
+        </div>
+
+        <div class="releases">
+
+            <div class="card release">
+                <span class="ver-tag pill">v<!--VERSION-->1.3.1<!--/VERSION--></span>
+                <h3>Buttons named for what they do</h3>
+                <ul>
+                    <li>Hovering a row's play button now reads "Build" followed by the row's name, since it runs that row's build steps; the Guide's entry is renamed to match</li>
+                    <li>In the Edit dialog a screen reader now announces the step order buttons as "Move the selected step up" and "Move the selected step down", since they run nothing</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.3.0</span>
+                <h3>The update check, described exactly</h3>
+                <ul>
+                    <li>The Guide, the README, the website and the requirements now say that the daily update check names BuildPilot and its version, because GitHub asks every caller to identify itself</li>
+                    <li>It still carries nothing about you or your scripts; it remains the only network request BuildPilot makes</li>
+                    <li>DECISIONS-TRADEOFFS.md sets out the deliberate choices BuildPilot rests on, with what each one gains and costs</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.2.2</span>
+                <h3>Long output lines are no longer cut off</h3>
+                <ul>
+                    <li>A line wider than the output tray now wraps onto as many lines as it needs, breaking at a space where it can, so tools such as Nuitka no longer lose the end of almost every line</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.2.1</span>
+                <h3>Tabs in output no longer show as boxes</h3>
+                <ul>
+                    <li>A tab in a script's output now becomes spaces up to the next tab stop, so the columns of go test line up as they do in a terminal</li>
+                    <li>Any other control character a script prints, such as a bell, is left out rather than drawn as a box</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.2.0</span>
+                <h3>Typical build time</h3>
+                <ul>
+                    <li>Every row shows how long its build usually takes, on a line of its own beneath the status, so there is something to judge a running build against</li>
+                    <li>The typical time is the median of the last five successful runs: one slow build on a cold cache does not move it; a failed or stopped run does not count</li>
+                    <li>It shows in every state, Not run included; it is remembered across restarts in run-times.json beside your settings file, which is unchanged</li>
+                    <li>Removing an operation forgets its run times; a run times file that cannot be read or written is noted in the log and the typical times start afresh</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.1.0</span>
+                <h3>Launch installer</h3>
+                <ul>
+                    <li>Each row has a Launch installer button right of Stop, starting the project's setup program as Explorer would, so Windows asks for administrator rights where the installer needs them</li>
+                    <li>BuildPilot finds the installer itself: the working directory's name followed by Setup.exe, in dist-installer or dist. The Edit dialog's new Installer field sets one named differently</li>
+                    <li>The button is greyed, with the reason in its tooltip, when there is nothing to launch, while the row runs and after a run that failed or was stopped</li>
+                    <li>The Edit dialog's step buttons now sit two by two beside the steps, so the dialog fits the window at its usual size</li>
+                    <li>The output tray now stays on the last line while it follows a run, so the green, red or grey closing line is always in view at the end</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.0.1</span>
+                <h3>The selected row stays in sight when the tray opens</h3>
+                <ul>
+                    <li>Opening or growing the output tray no longer hides a row selected near the foot of the list; the list scrolls just far enough to keep it in view</li>
+                </ul>
+            </div>
+
+            <div class="card release">
+                <span class="ver-tag pill">v1.0.0</span>
+                <h3>The first release: a flight deck for your build scripts</h3>
+                <ul>
+                    <li>An operation is one or more steps run in order in a working directory; PowerShell, batch, executable and Python scripts run out of the box and Settings maps any other file type to its program</li>
+                    <li>Every step's script is checked before the first one starts, so a missing script is found before a long first step rather than after it</li>
+                    <li>Add takes a script or a folder and proposes ready-made operations for projects holding build.ps1 or buildexe.py then buildinstaller.py; nothing is added until you confirm</li>
+                    <li>A Python or PowerShell step runs inside the working directory's virtual environment, with any inherited environment undone first; BuildPilot never creates or changes one</li>
+                    <li>Run the ticked builds starts every ticked row at once; two builds never run in the same folder. The output tray follows each run live and the exit code decides the outcome</li>
+                    <li>Every run starts in its own Windows job object, so Stop ends the script and every process it started</li>
+                    <li>Every control is reachable with Tab and the arrow keys and wears a visible focus ring; light and dark themes follow Windows</li>
+                    <li>One network request: a check for a newer release shortly after opening and once a day</li>
+                    <li>BuildPilotSetup.exe installs for your own account only, so Windows never asks for administrator rights; uninstalling keeps your operations and settings unless you untick that</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div class="cta releases-more">
+            <a class="btn" href="https://github.com/oernster/BuildPilot/releases">View all releases on GitHub</a>
+        </div>
+    </section>
+
+</main>
+
+<footer class="wrap site-foot">
+    <span>&copy; Oliver Ernster. GPL-3.0.
+        <a href="https://ernster.dev/commercial-licensing.html">Commercial licences</a> available.</span>
+    <span><a href="./">Home</a> &middot;
+        <a href="features.html">Features</a> &middot;
+        <a href="why.html">Why</a> &middot;
+        <a href="whats-new.html">What's New</a> &middot;
+        <a href="download.html">Download</a> &middot;
+        <a href="https://github.com/oernster/BuildPilot">Source</a> &middot;
+        <a href="https://ernster.dev">More of my work</a></span>
+</footer>
+
+</body>
+</html>

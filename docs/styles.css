@@ -269,6 +269,20 @@ h2 {
 
 .stat p { margin: 0; color: var(--muted); font-size: 0.95rem; }
 
+/* What's new: one card per release, newest first, each led by its version in a pill. */
+
+.releases {
+    display: grid;
+    gap: 14px;
+    margin-top: 28px;
+}
+
+.ver-tag { color: var(--accent); font-weight: 600; }
+
+.release h3 { margin-top: 12px; }
+
+.releases-more { margin-top: 28px; }
+
 /* Downloads: the house card per platform (EarthNow, SymDiary, BridgeTalk). BuildPilot is
    Windows only, so there is one card, centred at a card's width. */
 
